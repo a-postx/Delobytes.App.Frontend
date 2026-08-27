@@ -8,6 +8,8 @@ import type { Product, CreateProductRequest } from '@/types'
 
 const products = ref<Product[]>([])
 const { loading, error, execute } = useApi<Product[]>()
+const { loading: createLoading, execute: executeCreate } = useApi<Product>()
+const { loading: deleteLoading, execute: executeDelete } = useApi<void>()
 const { success, error: showError } = useNotification()
 
 const showForm = ref(false)
@@ -30,7 +32,7 @@ const createProduct = async () => {
     return
   }
   
-  const result = await execute(() => productsApi.create(formData.value))
+  const result = await executeCreate(() => productsApi.create(formData.value))
   if (result) {
     formData.value = { name: '', purchasePrice: 0, sellingPrice: 0 }
     showForm.value = false
@@ -44,8 +46,8 @@ const deleteProduct = async (id: string) => {
     return
   }
   
-  const result = await execute(() => productsApi.delete(id))
-  if (result !== null) {
+  await executeDelete(() => productsApi.delete(id))
+  if (!deleteLoading.value) {
     success('Product deleted successfully')
     await loadProducts()
   }
@@ -108,10 +110,10 @@ onMounted(() => {
       <div class="mt-4">
         <button
           @click="createProduct"
-          :disabled="loading"
+          :disabled="createLoading"
           class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded disabled:bg-gray-400 transition-colors"
         >
-          {{ loading ? 'Creating...' : 'Create Product' }}
+          {{ createLoading ? 'Creating...' : 'Create Product' }}
         </button>
       </div>
     </div>
