@@ -1,11 +1,14 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { apiClient } from '@/services/api'
+import { productsApi } from '@/services/api'
+import { useApi } from '@/composables/useApi'
+import { useNotification } from '@/composables/useNotification'
+import { formatCurrency, formatPercentage } from '@/utils/format'
 import type { Product, CreateProductRequest } from '@/types'
 
 const products = ref<Product[]>([])
-const loading = ref(false)
-const error = ref<string | null>(null)
+const { loading, error, execute } = useApi<Product[]>()
+const { success, error: showError } = useNotification()
 
 const showForm = ref(false)
 const formData = ref<CreateProductRequest>({
@@ -15,36 +18,24 @@ const formData = ref<CreateProductRequest>({
 })
 
 const loadProducts = async () => {
-  loading.value = true
-  error.value = null
-  
-  try {
-    products.value = await apiClient.getProducts()
-  } catch (err: any) {
-    error.value = err.message || 'Failed to load products'
-  } finally {
-    loading.value = false
+  const result = await execute(() => productsApi.getAll())
+  if (result) {
+    products.value = result
   }
 }
 
 const createProduct = async () => {
   if (!formData.value.name || formData.value.purchasePrice <= 0 || formData.value.sellingPrice <= 0) {
-    error.value = 'Please fill all fields with valid values'
+    showError('Please fill all fields with valid values')
     return
   }
   
-  loading.value = true
-  error.value = null
-  
-  try {
-    await apiClient.createProduct(formData.value)
+  const result = await execute(() => productsApi.create(formData.value))
+  if (result) {
     formData.value = { name: '', purchasePrice: 0, sellingPrice: 0 }
     showForm.value = false
+    success('Product created successfully')
     await loadProducts()
-  } catch (err: any) {
-    error.value = err.message || 'Failed to create product'
-  } finally {
-    loading.value = false
   }
 }
 
@@ -53,16 +44,10 @@ const deleteProduct = async (id: string) => {
     return
   }
   
-  loading.value = true
-  error.value = null
-  
-  try {
-    await apiClient.deleteProduct(id)
+  const result = await execute(() => productsApi.delete(id))
+  if (result !== null) {
+    success('Product deleted successfully')
     await loadProducts()
-  } catch (err: any) {
-    error.value = err.message || 'Failed to delete product'
-  } finally {
-    loading.value = false
   }
 }
 
@@ -77,7 +62,7 @@ onMounted(() => {
       <h2 class="text-2xl font-bold text-gray-900">Products</h2>
       <button
         @click="showForm = !showForm"
-        class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+        class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition-colors"
       >
         {{ showForm ? 'Cancel' : 'Add Product' }}
       </button>
@@ -124,7 +109,7 @@ onMounted(() => {
         <button
           @click="createProduct"
           :disabled="loading"
-          class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded disabled:bg-gray-400"
+          class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded disabled:bg-gray-400 transition-colors"
         >
           {{ loading ? 'Creating...' : 'Create Product' }}
         </button>
@@ -152,16 +137,16 @@ onMounted(() => {
           </tr>
         </thead>
         <tbody class="bg-white divide-y divide-gray-200">
-          <tr v-for="product in products" :key="product.id">
+          <tr v-for="product in products" :key="product.id" class="hover:bg-gray-50 transition-colors">
             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ product.name }}</td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${{ product.purchasePrice.toFixed(2) }}</td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${{ product.sellingPrice.toFixed(2) }}</td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${{ product.margin.toFixed(2) }}</td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ product.marginPercentage.toFixed(2) }}%</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ formatCurrency(product.purchasePrice) }}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ formatCurrency(product.sellingPrice) }}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ formatCurrency(product.margin) }}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ formatPercentage(product.marginPercentage) }}</td>
             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
               <button
                 @click="deleteProduct(product.id)"
-                class="text-red-600 hover:text-red-900"
+                class="text-red-600 hover:text-red-900 transition-colors"
               >
                 Delete
               </button>

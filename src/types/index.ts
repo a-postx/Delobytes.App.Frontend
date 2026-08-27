@@ -1,3 +1,14 @@
+export interface ApiResponse<T> {
+  data: T
+  success: boolean
+  message?: string
+}
+
+export interface ApiError {
+  message: string
+  errors?: Record<string, string[]>
+}
+
 export interface Product {
   id: string
   name: string
@@ -21,13 +32,15 @@ export interface UpdateProductRequest {
   sellingPrice?: number
 }
 
-export interface ApiResponse<T> {
-  data: T
-  success: boolean
-  message?: string
+export interface HealthStatus {
+  status: string
+  timestamp: string
+  version?: string
 }
 
-export interface ApiError {
-  message: string
-  errors?: Record<string, string[]>
+export interface MetricsResponse {
+  uptime: number
+  requestsTotal: number
+  requestsPerSecond: number
+  memoryUsage: number
 }

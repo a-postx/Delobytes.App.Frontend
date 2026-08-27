@@ -1,6 +1,5 @@
 import { vi } from 'vitest'
 
-// Mock window.location
 Object.defineProperty(window, 'location', {
   value: {
     hostname: 'localhost',
@@ -12,7 +11,6 @@ Object.defineProperty(window, 'location', {
   writable: true
 })
 
-// Mock console methods to reduce noise in tests
 global.console = {
   ...console,
   log: vi.fn(),
