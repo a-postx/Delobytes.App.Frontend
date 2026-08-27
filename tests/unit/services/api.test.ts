@@ -1,8 +1,23 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import axios from 'axios'
 
-vi.mock('axios')
-const mockedAxios = axios as any
+vi.mock('axios', () => ({
+  default: {
+    create: vi.fn(() => ({
+      defaults: {
+        baseURL: 'http://localhost:5000'
+      },
+      interceptors: {
+        request: {
+          use: vi.fn()
+        },
+        response: {
+          use: vi.fn()
+        }
+      }
+    }))
+  }
+}))
 
 describe('API Client', () => {
   beforeEach(() => {
