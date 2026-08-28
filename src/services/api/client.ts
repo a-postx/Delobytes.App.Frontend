@@ -30,7 +30,7 @@ class ApiClient {
       return 'https://api.app.delobytes.ru'
     }
     
-    return 'http://localhost:5000'
+    return 'https://a-postx-delobytes-app-backend-47aa.twc1.net'
   }
 
   private setupInterceptors(): void {
