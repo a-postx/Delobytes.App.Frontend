@@ -16,16 +16,6 @@
         </div>
 
         <div class="form-group">
-          <label for="displayName">Имя</label>
-          <input
-            id="displayName"
-            v-model="displayName"
-            type="text"
-            placeholder="Ваше имя (необязательно)"
-          />
-        </div>
-
-        <div class="form-group">
           <label for="password">Пароль</label>
           <input
             id="password"
@@ -71,7 +61,6 @@ const router = useRouter()
 const { post } = useApi()
 
 const email = ref('')
-const displayName = ref('')
 const password = ref('')
 const confirmPassword = ref('')
 const loading = ref(false)
@@ -90,7 +79,7 @@ const handleRegister = async () => {
   try {
     const response = await post('/api/auth/register', {
       email: email.value,
-      displayName: displayName.value || null,
+      displayName: null,
       password: password.value
     })
 
@@ -118,12 +107,14 @@ const handleRegister = async () => {
 .register-page {
   display: flex;
   justify-content: center;
-  align-items: flex-start;
+  align-items: center;
+  min-height: 100vh;
   position: fixed;
   inset: 0;
   background: #f5f5f5;
   z-index: 10;
-  padding-top: 80px;
+  padding: 1rem;
+  overflow-y: auto;
 }
 
 .register-container {
@@ -133,6 +124,7 @@ const handleRegister = async () => {
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
   width: 100%;
   max-width: 340px;
+  margin: auto;
 }
 
 h1 {

@@ -94,12 +94,14 @@ const loginWithYandex = () => {
 .login-page {
   display: flex;
   justify-content: center;
-  align-items: flex-start;
+  align-items: center;
+  min-height: 100vh;
   position: fixed;
   inset: 0;
   background: #f5f5f5;
   z-index: 10;
-  padding-top: 80px;
+  padding: 1rem;
+  overflow-y: auto;
 }
 
 .login-container {
@@ -109,6 +111,7 @@ const loginWithYandex = () => {
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
   width: 100%;
   max-width: 340px;
+  margin: auto;
 }
 
 h1 {
