@@ -31,7 +31,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { useApi } from '@/composables/useApi'
+import { useApi, extractErrorMessage } from '@/composables/useApi'
 
 const router = useRouter()
 const { post } = useApi()
@@ -69,7 +69,7 @@ const handleSetup = async () => {
 
     router.push('/')
   } catch (err: any) {
-    error.value = err.message || 'Ошибка создания тенанта. Попробуйте еще раз.'
+    error.value = extractErrorMessage(err, 'Ошибка создания тенанта. Попробуйте еще раз.')
   } finally {
     loading.value = false
   }

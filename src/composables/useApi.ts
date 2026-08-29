@@ -1,6 +1,14 @@
 import { ref } from 'vue'
 import { axiosInstance } from '@/services/api/client'
 
+/**
+ * Extracts a user-facing error message from an axios error.
+ * Priority: server response body "message" field → axios message → fallback.
+ */
+export function extractErrorMessage(error: any, fallback = 'Произошла ошибка. Попробуйте еще раз.'): string {
+  return error?.response?.data?.message || fallback
+}
+
 export function useApi<T = any>() {
   const data = ref<T | null>(null)
   const loading = ref(false)
@@ -16,7 +24,7 @@ export function useApi<T = any>() {
       data.value = result
       return result
     } catch (e: any) {
-      error.value = e.response?.data?.message || e.message || 'An error occurred'
+      error.value = extractErrorMessage(e)
       throw e
     } finally {
       loading.value = false
@@ -32,7 +40,7 @@ export function useApi<T = any>() {
       data.value = response.data as any
       return response.data
     } catch (e: any) {
-      error.value = e.response?.data?.message || e.message || 'An error occurred'
+      error.value = extractErrorMessage(e)
       throw e
     } finally {
       loading.value = false
@@ -48,7 +56,7 @@ export function useApi<T = any>() {
       data.value = response.data as any
       return response.data
     } catch (e: any) {
-      error.value = e.response?.data?.message || e.message || 'An error occurred'
+      error.value = extractErrorMessage(e)
       throw e
     } finally {
       loading.value = false
@@ -64,7 +72,7 @@ export function useApi<T = any>() {
       data.value = response.data as any
       return response.data
     } catch (e: any) {
-      error.value = e.response?.data?.message || e.message || 'An error occurred'
+      error.value = extractErrorMessage(e)
       throw e
     } finally {
       loading.value = false
@@ -80,7 +88,7 @@ export function useApi<T = any>() {
       data.value = response.data as any
       return response.data
     } catch (e: any) {
-      error.value = e.response?.data?.message || e.message || 'An error occurred'
+      error.value = extractErrorMessage(e)
       throw e
     } finally {
       loading.value = false

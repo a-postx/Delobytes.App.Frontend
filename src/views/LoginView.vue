@@ -79,7 +79,7 @@ const handleLogin = async () => {
       router.push('/')
     }
   } catch (err: any) {
-    error.value = err.message || 'Ошибка входа. Проверьте email и пароль.'
+    error.value = err.response?.data?.message || 'Неверный email или пароль.'
   } finally {
     loading.value = false
   }

@@ -68,7 +68,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { useApi } from '@/composables/useApi'
+import { useApi, extractErrorMessage } from '@/composables/useApi'
 
 const router = useRouter()
 const { post } = useApi()
@@ -104,7 +104,7 @@ const handleRegister = async () => {
       router.push('/login')
     }, 2000)
   } catch (err: any) {
-    error.value = err.message || 'Ошибка регистрации. Попробуйте еще раз.'
+    error.value = extractErrorMessage(err, 'Ошибка регистрации. Попробуйте еще раз.')
   } finally {
     loading.value = false
   }

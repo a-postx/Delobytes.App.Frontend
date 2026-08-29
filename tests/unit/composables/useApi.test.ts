@@ -4,7 +4,7 @@ import { useApi } from '@/composables/useApi'
 describe('useApi composable', () => {
   it('should initialize with default values', () => {
     const { data, loading, error } = useApi()
-    
+
     expect(data.value).toBeNull()
     expect(loading.value).toBe(false)
     expect(error.value).toBeNull()
@@ -12,23 +12,36 @@ describe('useApi composable', () => {
 
   it('should handle successful API call', async () => {
     const { data, loading, execute } = useApi<string>()
-    
+
     const result = await execute(() => Promise.resolve('test data'))
-    
+
     expect(result).toBe('test data')
     expect(data.value).toBe('test data')
     expect(loading.value).toBe(false)
   })
 
-  it('should handle failed API call', async () => {
+  it('should handle failed API call and set error from response body', async () => {
     const { error, execute } = useApi()
-    
+    const axiosError = { response: { data: { message: 'Test error' } } }
+
     try {
-      await execute(() => Promise.reject(new Error('Test error')))
+      await execute(() => Promise.reject(axiosError))
     } catch (e) {
       // Expected to throw
     }
-    
+
     expect(error.value).toBe('Test error')
+  })
+
+  it('should set default fallback when error has no response body', async () => {
+    const { error, execute } = useApi()
+
+    try {
+      await execute(() => Promise.reject(new Error('Network Error')))
+    } catch (e) {
+      // Expected to throw
+    }
+
+    expect(error.value).toBe('Произошла ошибка. Попробуйте еще раз.')
   })
 })

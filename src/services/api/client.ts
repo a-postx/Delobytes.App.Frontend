@@ -56,9 +56,13 @@ class ApiClient {
       (error: AxiosError) => {
         if (error.response) {
           console.error('API Error:', error.response.status, error.response.data)
-          
-          // Handle 401 Unauthorized - clear token and redirect to login
-          if (error.response.status === 401) {
+
+          // Redirect to login on 401 only for authenticated requests,
+          // not for auth endpoints themselves (login, register, etc.)
+          const url = error.config?.url ?? ''
+          const isAuthEndpoint = url.includes('/api/auth/')
+
+          if (error.response.status === 401 && !isAuthEndpoint) {
             localStorage.removeItem('accessToken')
             localStorage.removeItem('userId')
             localStorage.removeItem('tenantId')
