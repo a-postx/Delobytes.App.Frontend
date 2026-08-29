@@ -53,9 +53,6 @@
         </button>
 
         <div v-if="error" class="error-message">{{ error }}</div>
-        <div v-if="success" class="success-message">
-          Регистрация успешна! Перенаправление на вход...
-        </div>
       </form>
 
       <div class="login-link">
@@ -79,7 +76,6 @@ const password = ref('')
 const confirmPassword = ref('')
 const loading = ref(false)
 const error = ref('')
-const success = ref(false)
 
 const handleRegister = async () => {
   error.value = ''
@@ -92,17 +88,24 @@ const handleRegister = async () => {
   loading.value = true
 
   try {
-    await post('/api/auth/register', {
+    const response = await post('/api/auth/register', {
       email: email.value,
       displayName: displayName.value || null,
       password: password.value
     })
 
-    success.value = true
+    // Store userId for tenant setup
+    localStorage.setItem('userId', response.userId)
 
-    setTimeout(() => {
-      router.push('/login')
-    }, 2000)
+    if (response.requiresTenantSetup) {
+      // New user flow: redirect to tenant setup
+      router.push('/setup-tenant')
+    } else {
+      // Edge case: user already has tenant
+      localStorage.setItem('accessToken', response.accessToken)
+      localStorage.setItem('tenantId', response.tenantId)
+      router.push('/')
+    }
   } catch (err: any) {
     error.value = extractErrorMessage(err, 'Ошибка регистрации. Попробуйте еще раз.')
   } finally {
@@ -195,12 +198,6 @@ button:disabled {
 
 .error-message {
   color: #f44336;
-  font-size: 0.8125rem;
-  text-align: center;
-}
-
-.success-message {
-  color: #4CAF50;
   font-size: 0.8125rem;
   text-align: center;
 }
