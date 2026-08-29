@@ -98,8 +98,10 @@ const loginWithYandex = () => {
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: 100vh;
+  position: fixed;
+  inset: 0;
   background: #f5f5f5;
+  z-index: 10;
 }
 
 .login-container {
