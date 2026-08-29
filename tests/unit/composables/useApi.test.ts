@@ -23,7 +23,11 @@ describe('useApi composable', () => {
   it('should handle failed API call', async () => {
     const { error, execute } = useApi()
     
-    await execute(() => Promise.reject(new Error('Test error')))
+    try {
+      await execute(() => Promise.reject(new Error('Test error')))
+    } catch (e) {
+      // Expected to throw
+    }
     
     expect(error.value).toBe('Test error')
   })
