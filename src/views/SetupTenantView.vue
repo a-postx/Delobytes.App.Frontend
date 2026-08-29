@@ -3,7 +3,7 @@
     <div class="setup-container">
       <h1>Настройка рабочего пространства</h1>
       <p class="subtitle">Создайте свой первый тенант для начала работы</p>
-      
+
       <form @submit.prevent="handleSetup" class="setup-form">
         <div class="form-group">
           <label for="tenantName">Название организации/проекта</label>
@@ -17,11 +17,11 @@
           />
           <small>Это название будет отображаться во всех отчетах и документах</small>
         </div>
-        
+
         <button type="submit" :disabled="loading || !tenantName.trim()" class="btn-primary">
           {{ loading ? 'Создание...' : 'Создать и начать работу' }}
         </button>
-        
+
         <div v-if="error" class="error-message">{{ error }}</div>
       </form>
     </div>
@@ -42,11 +42,9 @@ const error = ref('')
 const userId = ref<string | null>(null)
 
 onMounted(() => {
-  // Get userId from localStorage (set during login)
   userId.value = localStorage.getItem('userId')
-  
+
   if (!userId.value) {
-    // User is not authenticated, redirect to login
     router.push('/login')
   }
 })
@@ -56,20 +54,19 @@ const handleSetup = async () => {
     error.value = 'Ошибка: пользователь не найден'
     return
   }
-  
+
   loading.value = true
   error.value = ''
-  
+
   try {
     const response = await post('/api/auth/create-tenant', {
       userId: userId.value,
       tenantName: tenantName.value.trim()
     })
-    
-    // Store token and redirect to home
+
     localStorage.setItem('accessToken', response.accessToken)
     localStorage.setItem('tenantId', response.tenantId)
-    
+
     router.push('/')
   } catch (err: any) {
     error.value = err.message || 'Ошибка создания тенанта. Попробуйте еще раз.'
@@ -83,101 +80,102 @@ const handleSetup = async () => {
 .setup-page {
   display: flex;
   justify-content: center;
-  align-items: center;
-  min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  align-items: flex-start;
+  position: fixed;
+  inset: 0;
+  background: #f5f5f5;
+  z-index: 10;
+  padding-top: 80px;
 }
 
 .setup-container {
   background: white;
-  padding: 3rem;
-  border-radius: 12px;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+  padding: 1.75rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
   width: 100%;
-  max-width: 500px;
+  max-width: 340px;
 }
 
 h1 {
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.375rem;
   text-align: center;
   color: #333;
-  font-size: 1.75rem;
+  font-size: 1.25rem;
+  font-weight: 600;
 }
 
 .subtitle {
   text-align: center;
   color: #666;
-  margin-bottom: 2rem;
-  font-size: 0.95rem;
+  margin-bottom: 1.25rem;
+  font-size: 0.875rem;
 }
 
 .setup-form {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 0.875rem;
 }
 
 .form-group {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.375rem;
 }
 
 label {
-  font-weight: 600;
-  color: #333;
-  font-size: 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #555;
 }
 
 input {
-  padding: 1rem;
-  border: 2px solid #e0e0e0;
-  border-radius: 6px;
-  font-size: 1rem;
-  transition: border-color 0.3s;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 0.9375rem;
+  transition: border-color 0.2s;
 }
 
 input:focus {
   outline: none;
-  border-color: #667eea;
+  border-color: #4CAF50;
 }
 
 small {
   color: #999;
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
 }
 
 .btn-primary {
-  padding: 1rem;
+  padding: 0.5rem 0.75rem;
   border: none;
-  border-radius: 6px;
-  font-size: 1.1rem;
-  font-weight: 600;
+  border-radius: 4px;
+  font-size: 0.9375rem;
+  font-weight: 500;
   cursor: pointer;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #4CAF50;
   color: white;
-  transition: transform 0.2s, box-shadow 0.3s;
-  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+  transition: background-color 0.2s;
+  width: 100%;
 }
 
 .btn-primary:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
+  background: #45a049;
 }
 
 button:disabled {
   opacity: 0.6;
   cursor: not-allowed;
-  transform: none;
 }
 
 .error-message {
   color: #f44336;
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   text-align: center;
-  padding: 0.75rem;
+  padding: 0.5rem 0.75rem;
   background: #ffebee;
   border-radius: 4px;
-  margin-top: 0.5rem;
 }
 </style>

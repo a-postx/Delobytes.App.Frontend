@@ -2,7 +2,7 @@
   <div class="login-page">
     <div class="login-container">
       <h1>Вход в Delobytes</h1>
-      
+
       <form @submit.prevent="handleLogin" class="login-form">
         <div class="form-group">
           <label for="email">Email</label>
@@ -14,7 +14,7 @@
             placeholder="your@email.com"
           />
         </div>
-        
+
         <div class="form-group">
           <label for="password">Пароль</label>
           <input
@@ -25,20 +25,20 @@
             placeholder="Введите пароль"
           />
         </div>
-        
+
         <button type="submit" :disabled="loading" class="btn-primary">
           {{ loading ? 'Вход...' : 'Войти' }}
         </button>
-        
+
         <div v-if="error" class="error-message">{{ error }}</div>
       </form>
-      
+
       <div class="divider">или</div>
-      
+
       <button @click="loginWithYandex" class="btn-yandex" :disabled="loading">
         Войти через Yandex ID
       </button>
-      
+
       <div class="register-link">
         <router-link to="/register">Нет аккаунта? Зарегистрируйтесь</router-link>
       </div>
@@ -62,19 +62,17 @@ const error = ref('')
 const handleLogin = async () => {
   loading.value = true
   error.value = ''
-  
+
   try {
     const response = await post('/api/auth/login', {
       email: email.value,
       password: password.value
     })
-    
+
     if (response.requiresTenantSetup) {
-      // Redirect to tenant setup
       localStorage.setItem('userId', response.userId)
       router.push('/setup-tenant')
     } else {
-      // Store token and redirect to home
       localStorage.setItem('accessToken', response.accessToken)
       localStorage.setItem('userId', response.userId)
       localStorage.setItem('tenantId', response.tenantId)
@@ -88,7 +86,6 @@ const handleLogin = async () => {
 }
 
 const loginWithYandex = () => {
-  // Placeholder for Yandex ID integration
   error.value = 'Вход через Yandex ID будет реализован в следующих версиях'
 }
 </script>
@@ -97,50 +94,54 @@ const loginWithYandex = () => {
 .login-page {
   display: flex;
   justify-content: center;
-  align-items: center;
+  align-items: flex-start;
   position: fixed;
   inset: 0;
   background: #f5f5f5;
   z-index: 10;
+  padding-top: 80px;
 }
 
 .login-container {
   background: white;
-  padding: 2rem;
+  padding: 1.75rem;
   border-radius: 8px;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
   width: 100%;
-  max-width: 400px;
+  max-width: 340px;
 }
 
 h1 {
-  margin-bottom: 1.5rem;
+  margin-bottom: 1.25rem;
   text-align: center;
   color: #333;
+  font-size: 1.25rem;
+  font-weight: 600;
 }
 
 .login-form {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 0.875rem;
 }
 
 .form-group {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.375rem;
 }
 
 label {
+  font-size: 0.875rem;
   font-weight: 500;
   color: #555;
 }
 
 input {
-  padding: 0.75rem;
+  padding: 0.5rem 0.75rem;
   border: 1px solid #ddd;
   border-radius: 4px;
-  font-size: 1rem;
+  font-size: 0.9375rem;
 }
 
 input:focus {
@@ -148,14 +149,16 @@ input:focus {
   border-color: #4CAF50;
 }
 
-.btn-primary, .btn-yandex {
-  padding: 0.75rem;
+.btn-primary,
+.btn-yandex {
+  padding: 0.5rem 0.75rem;
   border: none;
   border-radius: 4px;
-  font-size: 1rem;
+  font-size: 0.9375rem;
   font-weight: 500;
   cursor: pointer;
-  transition: background-color 0.3s;
+  transition: background-color 0.2s;
+  width: 100%;
 }
 
 .btn-primary {
@@ -170,8 +173,7 @@ input:focus {
 .btn-yandex {
   background: #ffcc00;
   color: #000;
-  margin-top: 1rem;
-  width: 100%;
+  margin-top: 0;
 }
 
 .btn-yandex:hover:not(:disabled) {
@@ -185,15 +187,15 @@ button:disabled {
 
 .error-message {
   color: #f44336;
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   text-align: center;
-  margin-top: 0.5rem;
 }
 
 .divider {
   text-align: center;
-  margin: 1.5rem 0;
+  margin: 1rem 0;
   color: #999;
+  font-size: 0.875rem;
   position: relative;
 }
 
@@ -217,7 +219,8 @@ button:disabled {
 
 .register-link {
   text-align: center;
-  margin-top: 1.5rem;
+  margin-top: 1rem;
+  font-size: 0.875rem;
 }
 
 .register-link a {
