@@ -169,6 +169,7 @@ input:focus {
   background: #ffcc00;
   color: #000;
   margin-top: 1rem;
+  width: 100%;
 }
 
 .btn-yandex:hover:not(:disabled) {
