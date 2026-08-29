@@ -37,6 +37,13 @@ class ApiClient {
     this.client.interceptors.request.use(
       (config) => {
         console.log(`API Request: ${config.method?.toUpperCase()} ${config.url}`)
+        
+        // Add JWT token to Authorization header if available
+        const token = localStorage.getItem('accessToken')
+        if (token) {
+          config.headers.Authorization = `Bearer ${token}`
+        }
+        
         return config
       },
       (error) => {
@@ -49,6 +56,14 @@ class ApiClient {
       (error: AxiosError) => {
         if (error.response) {
           console.error('API Error:', error.response.status, error.response.data)
+          
+          // Handle 401 Unauthorized - clear token and redirect to login
+          if (error.response.status === 401) {
+            localStorage.removeItem('accessToken')
+            localStorage.removeItem('userId')
+            localStorage.removeItem('tenantId')
+            window.location.href = '/login'
+          }
         } else if (error.request) {
           console.error('Network Error: No response received')
         } else {
