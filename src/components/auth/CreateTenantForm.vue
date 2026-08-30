@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 
-const props = defineProps<{
+defineProps<{
   tenantName: string
   loading: boolean
   error: string

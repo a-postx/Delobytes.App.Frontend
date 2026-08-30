@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 
-const props = defineProps<{
+defineProps<{
   email: string
   password: string
   confirmPassword: string
