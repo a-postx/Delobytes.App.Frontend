@@ -2,10 +2,12 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useApi } from '@/composables/useApi'
+import { useCurrentUser } from '@/composables/useCurrentUser'
 import LoginForm from '@/components/auth/LoginForm.vue'
 
 const router = useRouter()
 const { post } = useApi()
+const { fetchCurrentUser } = useCurrentUser()
 
 const email = ref('')
 const password = ref('')
@@ -29,6 +31,9 @@ const handleLogin = async () => {
       localStorage.setItem('accessToken', response.accessToken)
       localStorage.setItem('userId', response.userId)
       localStorage.setItem('tenantId', response.tenantId)
+
+      await fetchCurrentUser()
+
       router.push('/')
     }
   } catch (err: unknown) {

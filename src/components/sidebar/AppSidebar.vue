@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed, onMounted } from 'vue'
 import { Building2 } from 'lucide-vue-next'
 import NavMain from '@/components/sidebar/NavMain.vue'
 import NavUser from '@/components/sidebar/NavUser.vue'
@@ -11,26 +12,37 @@ import {
   SidebarRail,
 } from '@/components/ui/sidebar'
 import type { SidebarProps } from '@/components/ui/sidebar'
+import { useCurrentUser } from '@/composables/useCurrentUser'
 
 const props = withDefaults(defineProps<SidebarProps>(), {
   collapsible: 'icon',
 })
 
-const tenants = [
+const { currentUser, fetchCurrentUser } = useCurrentUser()
+
+onMounted(async () => {
+  if (!currentUser.value) {
+    await fetchCurrentUser()
+  }
+})
+
+const tenants = computed(() => [
   {
-    name: 'Мой тенант',
+    name: currentUser.value?.tenantName ?? '...',
     logo: Building2,
   },
-]
+])
 
-const currentUser = {
-  name: 'Пользователь',
-  email: 'user@example.com',
+const currentUserInfo = computed(() => ({
+  name: currentUser.value?.displayName ?? currentUser.value?.email ?? 'Пользователь',
+  email: currentUser.value?.email ?? '',
   avatar: '',
-}
+}))
 
 function handleLogout(): void {
   localStorage.removeItem('accessToken')
+  localStorage.removeItem('userId')
+  localStorage.removeItem('tenantId')
   window.location.href = '/login'
 }
 
@@ -49,7 +61,7 @@ function handleProfile(): void {
     </SidebarContent>
     <SidebarFooter>
       <NavUser
-        :user="currentUser"
+        :user="currentUserInfo"
         @logout="handleLogout"
         @profile="handleProfile"
       />
