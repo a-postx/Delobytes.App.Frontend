@@ -41,9 +41,6 @@ const emit = defineEmits<{
         <CardTitle class="text-xl">
           Вход в Delobytes
         </CardTitle>
-        <CardDescription>
-          Войдите с помощью Yandex ID или по email
-        </CardDescription>
       </CardHeader>
       <CardContent>
         <form @submit.prevent="emit('submit')">

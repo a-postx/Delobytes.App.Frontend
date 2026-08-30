@@ -31,7 +31,7 @@ const router = createRouter({
       name: 'login',
       component: LoginView,
       meta: {
-        title: 'Login',
+        title: 'Вход',
       },
     },
     {
@@ -39,7 +39,7 @@ const router = createRouter({
       name: 'register',
       component: RegisterView,
       meta: {
-        title: 'Register',
+        title: 'Регистрация',
       },
     },
     {
@@ -47,7 +47,7 @@ const router = createRouter({
       name: 'setup-tenant',
       component: SetupTenantView,
       meta: {
-        title: 'Setup Tenant',
+        title: 'Создание пространства',
       },
     },
   ],

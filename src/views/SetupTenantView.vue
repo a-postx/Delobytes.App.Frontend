@@ -40,7 +40,7 @@ const handleSetup = async () => {
 
     router.push('/')
   } catch (err: unknown) {
-    error.value = extractErrorMessage(err, 'Ошибка создания тенанта. Попробуйте ещё раз.')
+    error.value = extractErrorMessage(err, 'Ошибка создания рабочего пространства. Попробуйте ещё раз.')
   } finally {
     loading.value = false
   }

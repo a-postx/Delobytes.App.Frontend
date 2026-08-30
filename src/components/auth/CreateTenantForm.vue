@@ -31,9 +31,6 @@ const emit = defineEmits<{
   <Card>
     <CardHeader>
       <CardTitle>Настройка рабочего пространства</CardTitle>
-      <CardDescription>
-        Создайте свой первый тенант для начала работы
-      </CardDescription>
     </CardHeader>
     <CardContent>
       <form @submit.prevent="emit('submit')">
