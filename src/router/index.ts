@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import AppLayout from '@/layouts/AppLayout.vue'
 import HomeView from '@/views/HomeView.vue'
 import LoginView from '@/views/LoginView.vue'
 import RegisterView from '@/views/RegisterView.vue'
@@ -9,38 +10,47 @@ const router = createRouter({
   routes: [
     {
       path: '/',
-      name: 'home',
-      component: HomeView,
+      component: AppLayout,
       meta: {
-        title: 'Home',
-        requiresAuth: true
-      }
+        requiresAuth: true,
+      },
+      children: [
+        {
+          path: '',
+          name: 'home',
+          component: HomeView,
+          meta: {
+            title: 'Компоненты',
+            requiresAuth: true,
+          },
+        },
+      ],
     },
     {
       path: '/login',
       name: 'login',
       component: LoginView,
       meta: {
-        title: 'Login'
-      }
+        title: 'Login',
+      },
     },
     {
       path: '/register',
       name: 'register',
       component: RegisterView,
       meta: {
-        title: 'Register'
-      }
+        title: 'Register',
+      },
     },
     {
       path: '/setup-tenant',
       name: 'setup-tenant',
       component: SetupTenantView,
       meta: {
-        title: 'Setup Tenant'
-      }
-    }
-  ]
+        title: 'Setup Tenant',
+      },
+    },
+  ],
 })
 
 router.beforeEach((to, _from, next) => {
@@ -49,15 +59,12 @@ router.beforeEach((to, _from, next) => {
     document.title = `${title} - Delobytes`
   }
 
-  // Check authentication
   const token = localStorage.getItem('accessToken')
   const requiresAuth = to.meta.requiresAuth
 
   if (requiresAuth && !token) {
-    // Redirect to login if route requires auth and user is not authenticated
     next('/login')
   } else if ((to.name === 'login' || to.name === 'register') && token) {
-    // Redirect to home if user is already authenticated
     next('/')
   } else {
     next()
