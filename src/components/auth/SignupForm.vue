@@ -3,7 +3,6 @@ import { Button } from "@/components/ui/button"
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
@@ -35,9 +34,6 @@ const emit = defineEmits<{
   <Card>
     <CardHeader>
       <CardTitle>Регистрация в Delobytes</CardTitle>
-      <CardDescription>
-        Введите данные ниже для создания аккаунта
-      </CardDescription>
     </CardHeader>
     <CardContent>
       <form @submit.prevent="emit('submit')">
@@ -54,9 +50,6 @@ const emit = defineEmits<{
               :model-value="email"
               @update:model-value="emit('update:email', $event as string)"
             />
-            <FieldDescription>
-              Мы будем использовать его для связи с вами. Мы не передаём email третьим лицам.
-            </FieldDescription>
           </Field>
           <Field>
             <FieldLabel for="password">
