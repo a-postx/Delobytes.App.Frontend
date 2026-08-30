@@ -1,51 +1,3 @@
-<template>
-  <div class="login-page">
-    <div class="login-container">
-      <h1>Вход в Delobytes</h1>
-
-      <form @submit.prevent="handleLogin" class="login-form">
-        <div class="form-group">
-          <label for="email">Email</label>
-          <input
-            id="email"
-            v-model="email"
-            type="email"
-            required
-            placeholder="your@email.com"
-          />
-        </div>
-
-        <div class="form-group">
-          <label for="password">Пароль</label>
-          <input
-            id="password"
-            v-model="password"
-            type="password"
-            required
-            placeholder="Введите пароль"
-          />
-        </div>
-
-        <button type="submit" :disabled="loading" class="btn-primary">
-          {{ loading ? 'Вход...' : 'Войти' }}
-        </button>
-
-        <div v-if="error" class="error-message">{{ error }}</div>
-      </form>
-
-      <div class="divider">или</div>
-
-      <button @click="loginWithYandex" class="btn-yandex" :disabled="loading">
-        Войти через Yandex ID
-      </button>
-
-      <div class="register-link">
-        <router-link to="/register">Нет аккаунта? Зарегистрируйтесь</router-link>
-      </div>
-    </div>
-  </div>
-</template>
-
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
@@ -90,148 +42,87 @@ const loginWithYandex = () => {
 }
 </script>
 
-<style scoped>
-.login-page {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 100vh;
-  position: fixed;
-  inset: 0;
-  background: #f5f5f5;
-  z-index: 10;
-  padding: 1rem;
-  overflow-y: auto;
-}
+<template>
+  <div class="fixed inset-0 z-10 flex items-center justify-center overflow-y-auto bg-muted/50 p-4">
+    <div class="w-full max-w-sm rounded-lg border border-border bg-card p-7 shadow-sm">
+      <h1 class="mb-5 text-center text-xl font-semibold text-card-foreground">
+        Вход в Delobytes
+      </h1>
 
-.login-container {
-  background: white;
-  padding: 1.75rem;
-  border-radius: 8px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-  width: 100%;
-  max-width: 340px;
-  margin: auto;
-}
+      <form class="flex flex-col gap-3.5" @submit.prevent="handleLogin">
+        <div class="flex flex-col gap-1.5">
+          <label
+            for="email"
+            class="text-sm font-medium text-foreground"
+          >
+            Email
+          </label>
+          <input
+            id="email"
+            v-model="email"
+            type="email"
+            required
+            placeholder="your@email.com"
+            class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1"
+          />
+        </div>
 
-h1 {
-  margin-bottom: 1.25rem;
-  text-align: center;
-  color: #333;
-  font-size: 1.25rem;
-  font-weight: 600;
-}
+        <div class="flex flex-col gap-1.5">
+          <label
+            for="password"
+            class="text-sm font-medium text-foreground"
+          >
+            Пароль
+          </label>
+          <input
+            id="password"
+            v-model="password"
+            type="password"
+            required
+            placeholder="Введите пароль"
+            class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1"
+          />
+        </div>
 
-.login-form {
-  display: flex;
-  flex-direction: column;
-  gap: 0.875rem;
-}
+        <button
+          type="submit"
+          :disabled="loading"
+          class="mt-0.5 w-full rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {{ loading ? 'Вход...' : 'Войти' }}
+        </button>
 
-.form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 0.375rem;
-}
+        <div
+          v-if="error"
+          class="rounded-md bg-destructive/10 px-3 py-2 text-center text-xs text-destructive"
+        >
+          {{ error }}
+        </div>
+      </form>
 
-label {
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: #555;
-}
+      <div class="relative my-4 flex items-center">
+        <div class="flex-1 border-t border-border" />
+        <span class="mx-3 text-xs text-muted-foreground">или</span>
+        <div class="flex-1 border-t border-border" />
+      </div>
 
-input {
-  padding: 0.5rem 0.75rem;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 0.9375rem;
-}
+      <button
+        :disabled="loading"
+        class="w-full rounded-md bg-yellow-400 px-3 py-2 text-sm font-medium text-black transition-colors hover:bg-yellow-300 disabled:cursor-not-allowed disabled:opacity-60"
+        @click="loginWithYandex"
+      >
+        Войти через Yandex ID
+      </button>
 
-input:focus {
-  outline: none;
-  border-color: #4CAF50;
-}
-
-.btn-primary,
-.btn-yandex {
-  padding: 0.5rem 0.75rem;
-  border: none;
-  border-radius: 4px;
-  font-size: 0.9375rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background-color 0.2s;
-  width: 100%;
-}
-
-.btn-primary {
-  background: #4CAF50;
-  color: white;
-}
-
-.btn-primary:hover:not(:disabled) {
-  background: #45a049;
-}
-
-.btn-yandex {
-  background: #ffcc00;
-  color: #000;
-  margin-top: 0;
-}
-
-.btn-yandex:hover:not(:disabled) {
-  background: #e6b800;
-}
-
-button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.error-message {
-  color: #f44336;
-  font-size: 0.8125rem;
-  text-align: center;
-}
-
-.divider {
-  text-align: center;
-  margin: 1rem 0;
-  color: #999;
-  font-size: 0.875rem;
-  position: relative;
-}
-
-.divider::before,
-.divider::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  width: 40%;
-  height: 1px;
-  background: #ddd;
-}
-
-.divider::before {
-  left: 0;
-}
-
-.divider::after {
-  right: 0;
-}
-
-.register-link {
-  text-align: center;
-  margin-top: 1rem;
-  font-size: 0.875rem;
-}
-
-.register-link a {
-  color: #4CAF50;
-  text-decoration: none;
-}
-
-.register-link a:hover {
-  text-decoration: underline;
-}
-</style>
+      <p class="mt-4 text-center text-sm text-muted-foreground">
+        Нет аккаунта?
+        <router-link
+          to="/register"
+          class="font-medium text-primary underline-offset-4 hover:underline"
+        >
+          Зарегистрируйтесь
+        </router-link>
+      </p>
+    </div>
+  </div>
+</template>
