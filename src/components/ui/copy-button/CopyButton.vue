@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { Copy, Check } from 'lucide-vue-next'
-import { ref, onMounted } from 'vue'
 import type { HTMLAttributes } from 'vue'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip'
