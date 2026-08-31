@@ -5,16 +5,15 @@ import GoogleCallbackView from '@/views/GoogleCallbackView.vue'
 
 // ── Shared mocks ──────────────────────────────────────────────────────────────
 
+let useApiMock: any
+let useCurrentUserMock: any
+
 vi.mock('@/composables/useApi', () => ({
-  useApi: () => ({
-    post: vi.fn(),
-  }),
+  useApi: () => useApiMock(),
 }))
 
 vi.mock('@/composables/useCurrentUser', () => ({
-  useCurrentUser: () => ({
-    fetchCurrentUser: vi.fn(),
-  }),
+  useCurrentUser: () => useCurrentUserMock(),
 }))
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -58,6 +57,10 @@ describe('GoogleCallbackView', () => {
     vi.clearAllMocks()
     sessionStorage.clear()
     localStorage.clear()
+    
+    // Default mocks
+    useApiMock = () => ({ post: vi.fn() })
+    useCurrentUserMock = () => ({ fetchCurrentUser: vi.fn() })
   })
 
   // ── Error param from Google ───────────────────────────────────────────────
@@ -136,9 +139,8 @@ describe('GoogleCallbackView', () => {
   // ── Spinner while loading ─────────────────────────────────────────────────
 
   it('shows loading spinner before API call resolves', async () => {
-    const { useApi } = await import('@/composables/useApi')
     const postMock = vi.fn(() => new Promise(() => { /* never resolves */ }))
-    vi.mocked(useApi).mockReturnValue({ post: postMock } as any)
+    useApiMock = () => ({ post: postMock })
 
     sessionStorage.setItem('google_oauth_state', 'valid-state')
     setQueryParams({ code: 'code', state: 'valid-state' })
@@ -151,17 +153,16 @@ describe('GoogleCallbackView', () => {
   // ── Successful login ──────────────────────────────────────────────────────
 
   it('stores tokens and navigates to / on successful login', async () => {
-    const { useApi } = await import('@/composables/useApi')
     const postMock = vi.fn().mockResolvedValue({
       accessToken: 'google-jwt',
       userId: 'user-g1',
       tenantId: 'tenant-g1',
       requiresTenantSetup: false,
     })
-    vi.mocked(useApi).mockReturnValue({ post: postMock } as any)
+    useApiMock = () => ({ post: postMock })
 
-    const { useCurrentUser } = await import('@/composables/useCurrentUser')
-    vi.mocked(useCurrentUser).mockReturnValue({ fetchCurrentUser: vi.fn().mockResolvedValue(undefined) } as any)
+    const fetchMock = vi.fn().mockResolvedValue(undefined)
+    useCurrentUserMock = () => ({ fetchCurrentUser: fetchMock })
 
     sessionStorage.setItem('google_oauth_state', 'st')
     setQueryParams({ code: 'code', state: 'st' })
@@ -176,18 +177,16 @@ describe('GoogleCallbackView', () => {
   })
 
   it('calls fetchCurrentUser after storing tokens', async () => {
-    const { useApi } = await import('@/composables/useApi')
     const postMock = vi.fn().mockResolvedValue({
       accessToken: 'jwt',
       userId: 'u',
       tenantId: 't',
       requiresTenantSetup: false,
     })
-    vi.mocked(useApi).mockReturnValue({ post: postMock } as any)
+    useApiMock = () => ({ post: postMock })
 
-    const { useCurrentUser } = await import('@/composables/useCurrentUser')
     const fetchMock = vi.fn().mockResolvedValue(undefined)
-    vi.mocked(useCurrentUser).mockReturnValue({ fetchCurrentUser: fetchMock } as any)
+    useCurrentUserMock = () => ({ fetchCurrentUser: fetchMock })
 
     sessionStorage.setItem('google_oauth_state', 'st')
     setQueryParams({ code: 'code', state: 'st' })
@@ -201,14 +200,13 @@ describe('GoogleCallbackView', () => {
   // ── Tenant setup required ─────────────────────────────────────────────────
 
   it('stores userId and navigates to /setup-tenant when tenant setup is required', async () => {
-    const { useApi } = await import('@/composables/useApi')
     const postMock = vi.fn().mockResolvedValue({
-      accessToken: '',
+      accessToken: null,
       userId: 'user-new-g',
-      tenantId: null,
+      tenantId: 'tenant-g1',
       requiresTenantSetup: true,
     })
-    vi.mocked(useApi).mockReturnValue({ post: postMock } as any)
+    useApiMock = () => ({ post: postMock })
 
     sessionStorage.setItem('google_oauth_state', 'st')
     setQueryParams({ code: 'code', state: 'st' })
@@ -224,11 +222,10 @@ describe('GoogleCallbackView', () => {
   // ── API error ─────────────────────────────────────────────────────────────
 
   it('shows error message when backend call fails', async () => {
-    const { useApi } = await import('@/composables/useApi')
     const postMock = vi.fn().mockRejectedValue({
       response: { data: { message: 'Google auth failed' } },
     })
-    vi.mocked(useApi).mockReturnValue({ post: postMock } as any)
+    useApiMock = () => ({ post: postMock })
 
     sessionStorage.setItem('google_oauth_state', 'st')
     setQueryParams({ code: 'code', state: 'st' })
@@ -240,9 +237,8 @@ describe('GoogleCallbackView', () => {
   })
 
   it('shows fallback error when backend returns no message', async () => {
-    const { useApi } = await import('@/composables/useApi')
     const postMock = vi.fn().mockRejectedValue(new Error('Network Error'))
-    vi.mocked(useApi).mockReturnValue({ post: postMock } as any)
+    useApiMock = () => ({ post: postMock })
 
     sessionStorage.setItem('google_oauth_state', 'st')
     setQueryParams({ code: 'code', state: 'st' })
@@ -264,20 +260,19 @@ describe('GoogleCallbackView', () => {
     expect(link.text()).toContain('Вернуться на страницу входа')
   })
 
-  // ── Correct endpoint and redirect URI ─────────────────────────────────────
+  // ── Correct endpoint and redirect URI ──────────────────────────────────────
 
   it('POSTs to /api/auth/google/callback with the code and correct redirect URI', async () => {
-    const { useApi } = await import('@/composables/useApi')
     const postMock = vi.fn().mockResolvedValue({
       accessToken: 'jwt',
       userId: 'u',
       tenantId: 't',
       requiresTenantSetup: false,
     })
-    vi.mocked(useApi).mockReturnValue({ post: postMock } as any)
+    useApiMock = () => ({ post: postMock })
 
-    const { useCurrentUser } = await import('@/composables/useCurrentUser')
-    vi.mocked(useCurrentUser).mockReturnValue({ fetchCurrentUser: vi.fn().mockResolvedValue(undefined) } as any)
+    const fetchMock = vi.fn().mockResolvedValue(undefined)
+    useCurrentUserMock = () => ({ fetchCurrentUser: fetchMock })
 
     sessionStorage.setItem('google_oauth_state', 'st')
     setQueryParams({ code: 'google-code-123', state: 'st' })
@@ -292,17 +287,16 @@ describe('GoogleCallbackView', () => {
   })
 
   it('does not POST to the Yandex callback endpoint', async () => {
-    const { useApi } = await import('@/composables/useApi')
     const postMock = vi.fn().mockResolvedValue({
       accessToken: 'jwt',
       userId: 'u',
       tenantId: 't',
       requiresTenantSetup: false,
     })
-    vi.mocked(useApi).mockReturnValue({ post: postMock } as any)
+    useApiMock = () => ({ post: postMock })
 
-    const { useCurrentUser } = await import('@/composables/useCurrentUser')
-    vi.mocked(useCurrentUser).mockReturnValue({ fetchCurrentUser: vi.fn().mockResolvedValue(undefined) } as any)
+    const fetchMock = vi.fn().mockResolvedValue(undefined)
+    useCurrentUserMock = () => ({ fetchCurrentUser: fetchMock })
 
     sessionStorage.setItem('google_oauth_state', 'st')
     setQueryParams({ code: 'code', state: 'st' })

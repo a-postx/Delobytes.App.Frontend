@@ -5,16 +5,15 @@ import YandexCallbackView from '@/views/YandexCallbackView.vue'
 
 // ── Shared mocks ──────────────────────────────────────────────────────────────
 
+let useApiMock: any
+let useCurrentUserMock: any
+
 vi.mock('@/composables/useApi', () => ({
-  useApi: () => ({
-    post: vi.fn(),
-  }),
+  useApi: () => useApiMock(),
 }))
 
 vi.mock('@/composables/useCurrentUser', () => ({
-  useCurrentUser: () => ({
-    fetchCurrentUser: vi.fn(),
-  }),
+  useCurrentUser: () => useCurrentUserMock(),
 }))
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -58,9 +57,13 @@ describe('YandexCallbackView', () => {
     vi.clearAllMocks()
     sessionStorage.clear()
     localStorage.clear()
+    
+    // Default mocks
+    useApiMock = () => ({ post: vi.fn() })
+    useCurrentUserMock = () => ({ fetchCurrentUser: vi.fn() })
   })
 
-  // ── Error param from Yandex ───────────────────────────────────────────────
+  // ── Error param from Yandex ──────────────────────────────────────────────
 
   it('shows access_denied message when Yandex returns error=access_denied', async () => {
     setQueryParams({ error: 'access_denied' })
@@ -126,9 +129,8 @@ describe('YandexCallbackView', () => {
   // ── Spinner while loading ─────────────────────────────────────────────────
 
   it('shows loading spinner before API call resolves', async () => {
-    const { useApi } = await import('@/composables/useApi')
     const postMock = vi.fn(() => new Promise(() => { /* never resolves */ }))
-    vi.mocked(useApi).mockReturnValue({ post: postMock } as any)
+    useApiMock = () => ({ post: postMock })
 
     sessionStorage.setItem('yandex_oauth_state', 'valid-state')
     setQueryParams({ code: 'code', state: 'valid-state' })
@@ -142,18 +144,16 @@ describe('YandexCallbackView', () => {
   // ── Successful login ──────────────────────────────────────────────────────
 
   it('stores tokens and navigates to / on successful login', async () => {
-    const { useApi } = await import('@/composables/useApi')
     const postMock = vi.fn().mockResolvedValue({
       accessToken: 'jwt-abc',
       userId: 'user-1',
       tenantId: 'tenant-1',
       requiresTenantSetup: false,
     })
-    vi.mocked(useApi).mockReturnValue({ post: postMock } as any)
+    useApiMock = () => ({ post: postMock })
 
-    const { useCurrentUser } = await import('@/composables/useCurrentUser')
     const fetchMock = vi.fn().mockResolvedValue(undefined)
-    vi.mocked(useCurrentUser).mockReturnValue({ fetchCurrentUser: fetchMock } as any)
+    useCurrentUserMock = () => ({ fetchCurrentUser: fetchMock })
 
     sessionStorage.setItem('yandex_oauth_state', 'st')
     setQueryParams({ code: 'code', state: 'st' })
@@ -168,18 +168,16 @@ describe('YandexCallbackView', () => {
   })
 
   it('calls fetchCurrentUser after storing tokens', async () => {
-    const { useApi } = await import('@/composables/useApi')
     const postMock = vi.fn().mockResolvedValue({
       accessToken: 'jwt',
       userId: 'u',
       tenantId: 't',
       requiresTenantSetup: false,
     })
-    vi.mocked(useApi).mockReturnValue({ post: postMock } as any)
+    useApiMock = () => ({ post: postMock })
 
-    const { useCurrentUser } = await import('@/composables/useCurrentUser')
     const fetchMock = vi.fn().mockResolvedValue(undefined)
-    vi.mocked(useCurrentUser).mockReturnValue({ fetchCurrentUser: fetchMock } as any)
+    useCurrentUserMock = () => ({ fetchCurrentUser: fetchMock })
 
     sessionStorage.setItem('yandex_oauth_state', 'st')
     setQueryParams({ code: 'code', state: 'st' })
@@ -193,14 +191,13 @@ describe('YandexCallbackView', () => {
   // ── Tenant setup required ─────────────────────────────────────────────────
 
   it('stores userId and navigates to /setup-tenant when tenant setup is required', async () => {
-    const { useApi } = await import('@/composables/useApi')
     const postMock = vi.fn().mockResolvedValue({
-      accessToken: '',
+      accessToken: null,
       userId: 'user-new',
-      tenantId: null,
+      tenantId: 'tenant-1',
       requiresTenantSetup: true,
     })
-    vi.mocked(useApi).mockReturnValue({ post: postMock } as any)
+    useApiMock = () => ({ post: postMock })
 
     sessionStorage.setItem('yandex_oauth_state', 'st')
     setQueryParams({ code: 'code', state: 'st' })
@@ -216,11 +213,10 @@ describe('YandexCallbackView', () => {
   // ── API error ─────────────────────────────────────────────────────────────
 
   it('shows error message when backend call fails', async () => {
-    const { useApi } = await import('@/composables/useApi')
     const postMock = vi.fn().mockRejectedValue({
       response: { data: { message: 'Сервер недоступен' } },
     })
-    vi.mocked(useApi).mockReturnValue({ post: postMock } as any)
+    useApiMock = () => ({ post: postMock })
 
     sessionStorage.setItem('yandex_oauth_state', 'st')
     setQueryParams({ code: 'code', state: 'st' })
@@ -232,9 +228,8 @@ describe('YandexCallbackView', () => {
   })
 
   it('shows fallback error when backend returns no message', async () => {
-    const { useApi } = await import('@/composables/useApi')
     const postMock = vi.fn().mockRejectedValue(new Error('Network Error'))
-    vi.mocked(useApi).mockReturnValue({ post: postMock } as any)
+    useApiMock = () => ({ post: postMock })
 
     sessionStorage.setItem('yandex_oauth_state', 'st')
     setQueryParams({ code: 'code', state: 'st' })
@@ -256,20 +251,19 @@ describe('YandexCallbackView', () => {
     expect(link.text()).toContain('Вернуться на страницу входа')
   })
 
-  // ── Correct redirect URI sent to backend ──────────────────────────────────
+  // ── Correct redirect URI sent to backend ───────────────────────────────────
 
   it('sends the correct redirect URI to the backend', async () => {
-    const { useApi } = await import('@/composables/useApi')
     const postMock = vi.fn().mockResolvedValue({
       accessToken: 'jwt',
       userId: 'u',
       tenantId: 't',
       requiresTenantSetup: false,
     })
-    vi.mocked(useApi).mockReturnValue({ post: postMock } as any)
+    useApiMock = () => ({ post: postMock })
 
-    const { useCurrentUser } = await import('@/composables/useCurrentUser')
-    vi.mocked(useCurrentUser).mockReturnValue({ fetchCurrentUser: vi.fn().mockResolvedValue(undefined) } as any)
+    const fetchMock = vi.fn().mockResolvedValue(undefined)
+    useCurrentUserMock = () => ({ fetchCurrentUser: fetchMock })
 
     sessionStorage.setItem('yandex_oauth_state', 'st')
     setQueryParams({ code: 'mycode', state: 'st' })
