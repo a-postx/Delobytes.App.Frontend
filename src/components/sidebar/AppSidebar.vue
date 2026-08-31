@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { Building2 } from 'lucide-vue-next'
 import NavMain from '@/components/sidebar/NavMain.vue'
 import NavUser from '@/components/sidebar/NavUser.vue'
@@ -18,6 +19,7 @@ const props = withDefaults(defineProps<SidebarProps>(), {
   collapsible: 'icon',
 })
 
+const router = useRouter()
 const { currentUser, fetchCurrentUser } = useCurrentUser()
 
 onMounted(async () => {
@@ -46,12 +48,8 @@ function handleLogout(): void {
   window.location.href = '/login'
 }
 
-function handleSettings(): void {
-  window.location.href = '/settings'
-}
-
 function handleTenantSettings(): void {
-  window.location.href = '/tenant-settings'
+  router.push('/tenant-settings')
 }
 </script>
 
@@ -67,7 +65,6 @@ function handleTenantSettings(): void {
       <NavUser
         :user="currentUserInfo"
         @logout="handleLogout"
-        @settings="handleSettings"
         @tenant-settings="handleTenantSettings"
       />
     </SidebarFooter>

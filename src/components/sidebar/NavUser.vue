@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useRouter } from 'vue-router'
 import { BadgeCheck, ChevronsUpDown, LogOut } from 'lucide-vue-next'
 import {
   Avatar,
@@ -21,6 +22,8 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar'
 
+const router = useRouter()
+
 defineProps<{
   user: {
     name: string
@@ -31,7 +34,6 @@ defineProps<{
 
 const emit = defineEmits<{
   logout: []
-  settings: []
   tenantSettings: []
 }>()
 
@@ -55,7 +57,7 @@ const { isMobile } = useSidebar()
             </Avatar>
             <div class="grid flex-1 text-left text-sm leading-tight">
               <span class="truncate font-medium">{{ user.email }}</span>
-              <span class="truncate text-xs text-primary hover:underline cursor-pointer">Настройки</span>
+              <span class="truncate text-xs text-primary hover:underline cursor-pointer" @click="router.push('/settings')">Настройки</span>
             </div>
             <ChevronsUpDown class="ml-auto size-4" />
           </SidebarMenuButton>

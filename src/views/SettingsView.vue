@@ -8,9 +8,13 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
+import { Label } from '@/components/ui/label'
 import { useCurrentUser } from '@/composables/useCurrentUser'
+import { useTheme } from '@/composables/useTheme'
 
 const { currentUser, fetchCurrentUser } = useCurrentUser()
+const { theme, setTheme } = useTheme()
 
 onMounted(async () => {
   if (!currentUser.value) {
@@ -26,9 +30,30 @@ const userEmail = computed(() => currentUser.value?.email ?? '')
     <div class="flex flex-col gap-2">
       <h1 class="text-3xl font-bold">Настройки</h1>
       <p class="text-muted-foreground">
-        Эти настройки отражаются во всех пространствах, в которых вы работаете.
+        Настройте всё как надо.
       </p>
     </div>
+
+    <Card>
+      <CardHeader>
+        <CardTitle>Внешний вид</CardTitle>
+        <CardDescription>
+          Выберите тему оформления интерфейса
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <RadioGroup :model-value="theme" @update:model-value="setTheme">
+          <div class="flex items-center space-x-2">
+            <RadioGroupItem id="light" value="light" />
+            <Label for="light" class="cursor-pointer font-normal">Светло</Label>
+          </div>
+          <div class="flex items-center space-x-2">
+            <RadioGroupItem id="dark" value="dark" />
+            <Label for="dark" class="cursor-pointer font-normal">Темно</Label>
+          </div>
+        </RadioGroup>
+      </CardContent>
+    </Card>
 
     <Card>
       <CardHeader>
