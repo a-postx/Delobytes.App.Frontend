@@ -35,17 +35,13 @@ const syncTenantName = (): void => {
   initialName.value = name
 }
 
-onMounted(() => {
-  syncTenantName()
-})
-
 // Watch currentUser to sync tenant name when it changes
 watch(
-  () => currentUser.value?.tenantName,
-  (newName: string | undefined) => {
-    if (newName !== undefined && newName !== localTenantName.value) {
-      localTenantName.value = newName
-      initialName.value = newName
+  () => currentUser.value,
+  (user: any) => {
+    if (user?.tenantName) {
+      localTenantName.value = user.tenantName
+      initialName.value = user.tenantName
     }
   },
   { immediate: true }

@@ -31,21 +31,22 @@ const handleCopy = async (): Promise<void> => {
       return
     }
 
-    const parentElement = buttonRef.value.parentElement
+    // Ищем ближайший родительский элемент с классом relative
+    const relativeContainer = buttonRef.value.closest('.relative')
 
-    if (!parentElement) {
-      console.error('Parent element not found')
+    if (!relativeContainer) {
+      console.error('Relative container not found')
       return
     }
 
-    // Пытаемся получить текст из input/textarea
-    const inputElement = parentElement.querySelector('input, textarea') as HTMLInputElement | HTMLTextAreaElement
+    // Пытаемся получить текст из input/textarea внутри relative контейнера
+    const inputElement = relativeContainer.querySelector('input, textarea') as HTMLInputElement | HTMLTextAreaElement
     let text = inputElement?.value
 
     // Если input/textarea нет, берем textContent
     if (!text) {
       // Клонируем элемент и удаляем из него кнопку для получения чистого текста
-      const clone = parentElement.cloneNode(true) as HTMLElement
+      const clone = relativeContainer.cloneNode(true) as HTMLElement
       const buttonInClone = clone.querySelector('[data-slot="button"]')
       if (buttonInClone) {
         buttonInClone.remove()
