@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Copy, Check } from 'lucide-vue-next'
-import { ref, getCurrentInstance } from 'vue'
+import { ref, onMounted } from 'vue'
 import type { HTMLAttributes } from 'vue'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip'
@@ -22,16 +22,21 @@ const props = withDefaults(defineProps<Props>(), {
 
 const { success } = useNotification()
 const isCopied = ref<boolean>(false)
+const buttonRef = ref<HTMLElement | null>(null)
 
 const handleCopy = async (): Promise<void> => {
   try {
-    const instance = getCurrentInstance()
-    if (!instance?.parent?.$el) {
-      console.error('Parent element not found')
+    if (!buttonRef.value) {
+      console.error('Button ref not found')
       return
     }
 
-    const parentElement = instance.parent.$el
+    const parentElement = buttonRef.value.parentElement
+
+    if (!parentElement) {
+      console.error('Parent element not found')
+      return
+    }
 
     // Пытаемся получить текст из input/textarea
     const inputElement = parentElement.querySelector('input, textarea') as HTMLInputElement | HTMLTextAreaElement
@@ -39,7 +44,13 @@ const handleCopy = async (): Promise<void> => {
 
     // Если input/textarea нет, берем textContent
     if (!text) {
-      text = parentElement.textContent?.trim() || ''
+      // Клонируем элемент и удаляем из него кнопку для получения чистого текста
+      const clone = parentElement.cloneNode(true) as HTMLElement
+      const buttonInClone = clone.querySelector('[data-slot="button"]')
+      if (buttonInClone) {
+        buttonInClone.remove()
+      }
+      text = clone.textContent?.trim() || ''
     }
 
     if (!text) {
@@ -65,6 +76,7 @@ const handleCopy = async (): Promise<void> => {
     <Tooltip>
       <TooltipTrigger as-child>
         <Button
+          ref="buttonRef"
           :variant="variant"
           :size="size"
           :class="props.class"
