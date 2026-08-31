@@ -17,6 +17,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import YandexLoginButton from "@/components/auth/YandexLoginButton.vue"
+import GoogleLoginButton from "@/components/auth/GoogleLoginButton.vue"
 
 const props = defineProps<{
   class?: HTMLAttributes["class"]
@@ -31,6 +32,7 @@ const emit = defineEmits<{
   (e: "update:password", value: string): void
   (e: "submit"): void
   (e: "yandex"): void
+  (e: "google"): void
 }>()
 </script>
 
@@ -49,6 +51,12 @@ const emit = defineEmits<{
               <YandexLoginButton
                 :loading="loading"
                 @click="emit('yandex')"
+              />
+            </Field>
+            <Field>
+              <GoogleLoginButton
+                :loading="loading"
+                @click="emit('google')"
               />
             </Field>
             <FieldSeparator>

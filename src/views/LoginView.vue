@@ -57,7 +57,6 @@ const handleYandex = () => {
     return
   }
 
-  // Store a random state value to verify the callback and prevent CSRF.
   const state = crypto.randomUUID()
   sessionStorage.setItem('yandex_oauth_state', state)
 
@@ -73,6 +72,36 @@ const handleYandex = () => {
 
   window.location.href = `https://oauth.yandex.ru/authorize?${params.toString()}`
 }
+
+/**
+ * Redirects the browser to the Google OAuth 2.0 authorization endpoint.
+ * After the user grants access, Google redirects back to /auth/google/callback
+ * where GoogleCallbackView.vue completes the code exchange.
+ */
+const handleGoogle = () => {
+  const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID as string
+
+  if (!clientId) {
+    error.value = 'Google не настроен. Обратитесь к администратору.'
+    return
+  }
+
+  const state = crypto.randomUUID()
+  sessionStorage.setItem('google_oauth_state', state)
+
+  const redirectUri = `${window.location.origin}/auth/google/callback`
+
+  const params = new URLSearchParams({
+    response_type: 'code',
+    client_id: clientId,
+    redirect_uri: redirectUri,
+    scope: 'openid email',
+    state,
+    access_type: 'online',
+  })
+
+  window.location.href = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`
+}
 </script>
 
 <template>
@@ -85,6 +114,7 @@ const handleYandex = () => {
         :error="error"
         @submit="handleLogin"
         @yandex="handleYandex"
+        @google="handleGoogle"
       />
     </div>
   </div>
