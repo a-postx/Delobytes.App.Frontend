@@ -12,6 +12,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Label } from '@/components/ui/label'
 import { useCurrentUser } from '@/composables/useCurrentUser'
 import { useTheme } from '@/composables/useTheme'
+import type { Theme } from '@/composables/useTheme'
 
 const { currentUser, fetchCurrentUser } = useCurrentUser()
 const { theme, setTheme } = useTheme()
@@ -42,7 +43,7 @@ const userEmail = computed(() => currentUser.value?.email ?? '')
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <RadioGroup :model-value="theme" @update:model-value="setTheme">
+        <RadioGroup :model-value="theme" @update:model-value="(v) => setTheme(v as Theme)">
           <div class="flex items-center space-x-2">
             <RadioGroupItem id="light" value="light" />
             <Label for="light" class="cursor-pointer font-normal">Светло</Label>

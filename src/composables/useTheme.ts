@@ -1,7 +1,7 @@
 import { computed } from 'vue'
 import { useStorage } from '@vueuse/core'
 
-type Theme = 'light' | 'dark'
+export type Theme = 'light' | 'dark'
 
 const THEME_STORAGE_KEY = 'app-theme'
 const DARK_CLASS = 'dark'
@@ -31,7 +31,7 @@ export function useTheme() {
   }
 
   const toggleTheme = (): void => {
-    const newTheme = theme.value === 'light' ? 'dark' : 'light'
+    const newTheme: Theme = theme.value === 'light' ? 'dark' : 'light'
     setTheme(newTheme)
   }
 
