@@ -126,8 +126,9 @@ describe('TenantSettingsView', () => {
     await input.trigger('blur')
     await nextTick()
 
-    // Spinner should be visible
-    expect(wrapper.text()).toContain('spinner')
+    // Spinner should be visible (check for spinner container)
+    const spinnerContainer = wrapper.find('.absolute.right-3')
+    expect(spinnerContainer.exists()).toBe(true)
 
     // Resolve the promise
     resolvePromise!({
@@ -135,9 +136,10 @@ describe('TenantSettingsView', () => {
       name: 'New Name'
     })
     await nextTick()
+    await nextTick()
 
-    // Spinner should be hidden
-    expect(wrapper.find('.spinner').exists()).toBe(false)
+    // Spinner should be hidden after promise resolves
+    expect(wrapper.find('.absolute.right-3').exists()).toBe(false)
   })
 
   it('shows success toast on successful update', async () => {
