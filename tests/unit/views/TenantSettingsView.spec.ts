@@ -56,14 +56,14 @@ describe('TenantSettingsView', () => {
     expect((input.element as HTMLInputElement).value).toBe('Test Tenant')
   })
 
-  it('displays tenant ID in disabled input field', async () => {
+  it('displays tenant ID in readonly input field', async () => {
     wrapper = mount(TenantSettingsView)
     await nextTick()
 
     const input = wrapper.find('input#tenant-id')
     expect(input.exists()).toBe(true)
     expect((input.element as HTMLInputElement).value).toBe('123e4567-e89b-12d3-a456-426614174001')
-    expect((input.element as HTMLInputElement).disabled).toBe(true)
+    expect((input.element as HTMLInputElement).readOnly).toBe(true)
   })
 
   it('does not call API when name is not changed on blur', async () => {

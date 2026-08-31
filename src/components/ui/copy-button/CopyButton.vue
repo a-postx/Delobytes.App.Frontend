@@ -7,7 +7,7 @@ import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/comp
 import { useNotification } from '@/composables/useNotification'
 import type { ButtonVariants } from '@/components/ui/button'
 
-interface Props extends Record<string, any> {
+interface Props {
   variant?: ButtonVariants['variant']
   size?: ButtonVariants['size']
   tooltipText?: string
