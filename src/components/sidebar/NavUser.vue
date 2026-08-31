@@ -57,7 +57,7 @@ const { isMobile } = useSidebar()
             </Avatar>
             <div class="grid flex-1 text-left text-sm leading-tight">
               <span class="truncate font-medium">{{ user.email }}</span>
-              <span class="truncate text-xs text-primary hover:underline cursor-pointer" @click="router.push('/settings')">Настройки</span>
+              <span class="truncate text-xs text-primary underline">Настройки</span>
             </div>
             <ChevronsUpDown class="ml-auto size-4" />
           </SidebarMenuButton>
@@ -77,7 +77,7 @@ const { isMobile } = useSidebar()
                 </AvatarFallback>
               </Avatar>
               <div class="grid flex-1 text-left text-sm leading-tight">
-                <span class="truncate font-semibold">{{ user.email }}</span>
+                <span class="truncate font-semibold cursor-pointer hover:underline" @click="router.push('/settings')">{{ user.email }}</span>
               </div>
             </div>
           </DropdownMenuLabel>
