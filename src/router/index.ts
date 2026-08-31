@@ -6,6 +6,7 @@ import RegisterView from '@/views/RegisterView.vue'
 import SetupTenantView from '@/views/SetupTenantView.vue'
 import SettingsView from '@/views/SettingsView.vue'
 import TenantSettingsView from '@/views/TenantSettingsView.vue'
+import YandexCallbackView from '@/views/YandexCallbackView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -68,6 +69,14 @@ const router = createRouter({
       component: SetupTenantView,
       meta: {
         title: 'Создание пространства',
+      },
+    },
+    {
+      path: '/auth/yandex/callback',
+      name: 'yandex-callback',
+      component: YandexCallbackView,
+      meta: {
+        title: 'Вход через Яндекс',
       },
     },
   ],

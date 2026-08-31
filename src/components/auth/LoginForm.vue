@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import type { HTMLAttributes } from "vue"
 import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
 import {
   Card,
   CardContent,
@@ -16,6 +15,8 @@ import {
   FieldSeparator,
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button"
+import YandexLoginButton from "@/components/auth/YandexLoginButton.vue"
 
 const props = defineProps<{
   class?: HTMLAttributes["class"]
@@ -45,24 +46,10 @@ const emit = defineEmits<{
         <form @submit.prevent="emit('submit')">
           <FieldGroup>
             <Field>
-              <Button
-                variant="outline"
-                type="button"
-                class="w-full"
-                :disabled="loading"
+              <YandexLoginButton
+                :loading="loading"
                 @click="emit('yandex')"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 24 24"
-                  class="size-4"
-                  fill="currentColor"
-                  aria-hidden="true"
-                >
-                  <path d="M2.04 12c0-5.523 4.476-10 9.998-10C17.522 2 22 6.477 22 12s-4.478 10-10.002 10C6.516 22 2.04 17.523 2.04 12zm11.212 4.688V7.313h1.046c1.812 0 2.77.978 2.77 2.644 0 1.09-.479 1.88-1.358 2.32l1.937 4.411h-1.585l-1.69-4.085h-.597v4.085h-1.523zm0-5.277h.93c.882 0 1.356-.527 1.356-1.496 0-.97-.474-1.47-1.357-1.47h-.929v2.966z"/>
-                </svg>
-                Войти через Yandex ID
-              </Button>
+              />
             </Field>
             <FieldSeparator>
               или продолжить с email

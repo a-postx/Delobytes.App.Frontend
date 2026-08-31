@@ -44,8 +44,34 @@ const handleLogin = async () => {
   }
 }
 
+/**
+ * Redirects the browser to the Yandex OAuth 2.0 authorization endpoint.
+ * After the user grants access, Yandex redirects back to /auth/yandex/callback
+ * where YandexCallbackView.vue completes the code exchange.
+ */
 const handleYandex = () => {
-  error.value = 'Вход через Yandex ID будет реализован в следующих версиях'
+  const clientId = import.meta.env.VITE_YANDEX_CLIENT_ID as string
+
+  if (!clientId) {
+    error.value = 'Yandex ID не настроен. Обратитесь к администратору.'
+    return
+  }
+
+  // Store a random state value to verify the callback and prevent CSRF.
+  const state = crypto.randomUUID()
+  sessionStorage.setItem('yandex_oauth_state', state)
+
+  const redirectUri = `${window.location.origin}/auth/yandex/callback`
+
+  const params = new URLSearchParams({
+    response_type: 'code',
+    client_id: clientId,
+    redirect_uri: redirectUri,
+    scope: 'login:info login:email',
+    state,
+  })
+
+  window.location.href = `https://oauth.yandex.ru/authorize?${params.toString()}`
 }
 </script>
 
