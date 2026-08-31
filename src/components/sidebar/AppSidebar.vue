@@ -46,8 +46,12 @@ function handleLogout(): void {
   window.location.href = '/login'
 }
 
-function handleProfile(): void {
-  // TODO: navigate to profile page
+function handleSettings(): void {
+  window.location.href = '/settings'
+}
+
+function handleTenantSettings(): void {
+  window.location.href = '/tenant-settings'
 }
 </script>
 
@@ -63,7 +67,8 @@ function handleProfile(): void {
       <NavUser
         :user="currentUserInfo"
         @logout="handleLogout"
-        @profile="handleProfile"
+        @settings="handleSettings"
+        @tenant-settings="handleTenantSettings"
       />
     </SidebarFooter>
     <SidebarRail />

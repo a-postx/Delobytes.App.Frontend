@@ -31,7 +31,8 @@ defineProps<{
 
 const emit = defineEmits<{
   logout: []
-  profile: []
+  settings: []
+  tenantSettings: []
 }>()
 
 const { isMobile } = useSidebar()
@@ -53,8 +54,8 @@ const { isMobile } = useSidebar()
               </AvatarFallback>
             </Avatar>
             <div class="grid flex-1 text-left text-sm leading-tight">
-              <span class="truncate font-medium">{{ user.name }}</span>
-              <span class="truncate text-xs">{{ user.email }}</span>
+              <span class="truncate font-medium">{{ user.email }}</span>
+              <span class="truncate text-xs text-primary hover:underline cursor-pointer">Настройки</span>
             </div>
             <ChevronsUpDown class="ml-auto size-4" />
           </SidebarMenuButton>
@@ -74,16 +75,15 @@ const { isMobile } = useSidebar()
                 </AvatarFallback>
               </Avatar>
               <div class="grid flex-1 text-left text-sm leading-tight">
-                <span class="truncate font-semibold">{{ user.name }}</span>
-                <span class="truncate text-xs">{{ user.email }}</span>
+                <span class="truncate font-semibold">{{ user.email }}</span>
               </div>
             </div>
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
           <DropdownMenuGroup>
-            <DropdownMenuItem @click="emit('profile')">
+            <DropdownMenuItem @click="emit('tenantSettings')">
               <BadgeCheck />
-              Профиль
+              Настройки пространства
             </DropdownMenuItem>
           </DropdownMenuGroup>
           <DropdownMenuSeparator />

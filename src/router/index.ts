@@ -4,6 +4,8 @@ import HomeView from '@/views/HomeView.vue'
 import LoginView from '@/views/LoginView.vue'
 import RegisterView from '@/views/RegisterView.vue'
 import SetupTenantView from '@/views/SetupTenantView.vue'
+import SettingsView from '@/views/SettingsView.vue'
+import TenantSettingsView from '@/views/TenantSettingsView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -21,6 +23,24 @@ const router = createRouter({
           component: HomeView,
           meta: {
             title: 'Компоненты',
+            requiresAuth: true,
+          },
+        },
+        {
+          path: 'settings',
+          name: 'settings',
+          component: SettingsView,
+          meta: {
+            title: 'Настройки',
+            requiresAuth: true,
+          },
+        },
+        {
+          path: 'tenant-settings',
+          name: 'tenant-settings',
+          component: TenantSettingsView,
+          meta: {
+            title: 'Настройки пространства',
             requiresAuth: true,
           },
         },
