@@ -28,13 +28,6 @@ const localTenantName = ref<string>('')
 const isUpdating = ref<boolean>(false)
 const initialName = ref<string>('')
 
-// Sync localTenantName with currentUser
-const syncTenantName = (): void => {
-  const name: string = currentUser.value?.tenantName ?? ''
-  localTenantName.value = name
-  initialName.value = name
-}
-
 // Watch currentUser to sync tenant name when it changes
 watch(
   () => currentUser.value,
