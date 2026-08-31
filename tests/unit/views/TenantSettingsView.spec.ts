@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { mount, VueWrapper } from '@vue/test-utils'
+import { mount, VueWrapper, flushPromises } from '@vue/test-utils'
 import { nextTick } from 'vue'
 import TenantSettingsView from '@/views/TenantSettingsView.vue'
 import { tenantApi } from '@/services/api'
@@ -135,7 +135,9 @@ describe('TenantSettingsView', () => {
       tenantId: '123e4567-e89b-12d3-a456-426614174001',
       name: 'New Name'
     })
-    await nextTick()
+    
+    // Wait for all promises and DOM updates
+    await flushPromises()
     await nextTick()
 
     // Spinner should be hidden after promise resolves
@@ -157,8 +159,7 @@ describe('TenantSettingsView', () => {
     const input = wrapper.find('input#tenant-name')
     await input.setValue('Updated Name')
     await input.trigger('blur')
-    await nextTick()
-    await nextTick() // Wait for promise resolution
+    await flushPromises()
 
     expect(toast.success).toHaveBeenCalledWith('Имя пространства успешно изменено')
   })
@@ -181,8 +182,7 @@ describe('TenantSettingsView', () => {
     const input = wrapper.find('input#tenant-name')
     await input.setValue('Invalid Name')
     await input.trigger('blur')
-    await nextTick()
-    await nextTick() // Wait for promise rejection
+    await flushPromises()
 
     expect(toast.error).toHaveBeenCalledWith('Ошибка обновления')
     // Should revert to original value
