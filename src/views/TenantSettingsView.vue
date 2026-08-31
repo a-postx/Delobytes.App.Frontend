@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import {
   Card,
   CardContent,
@@ -9,6 +9,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Spinner } from '@/components/ui/spinner'
+import { CopyButton } from '@/components/ui/copy-button'
 import { useCurrentUser } from '@/composables/useCurrentUser'
 import { tenantApi } from '@/services/api'
 import { toast } from 'vue-sonner'
@@ -37,6 +38,18 @@ const syncTenantName = (): void => {
 onMounted(() => {
   syncTenantName()
 })
+
+// Watch currentUser to sync tenant name when it changes
+watch(
+  () => currentUser.value?.tenantName,
+  (newName: string | undefined) => {
+    if (newName !== undefined && newName !== localTenantName.value) {
+      localTenantName.value = newName
+      initialName.value = newName
+    }
+  },
+  { immediate: true }
+)
 
 const handleBlur = async (): Promise<void> => {
   const trimmedName: string = localTenantName.value.trim()
@@ -75,7 +88,7 @@ const handleBlur = async (): Promise<void> => {
 <template>
   <div class="flex flex-col gap-6 p-6">
     <div class="flex flex-col gap-2">
-      <h1 class="text-3xl font-bold">Настройки пространства</h1>
+      <h1 class="text-2xl font-bold">Настройки пространства</h1>
       <p class="text-muted-foreground">
         Дайте вашему пространству понятное имя, чтобы ваша команда могла удобно переключаться между ними.
       </p>
@@ -83,7 +96,7 @@ const handleBlur = async (): Promise<void> => {
 
     <Card>
       <CardHeader>
-        <CardTitle>Информация о пространстве</CardTitle>
+        <CardTitle class="text-lg">Информация о пространстве</CardTitle>
       </CardHeader>
       <CardContent class="space-y-4">
         <div class="space-y-2">
@@ -102,12 +115,18 @@ const handleBlur = async (): Promise<void> => {
         </div>
         <div class="space-y-2">
           <Label for="tenant-id">Идентификатор пространства</Label>
-          <Input
-            id="tenant-id"
-            :model-value="tenantId"
-            placeholder="ID пространства"
-            disabled
-          />
+          <div class="relative">
+            <Input
+              id="tenant-id"
+              :model-value="tenantId"
+              placeholder="ID пространства"
+              readonly
+              class="pr-10 select-text cursor-text"
+            />
+            <div class="absolute right-1 top-1/2 -translate-y-1/2">
+              <CopyButton tooltip-text="Копировать ID" />
+            </div>
+          </div>
         </div>
       </CardContent>
     </Card>
