@@ -55,7 +55,7 @@ const activeTenant = ref(props.tenants[0]!)
           :side-offset="4"
         >
           <DropdownMenuLabel class="text-xs text-muted-foreground">
-            Тенанты
+            Пространства
           </DropdownMenuLabel>
           <DropdownMenuItem
             v-for="(tenant) in tenants"
