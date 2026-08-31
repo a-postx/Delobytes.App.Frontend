@@ -1,4 +1,4 @@
-import { computed, onMounted } from 'vue'
+import { computed } from 'vue'
 import { useStorage } from '@vueuse/core'
 
 type Theme = 'light' | 'dark'
