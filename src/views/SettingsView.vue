@@ -43,14 +43,18 @@ const userEmail = computed(() => currentUser.value?.email ?? '')
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <RadioGroup :model-value="theme" @update:model-value="(v) => setTheme(v as Theme)">
-          <div class="flex items-center space-x-2">
+        <RadioGroup
+          class="flex flex-col gap-2.5"
+          :model-value="theme"
+          @update:model-value="(v) => setTheme(v as Theme)"
+        >
+          <div class="flex items-center">
             <RadioGroupItem id="light" value="light" />
-            <Label for="light" class="cursor-pointer font-normal">Светло</Label>
+            <Label for="light" class="cursor-pointer font-normal pl-[15px]">Светло</Label>
           </div>
-          <div class="flex items-center space-x-2">
+          <div class="flex items-center">
             <RadioGroupItem id="dark" value="dark" />
-            <Label for="dark" class="cursor-pointer font-normal">Темно</Label>
+            <Label for="dark" class="cursor-pointer font-normal pl-[15px]">Темно</Label>
           </div>
         </RadioGroup>
       </CardContent>
