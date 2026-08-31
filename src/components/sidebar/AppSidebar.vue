@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup lang=\"ts\">
 import { computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { Building2 } from 'lucide-vue-next'
@@ -51,21 +51,26 @@ function handleLogout(): void {
 function handleTenantSettings(): void {
   router.push('/tenant-settings')
 }
+
+function handleUserSettings(): void {
+  router.push('/settings')
+}
 </script>
 
 <template>
-  <Sidebar v-bind="props">
+  <Sidebar v-bind=\"props\">
     <SidebarHeader>
-      <TenantSwitcher :tenants="tenants" />
+      <TenantSwitcher :tenants=\"tenants\" />
     </SidebarHeader>
     <SidebarContent>
       <NavMain />
     </SidebarContent>
     <SidebarFooter>
       <NavUser
-        :user="currentUserInfo"
-        @logout="handleLogout"
-        @tenant-settings="handleTenantSettings"
+        :user=\"currentUserInfo\"
+        @logout=\"handleLogout\"
+        @tenant-settings=\"handleTenantSettings\"
+        @user-settings=\"handleUserSettings\"
       />
     </SidebarFooter>
     <SidebarRail />
