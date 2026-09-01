@@ -12,13 +12,13 @@ describe('YandexLoginButton', () => {
 
   it('shows default label text', () => {
     const wrapper = mount(YandexLoginButton)
-    expect(wrapper.text()).toContain('Войти с Яндекс ID')
+    expect(wrapper.text()).toContain('Войти с Яндекс')
   })
 
   it('shows loading text when loading prop is true', () => {
     const wrapper = mount(YandexLoginButton, { props: { loading: true } })
     expect(wrapper.text()).toContain('Подождите...')
-    expect(wrapper.text()).not.toContain('Войти с Яндекс ID')
+    expect(wrapper.text()).not.toContain('Войти с Яндекс')
   })
 
   it('renders the Яндекс brand badge with letter Я', () => {

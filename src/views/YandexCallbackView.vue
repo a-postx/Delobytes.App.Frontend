@@ -3,6 +3,7 @@ import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useApi } from '@/composables/useApi'
 import { useCurrentUser } from '@/composables/useCurrentUser'
+import { Spinner } from '@/components/ui/spinner'
 
 const router = useRouter()
 const { post } = useApi()
@@ -70,27 +71,7 @@ onMounted(async () => {
     <div class="flex w-full max-w-sm flex-col items-center gap-4 text-center">
       <template v-if="!error">
         <!-- Spinner while the code exchange is in progress -->
-        <svg
-          class="h-8 w-8 animate-spin text-muted-foreground"
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
-          aria-hidden="true"
-        >
-          <circle
-            class="opacity-25"
-            cx="12"
-            cy="12"
-            r="10"
-            stroke="currentColor"
-            stroke-width="4"
-          />
-          <path
-            class="opacity-75"
-            fill="currentColor"
-            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-          />
-        </svg>
+        <Spinner size="lg" class="text-muted-foreground" />
         <p class="text-sm text-muted-foreground">
           Вход через Яндекс…
         </p>
