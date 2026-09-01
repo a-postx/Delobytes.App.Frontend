@@ -57,7 +57,6 @@ const { isMobile } = useSidebar()
             </Avatar>
             <div class="grid flex-1 text-left text-sm leading-tight">
               <span class="truncate font-medium">{{ user.email }}</span>
-              <span class="truncate text-xs text-primary underline">Настройки</span>
             </div>
           </SidebarMenuButton>
         </DropdownMenuTrigger>
@@ -76,9 +75,8 @@ const { isMobile } = useSidebar()
                 </AvatarFallback>
               </Avatar>
               <div class="grid flex-1 text-left text-sm leading-tight">
-                <span
-                  class="truncate font-semibold"
-                >{{ user.email }}</span>
+                <span class="truncate font-semibold">{{ user.email }}</span>
+				<span class="truncate text-xs text-primary underline">Настройки</span>
               </div>
             </div>
           </DropdownMenuLabel>
