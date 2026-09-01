@@ -29,7 +29,7 @@ const userEmail = computed(() => currentUser.value?.email ?? '')
 <template>
   <div class="flex flex-col gap-6 p-6">
     <div class="flex flex-col gap-2">
-      <h1 class="text-3xl font-bold">Настройки</h1>
+      <h1 class="text-2xl font-bold">Настройки</h1>
       <p class="text-muted-foreground">
         Настройте всё как надо.
       </p>
@@ -37,7 +37,7 @@ const userEmail = computed(() => currentUser.value?.email ?? '')
 
     <Card>
       <CardHeader>
-        <CardTitle>Внешний вид</CardTitle>
+        <CardTitle class="text-lg">Внешний вид</CardTitle>
         <CardDescription>
           Выберите тему оформления интерфейса
         </CardDescription>
@@ -62,7 +62,7 @@ const userEmail = computed(() => currentUser.value?.email ?? '')
 
     <Card>
       <CardHeader>
-        <CardTitle>Пароль</CardTitle>
+        <CardTitle class="text-lg">Пароль</CardTitle>
         <CardDescription>
           Мы отправим письмо с волшебной ссылкой на {{ userEmail }}.
           Эта ссылка позволит создать новый пароль.
