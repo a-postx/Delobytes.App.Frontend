@@ -28,32 +28,25 @@ const buttonRef = ref<HTMLElement | null>(null)
 
 const handleCopy = async (): Promise<void> => {
   try {
-    if (!buttonRef.value) {
-      console.error('Button ref not found')
-      return
-    }
+    let text: string = props.value
 
-    // Ищем ближайший родительский элемент с классом relative
-    const relativeContainer = buttonRef.value.closest('.relative')
+    // Если значение не передано через props, пытаемся найти его в DOM
+    if (!text && buttonRef.value) {
+      const relativeContainer = buttonRef.value.closest('.relative')
 
-    if (!relativeContainer) {
-      console.error('Relative container not found')
-      return
-    }
+      if (relativeContainer) {
+        const inputElement = relativeContainer.querySelector('input, textarea') as HTMLInputElement | HTMLTextAreaElement
+        text = inputElement?.value || ''
 
-    // Пытаемся получить текст из input/textarea внутри relative контейнера
-    const inputElement = relativeContainer.querySelector('input, textarea') as HTMLInputElement | HTMLTextAreaElement
-    let text = inputElement?.value
-
-    // Если input/textarea нет, берем textContent
-    if (!text) {
-      // Клонируем элемент и удаляем из него кнопку для получения чистого текста
-      const clone = relativeContainer.cloneNode(true) as HTMLElement
-      const buttonInClone = clone.querySelector('[data-slot="button"]')
-      if (buttonInClone) {
-        buttonInClone.remove()
+        if (!text) {
+          const clone = relativeContainer.cloneNode(true) as HTMLElement
+          const buttonInClone = clone.querySelector('[data-slot="button"]')
+          if (buttonInClone) {
+            buttonInClone.remove()
+          }
+          text = clone.textContent?.trim() || ''
+        }
       }
-      text = clone.textContent?.trim() || ''
     }
 
     if (!text) {
