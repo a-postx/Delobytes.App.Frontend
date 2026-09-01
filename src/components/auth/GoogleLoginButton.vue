@@ -18,9 +18,9 @@ const emit = defineEmits<{
     :disabled="loading"
     :class="cn(
       'inline-flex h-9 w-full items-center justify-center gap-2.5 rounded-md border px-4 py-2',
-      'bg-background text-sm font-medium text-foreground shadow-xs',
-      'transition-colors hover:bg-accent hover:text-accent-foreground',
-      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-2',
+      'bg-[#ABD6FF] text-sm font-medium text-foreground shadow-xs',
+      'transition-colors hover:bg-[#9AC0E5]',
+      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ABD6FF]/50 focus-visible:ring-offset-2',
       'disabled:pointer-events-none disabled:opacity-50',
       'dark:bg-input/30 dark:border-input dark:hover:bg-input/50',
       props.class

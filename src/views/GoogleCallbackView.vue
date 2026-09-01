@@ -89,7 +89,7 @@ onMounted(async () => {
           />
         </svg>
         <p class="text-sm text-muted-foreground">
-          Выполняется вход через Google…
+          Вход через Google…
         </p>
       </template>
 

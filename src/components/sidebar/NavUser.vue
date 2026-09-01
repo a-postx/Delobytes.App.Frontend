@@ -11,7 +11,6 @@ import {
   DropdownMenuContent,
   DropdownMenuGroup,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
@@ -66,7 +65,7 @@ const { isMobile } = useSidebar()
           align="end"
           :side-offset="4"
         >
-          <DropdownMenuLabel class="p-0 font-normal cursor-pointer hover:bg-accent" @click="router.push('/settings')">
+          <DropdownMenuItem class="p-0 font-normal" @click="router.push('/settings')">
             <div class="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
               <Avatar class="h-8 w-8 rounded-lg">
                 <AvatarImage :src="user.avatar" :alt="user.name" />
@@ -79,7 +78,7 @@ const { isMobile } = useSidebar()
 				<span class="truncate text-xs text-primary underline">Настройки</span>
               </div>
             </div>
-          </DropdownMenuLabel>
+          </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuGroup>
             <DropdownMenuItem @click="emit('tenantSettings')">
@@ -90,7 +89,7 @@ const { isMobile } = useSidebar()
           <DropdownMenuSeparator />
           <DropdownMenuItem @click="emit('logout')">
             <LogOut />
-            Выход из приложения
+            Выход
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

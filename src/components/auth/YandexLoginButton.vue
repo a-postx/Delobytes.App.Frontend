@@ -34,6 +34,6 @@ const emit = defineEmits<{
       Я
     </span>
 
-    <span>{{ loading ? 'Подождите...' : 'Войти с Яндекс ID' }}</span>
+    <span>{{ loading ? 'Подождите...' : 'Войти с Яндекс' }}</span>
   </button>
 </template>

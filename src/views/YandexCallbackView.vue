@@ -92,7 +92,7 @@ onMounted(async () => {
           />
         </svg>
         <p class="text-sm text-muted-foreground">
-          Выполняется вход через Яндекс…
+          Вход через Яндекс…
         </p>
       </template>
 
