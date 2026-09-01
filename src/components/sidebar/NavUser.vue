@@ -75,7 +75,7 @@ const { isMobile } = useSidebar()
               </Avatar>
               <div class="grid flex-1 text-left text-sm leading-tight">
                 <span class="truncate font-semibold">{{ user.email }}</span>
-				<span class="truncate text-xs text-primary underline">Настройки</span>
+				<span class="truncate text-xs text-muted-foreground underline">Настройки</span>
               </div>
             </div>
           </DropdownMenuItem>
