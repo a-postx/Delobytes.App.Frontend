@@ -12,12 +12,14 @@ interface Props {
   size?: ButtonVariants['size']
   tooltipText?: string
   class?: HTMLAttributes['class']
+  value?: string
 }
 
 const props = withDefaults(defineProps<Props>(), {
   variant: 'ghost',
   size: 'icon-sm',
-  tooltipText: 'Copy to clipboard'
+  tooltipText: 'Copy to clipboard',
+  value: ''
 })
 
 const { success } = useNotification()

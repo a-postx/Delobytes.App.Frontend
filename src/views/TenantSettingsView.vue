@@ -113,7 +113,7 @@ const handleBlur = async (): Promise<void> => {
               class="pr-10 select-text cursor-text"
             />
             <div class="absolute right-1 top-1/2 -translate-y-1/2">
-              <CopyButton tooltip-text="Копировать ID" />
+              <CopyButton :value="tenantId" tooltip-text="Копировать ID" />
             </div>
           </div>
         </div>
