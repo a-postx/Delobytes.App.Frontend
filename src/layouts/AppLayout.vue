@@ -1,52 +1,18 @@
 <script setup lang="ts">
+import AppNavBar from '@/components/AppNavBar.vue'
 import AppSidebar from '@/components/sidebar/AppSidebar.vue'
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from '@/components/ui/breadcrumb'
-import { Separator } from '@/components/ui/separator'
 import {
   SidebarInset,
   SidebarProvider,
-  SidebarTrigger,
 } from '@/components/ui/sidebar'
-import { RouterView, useRoute } from 'vue-router'
-import { computed } from 'vue'
-
-const route = useRoute()
-
-const breadcrumbLabel = computed<string>(() => {
-  return (route.meta.title as string) ?? ''
-})
+import { RouterView } from 'vue-router'
 </script>
 
 <template>
   <SidebarProvider>
     <AppSidebar />
     <SidebarInset>
-      <header class="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
-        <div class="flex items-center gap-2 px-4">
-          <SidebarTrigger class="-ml-1" />
-          <Separator
-            orientation="vertical"
-            class="mr-2 h-4"
-          />
-          <Breadcrumb>
-            <BreadcrumbList>
-              <BreadcrumbItem class="hidden md:block">
-                <BreadcrumbPage>Платформа</BreadcrumbPage>
-              </BreadcrumbItem>
-              <BreadcrumbSeparator class="hidden md:block" />
-              <BreadcrumbItem>
-                <BreadcrumbPage>{{ breadcrumbLabel }}</BreadcrumbPage>
-              </BreadcrumbItem>
-            </BreadcrumbList>
-          </Breadcrumb>
-        </div>
-      </header>
+      <AppNavBar />
       <main class="flex flex-1 flex-col gap-4 p-4 pt-0">
         <RouterView />
       </main>
