@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
-import { BadgeCheck, ChevronsUpDown, LogOut } from 'lucide-vue-next'
+import { BadgeCheck, LogOut } from 'lucide-vue-next'
 import {
   Avatar,
   AvatarFallback,
@@ -59,7 +59,6 @@ const { isMobile } = useSidebar()
               <span class="truncate font-medium">{{ user.email }}</span>
               <span class="truncate text-xs text-primary underline">Настройки</span>
             </div>
-            <ChevronsUpDown class="ml-auto size-4" />
           </SidebarMenuButton>
         </DropdownMenuTrigger>
         <DropdownMenuContent
