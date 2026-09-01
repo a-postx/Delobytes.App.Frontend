@@ -68,7 +68,7 @@ const { isMobile } = useSidebar()
           align="end"
           :side-offset="4"
         >
-          <DropdownMenuLabel class="p-0 font-normal">
+          <DropdownMenuLabel class="p-0 font-normal cursor-pointer hover:bg-accent" @click="router.push('/settings')">
             <div class="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
               <Avatar class="h-8 w-8 rounded-lg">
                 <AvatarImage :src="user.avatar" :alt="user.name" />
@@ -77,7 +77,9 @@ const { isMobile } = useSidebar()
                 </AvatarFallback>
               </Avatar>
               <div class="grid flex-1 text-left text-sm leading-tight">
-                <span class="truncate font-semibold cursor-pointer hover:underline" @click="router.push('/settings')">{{ user.email }}</span>
+                <span
+                  class="truncate font-semibold"
+                >{{ user.email }}</span>
               </div>
             </div>
           </DropdownMenuLabel>
