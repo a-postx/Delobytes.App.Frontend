@@ -68,7 +68,6 @@ const activeTenant = ref(props.tenants[0]!)
             </div>
             {{ tenant.name }}
           </DropdownMenuItem>
-          <DropdownMenuSeparator />
         </DropdownMenuContent>
       </DropdownMenu>
     </SidebarMenuItem>
