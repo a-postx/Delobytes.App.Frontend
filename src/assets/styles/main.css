@@ -4,80 +4,84 @@
 
 @layer base {
   :root {
-    --background: 40 100% 98%;
-    --foreground: 210 15% 35%;
+    --background: 30 20% 97%;
+    --foreground: 20 10% 15%;
     --card: 0 0% 100%;
-    --card-foreground: 210 15% 35%;
+    --card-foreground: 20 10% 15%;
     --popover: 0 0% 100%;
-    --popover-foreground: 210 15% 35%;
-    --primary: 30 90% 65%;
-    --primary-foreground: 210 15% 20%;
-    --secondary: 174 65% 58%;
-    --secondary-foreground: 0 0% 100%;
-    --muted: 30 30% 90%;
-    --muted-foreground: 210 10% 50%;
-    --accent: 30 90% 65%;
-    --accent-foreground: 210 15% 20%;
-    --destructive: 0 75% 58%;
+    --popover-foreground: 20 10% 15%;
+    --primary: 14 65% 55%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 140 25% 88%;
+    --secondary-foreground: 140 20% 25%;
+    --muted: 30 15% 93%;
+    --muted-foreground: 20 8% 48%;
+    --accent: 14 65% 55%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 75% 55%;
     --destructive-foreground: 0 0% 100%;
-    --border: 210 12% 88%;
-    --input: 210 12% 88%;
-    --ring: 30 90% 65%;
+    --border: 30 10% 88%;
+    --input: 30 10% 88%;
+    --ring: 14 65% 55%;
     --radius: 0.5rem;
 
     --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 210 12% 50%;
-    --sidebar-primary: 30 90% 65%;
+    --sidebar-foreground: 20 10% 30%;
+    --sidebar-primary: 14 65% 55%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 30 90% 65%;
-    --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 210 10% 90%;
-    --sidebar-ring: 30 90% 65%;
-    
-    --chart-1: 30 90% 65%;
-    --chart-2: 174 65% 58%;
-    --chart-3: 210 20% 70%;
-    --success: 150 65% 50%;
-    --warning: 30 90% 65%;
-    --info: 174 65% 58%;
+    --sidebar-accent: 14 50% 94%;
+    --sidebar-accent-foreground: 14 65% 45%;
+    --sidebar-border: 30 10% 90%;
+    --sidebar-ring: 14 65% 55%;
+
+    --chart-1: 14 65% 55%;
+    --chart-2: 150 30% 55%;
+    --chart-3: 35 80% 60%;
+    --success: 142 45% 48%;
+    --warning: 35 90% 55%;
+    --info: 210 75% 58%;
+    --pending: 35 90% 55%;
+    --completed: 142 45% 48%;
   }
 
   .dark {
-    --background: 210 25% 23%;
-    --foreground: 210 30% 92%;
-    --card: 210 22% 28%;
-    --card-foreground: 210 30% 92%;
-    --popover: 210 22% 28%;
-    --popover-foreground: 210 30% 92%;
-    --primary: 25 75% 50%;
+    --background: 160 8% 18%;
+    --foreground: 30 15% 90%;
+    --card: 160 8% 22%;
+    --card-foreground: 30 15% 90%;
+    --popover: 160 8% 22%;
+    --popover-foreground: 30 15% 90%;
+    --primary: 14 65% 58%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 175 55% 47%;
-    --secondary-foreground: 0 0% 100%;
-    --muted: 210 20% 35%;
-    --muted-foreground: 215 15% 65%;
-    --accent: 25 75% 50%;
+    --secondary: 160 8% 28%;
+    --secondary-foreground: 30 15% 85%;
+    --muted: 160 8% 28%;
+    --muted-foreground: 30 10% 60%;
+    --accent: 14 65% 58%;
     --accent-foreground: 0 0% 100%;
-    --destructive: 0 70% 55%;
+    --destructive: 0 65% 50%;
     --destructive-foreground: 0 0% 100%;
-    --border: 210 18% 32%;
-    --input: 210 18% 32%;
-    --ring: 25 75% 50%;
+    --border: 160 8% 28%;
+    --input: 160 8% 28%;
+    --ring: 14 65% 58%;
 
-    --sidebar-background: 215 28% 17%;
-    --sidebar-foreground: 215 15% 70%;
-    --sidebar-primary: 25 75% 50%;
+    --sidebar-background: 160 10% 14%;
+    --sidebar-foreground: 30 12% 78%;
+    --sidebar-primary: 14 65% 58%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 25 75% 50%;
-    --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 215 25% 22%;
-    --sidebar-ring: 25 75% 50%;
-    
-    --chart-1: 25 75% 50%;
-    --chart-2: 175 55% 47%;
-    --chart-3: 215 15% 52%;
-    --success: 150 60% 45%;
+    --sidebar-accent: 160 8% 22%;
+    --sidebar-accent-foreground: 14 65% 65%;
+    --sidebar-border: 160 8% 22%;
+    --sidebar-ring: 14 65% 58%;
+
+    --chart-1: 14 65% 58%;
+    --chart-2: 150 30% 52%;
+    --chart-3: 35 75% 58%;
+    --success: 142 40% 45%;
     --warning: 35 85% 55%;
-    --info: 175 55% 47%;
+    --info: 210 70% 58%;
+    --pending: 35 85% 55%;
+    --completed: 142 40% 45%;
   }
 }
 
