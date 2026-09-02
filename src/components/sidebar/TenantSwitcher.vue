@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { computed, ref } from 'vue'
 import type { Component } from 'vue'
 import { ChevronsUpDown } from 'lucide-vue-next'
 import {
@@ -23,17 +23,16 @@ const props = defineProps<{
   }[]
 }>()
 
-watch(
-  () => props.tenants[0],
-  (tenant) => {
-    if (tenant) {
-      activeTenant.value = tenant
-    }
-  }
-)
-
 const { isMobile } = useSidebar()
-const activeTenant = ref(props.tenants[0]!)
+
+// Track selected tenant by index — computed always derives from the current prop,
+// so any upstream change (page refresh, rename) is reflected automatically.
+const activeTenantIndex = ref(0)
+const activeTenant = computed(() => props.tenants[activeTenantIndex.value] ?? props.tenants[0]!)
+
+function selectTenant(index: number): void {
+  activeTenantIndex.value = index
+}
 </script>
 
 <template>
@@ -66,10 +65,10 @@ const activeTenant = ref(props.tenants[0]!)
             Пространства
           </DropdownMenuLabel>
           <DropdownMenuItem
-            v-for="(tenant) in tenants"
+            v-for="(tenant, index) in tenants"
             :key="tenant.name"
             class="gap-2 p-2"
-            @click="activeTenant = tenant"
+            @click="selectTenant(index)"
           >
             <div class="flex size-6 items-center justify-center rounded-sm border">
               <component :is="tenant.logo" class="size-3.5 shrink-0" />
