@@ -2,13 +2,13 @@
 import type { PaginationRootProps } from 'reka-ui'
 import { PaginationRoot } from 'reka-ui'
 
-interface Props extends PaginationRootProps {}
+interface Props extends Partial<PaginationRootProps> {}
 
-defineProps<Props>()
+const props = withDefaults(defineProps<Props>(), {})
 </script>
 
 <template>
-  <PaginationRoot v-bind="$attrs">
+  <PaginationRoot v-bind="{ ...props, ...$attrs }">
     <slot />
   </PaginationRoot>
 </template>
