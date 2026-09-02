@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import type { Component } from 'vue'
 import { ChevronsUpDown } from 'lucide-vue-next'
 import {
@@ -22,6 +22,15 @@ const props = defineProps<{
     logo: Component
   }[]
 }>()
+
+watch(
+  () => props.tenants[0],
+  (tenant) => {
+    if (tenant) {
+      activeTenant.value = tenant
+    }
+  }
+)
 
 const { isMobile } = useSidebar()
 const activeTenant = ref(props.tenants[0]!)
