@@ -25,6 +25,7 @@ const handleLogin = async () => {
     })
 
     if (response.requiresTenantSetup) {
+	  localStorage.setItem('accessToken', response.accessToken)
       localStorage.setItem('userId', response.userId)
       router.push('/setup-tenant')
     } else {
