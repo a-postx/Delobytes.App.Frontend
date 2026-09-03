@@ -1,5 +1,5 @@
 <script setup lang="ts" generic="T extends Record<string, any>">
-import { Icon } from '@iconify/vue'
+import { Check, Minus, ArrowUp, ArrowDown, ChevronsUpDown, Ellipsis, ChevronLeft, ChevronRight, MoreHorizontal } from 'lucide-vue-next'
 import {
   CheckboxIndicator,
   CheckboxRoot,
@@ -156,10 +156,8 @@ const menuItemClass = 'flex cursor-default select-none items-center gap-2 rounde
                   aria-label="Выбрать все строки на странице"
                 >
                   <CheckboxIndicator class="text-primary-foreground">
-                    <Icon
-                      :icon="pageSelection === 'indeterminate' ? 'lucide:minus' : 'lucide:check'"
-                      class="size-3"
-                    />
+                    <Minus v-if="pageSelection === 'indeterminate'" class="size-3" />
+                    <Check v-else class="size-3" />
                   </CheckboxIndicator>
                 </CheckboxRoot>
               </th>
@@ -178,10 +176,9 @@ const menuItemClass = 'flex cursor-default select-none items-center gap-2 rounde
                   @click="toggleSort(column.key)"
                 >
                   {{ column.label }}
-                  <Icon
-                    :icon="sortState.key === column.key ? (sortState.descending ? 'lucide:arrow-down' : 'lucide:arrow-up') : 'lucide:chevrons-up-down'"
-                    class="size-3.5"
-                  />
+                  <ArrowDown v-if="sortState.key === column.key && sortState.descending" class="size-3.5" />
+                  <ArrowUp v-else-if="sortState.key === column.key" class="size-3.5" />
+                  <ChevronsUpDown v-else class="size-3.5" />
                 </button>
                 <span
                   v-else
@@ -221,10 +218,7 @@ const menuItemClass = 'flex cursor-default select-none items-center gap-2 rounde
                   @update:model-value="toggleRow(row, $event)"
                 >
                   <CheckboxIndicator class="text-primary-foreground">
-                    <Icon
-                      icon="lucide:check"
-                      class="size-3"
-                    />
+                    <Check class="size-3" />
                   </CheckboxIndicator>
                 </CheckboxRoot>
               </td>
@@ -251,10 +245,7 @@ const menuItemClass = 'flex cursor-default select-none items-center gap-2 rounde
                     class="grid size-7 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 transition-colors"
                     aria-label="Действия"
                   >
-                    <Icon
-                      icon="lucide:ellipsis"
-                      class="size-4"
-                    />
+                    <Ellipsis class="size-4" />
                   </DropdownMenuTrigger>
                   <DropdownMenuPortal>
                     <DropdownMenuContent
@@ -274,10 +265,7 @@ const menuItemClass = 'flex cursor-default select-none items-center gap-2 rounde
                           :class="[menuItemClass, action.destructive && 'text-destructive']"
                           @select="action.handler(row)"
                         >
-                          <Icon
-                            :icon="action.icon"
-                            class="size-4"
-                          />
+                          <component :is="action.icon" class="size-4" />
                           {{ action.label }}
                         </DropdownMenuItem>
                       </template>
@@ -314,10 +302,7 @@ const menuItemClass = 'flex cursor-default select-none items-center gap-2 rounde
           class="flex items-center gap-1"
         >
           <PaginationPrev class="grid size-8 place-items-center rounded-md text-foreground hover:bg-muted disabled:opacity-40 focus:outline-none focus:ring-2 focus:ring-primary/40 transition-colors">
-            <Icon
-              icon="lucide:chevron-left"
-              class="size-4"
-            />
+            <ChevronLeft class="size-4" />
           </PaginationPrev>
           <template v-for="(item, index) in items">
             <PaginationListItem
@@ -338,10 +323,7 @@ const menuItemClass = 'flex cursor-default select-none items-center gap-2 rounde
             </PaginationEllipsis>
           </template>
           <PaginationNext class="grid size-8 place-items-center rounded-md text-foreground hover:bg-muted disabled:opacity-40 focus:outline-none focus:ring-2 focus:ring-primary/40 transition-colors">
-            <Icon
-              icon="lucide:chevron-right"
-              class="size-4"
-            />
+            <ChevronRight class="size-4" />
           </PaginationNext>
         </PaginationList>
       </PaginationRoot>
