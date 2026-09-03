@@ -10,28 +10,22 @@ const { post } = useApi()
 const tenantName = ref('')
 const loading = ref(false)
 const error = ref('')
-const userId = ref<string | null>(null)
 
 onMounted(() => {
-  userId.value = localStorage.getItem('userId')
+  const token = localStorage.getItem('accessToken')
 
-  if (!userId.value) {
+  if (!token) {
     router.push('/login')
   }
 })
 
 const handleSetup = async () => {
-  if (!userId.value) {
-    error.value = 'Ошибка: пользователь не найден'
-    return
-  }
-
   loading.value = true
   error.value = ''
 
   try {
+    // userId is now extracted from JWT token by backend
     const response = await post('/api/auth/create-tenant', {
-      userId: userId.value,
       tenantName: tenantName.value.trim()
     })
 

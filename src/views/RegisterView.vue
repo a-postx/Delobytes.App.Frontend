@@ -31,11 +31,19 @@ const handleRegister = async () => {
     })
 
     localStorage.setItem('userId', response.userId)
+    
+    // Save accessToken from registration response
+    if (response.accessToken) {
+      localStorage.setItem('accessToken', response.accessToken)
+    }
 
     if (response.requiresTenantSetup) {
       router.push('/setup-tenant')
     } else {
-      localStorage.setItem('accessToken', response.accessToken)
+      // User already has tenant (edge case)
+      if (!response.accessToken) {
+        localStorage.setItem('accessToken', response.accessToken)
+      }
       localStorage.setItem('tenantId', response.tenantId)
       router.push('/')
     }
