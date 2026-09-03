@@ -51,4 +51,12 @@ export interface CurrentUser {
   email: string
   tenantId: string
   tenantName: string
+  role: string
+  tenants: UserTenant[]
+}
+
+export interface UserTenant {
+  tenantId: string
+  tenantName: string
+  role: string
 }

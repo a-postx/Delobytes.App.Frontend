@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed } from 'vue'
 import type { Component } from 'vue'
-import { ChevronsUpDown } from 'lucide-vue-next'
+import { ChevronsUpDown, Building2 } from 'lucide-vue-next'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,28 +15,49 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from '@/components/ui/sidebar'
-
-const props = defineProps<{
-  tenants: {
-    name: string
-    logo: Component
-  }[]
-}>()
+import { useCurrentUser } from '@/composables/useCurrentUser'
+import { tenantApi } from '@/services/api'
+import { toast } from 'vue-sonner'
 
 const { isMobile } = useSidebar()
+const { currentUser, fetchCurrentUser } = useCurrentUser()
 
-// Track selected tenant by index — computed always derives from the current prop,
-// so any upstream change (page refresh, rename) is reflected automatically.
-const activeTenantIndex = ref(0)
-const activeTenant = computed(() => props.tenants[activeTenantIndex.value] ?? props.tenants[0]!)
+const activeTenant = computed(() => {
+  if (!currentUser.value) return null
+  return {
+    id: currentUser.value.tenantId,
+    name: currentUser.value.tenantName,
+  }
+})
 
-function selectTenant(index: number): void {
-  activeTenantIndex.value = index
+const availableTenants = computed(() => {
+  if (!currentUser.value?.tenants) return []
+  return currentUser.value.tenants.map((t) => ({
+    id: t.tenantId,
+    name: t.tenantName,
+    role: t.role,
+  }))
+})
+
+async function selectTenant(tenantId: string): Promise<void> {
+  if (tenantId === activeTenant.value?.id) return
+
+  try {
+    const response = await tenantApi.switchTenant(tenantId)
+    localStorage.setItem('accessToken', response.accessToken)
+    await fetchCurrentUser()
+    toast.success('Пространство успешно переключено')
+    window.location.reload()
+  } catch (error: unknown) {
+    const apiError = error as { response?: { data?: { message?: string } } }
+    const message: string = apiError.response?.data?.message ?? 'Не удалось переключить пространство'
+    toast.error(message)
+  }
 }
 </script>
 
 <template>
-  <SidebarMenu>
+  <SidebarMenu v-if="activeTenant && availableTenants.length > 0">
     <SidebarMenuItem>
       <DropdownMenu>
         <DropdownMenuTrigger as-child>
@@ -45,7 +66,7 @@ function selectTenant(index: number): void {
             class="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
           >
             <div class="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-              <component :is="activeTenant.logo" class="size-4" />
+              <Building2 class="size-4" />
             </div>
             <div class="grid flex-1 text-left text-sm leading-tight">
               <span class="truncate font-medium">
@@ -65,15 +86,19 @@ function selectTenant(index: number): void {
             Пространства
           </DropdownMenuLabel>
           <DropdownMenuItem
-            v-for="(tenant, index) in tenants"
-            :key="tenant.name"
+            v-for="tenant in availableTenants"
+            :key="tenant.id"
             class="gap-2 p-2"
-            @click="selectTenant(index)"
+            :class="{ 'bg-accent': tenant.id === activeTenant.id }"
+            @click="selectTenant(tenant.id)"
           >
             <div class="flex size-6 items-center justify-center rounded-sm border">
-              <component :is="tenant.logo" class="size-3.5 shrink-0" />
+              <Building2 class="size-3.5 shrink-0" />
             </div>
-            {{ tenant.name }}
+            <div class="flex flex-col">
+              <span>{{ tenant.name }}</span>
+              <span class="text-xs text-muted-foreground">{{ tenant.role }}</span>
+            </div>
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
