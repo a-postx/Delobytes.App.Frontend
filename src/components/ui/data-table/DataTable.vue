@@ -1,5 +1,5 @@
 <script setup lang="ts" generic="T extends Record<string, any>">
-import { Check, Minus, ArrowUp, ArrowDown, ChevronsUpDown, Ellipsis, ChevronLeft, ChevronRight, MoreHorizontal } from 'lucide-vue-next'
+import { Check, Minus, ArrowUp, ArrowDown, ChevronsUpDown, Ellipsis, ChevronLeft, ChevronRight } from 'lucide-vue-next'
 import {
   CheckboxIndicator,
   CheckboxRoot,
