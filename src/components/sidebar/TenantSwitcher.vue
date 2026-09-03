@@ -30,7 +30,17 @@ const activeTenant = computed(() => {
 })
 
 const availableTenants = computed(() => {
-  if (!currentUser.value?.tenants) return []
+  if (!currentUser.value?.tenants || currentUser.value.tenants.length === 0) {
+    // Fallback: if tenants array is not available, use current tenant info
+    if (currentUser.value) {
+      return [{
+        id: currentUser.value.tenantId,
+        name: currentUser.value.tenantName,
+        role: currentUser.value.role || 'Unknown',
+      }]
+    }
+    return []
+  }
   return currentUser.value.tenants.map((t) => ({
     id: t.tenantId,
     name: t.tenantName,
@@ -56,7 +66,7 @@ async function selectTenant(tenantId: string): Promise<void> {
 </script>
 
 <template>
-  <SidebarMenu v-if="activeTenant && availableTenants.length > 0">
+  <SidebarMenu>
     <SidebarMenuItem>
       <DropdownMenu>
         <DropdownMenuTrigger as-child>
@@ -69,13 +79,14 @@ async function selectTenant(tenantId: string): Promise<void> {
             </div>
             <div class="grid flex-1 text-left text-sm leading-tight">
               <span class="truncate font-medium">
-                {{ activeTenant.name }}
+                {{ activeTenant?.name || '...' }}
               </span>
             </div>
             <ChevronsUpDown class="ml-auto" />
           </SidebarMenuButton>
         </DropdownMenuTrigger>
         <DropdownMenuContent
+          v-if="availableTenants.length > 0"
           class="w-[var(--reka-dropdown-menu-trigger-width)] min-w-56 rounded-lg"
           align="start"
           :side="isMobile ? 'bottom' : 'right'"
@@ -88,7 +99,7 @@ async function selectTenant(tenantId: string): Promise<void> {
             v-for="tenant in availableTenants"
             :key="tenant.id"
             class="gap-2 p-2"
-            :class="{ 'bg-accent': tenant.id === activeTenant.id }"
+            :class="{ 'bg-accent': tenant.id === activeTenant?.id }"
             @click="selectTenant(tenant.id)"
           >
             <div class="flex size-6 items-center justify-center rounded-sm border">
