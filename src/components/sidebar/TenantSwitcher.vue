@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { Component } from 'vue'
 import { ChevronsUpDown, Building2 } from 'lucide-vue-next'
 import {
   DropdownMenu,
