@@ -278,12 +278,10 @@ const handleRevokeInvitation = async (): Promise<void> => {
 
   <AlertDialog :open="changeRoleDialog" @update:open="changeRoleDialog = $event">
     <AlertDialogContent>
-      <AlertDialogHeader>
-        <AlertDialogTitle>Изменить роль пользователя</AlertDialogTitle>
-        <AlertDialogDescription>
-          Выберите новую роль для пользователя {{ selectedMember?.email }}
-        </AlertDialogDescription>
-      </AlertDialogHeader>
+      <AlertDialogTitle>Изменить роль</AlertDialogTitle>
+      <AlertDialogDescription>
+          Выберите роль пользователя {{ selectedMember?.email }}
+      </AlertDialogDescription>
       <div class="py-4">
         <RadioGroup v-model="newRole" :disabled="isUpdatingRole">
           <div class="flex items-center space-x-2">
@@ -306,48 +304,38 @@ const handleRevokeInvitation = async (): Promise<void> => {
           </div>
         </RadioGroup>
       </div>
-      <AlertDialogFooter>
-        <AlertDialogCancel :disabled="isUpdatingRole">Отмена</AlertDialogCancel>
-        <AlertDialogAction @click="handleChangeRole" :disabled="isUpdatingRole || !newRole">
-          {{ isUpdatingRole ? 'Изменение...' : 'Изменить' }}
-        </AlertDialogAction>
-      </AlertDialogFooter>
+      <AlertDialogCancel :disabled="isUpdatingRole">Отмена</AlertDialogCancel>
+      <AlertDialogAction @click="handleChangeRole" :disabled="isUpdatingRole || !newRole">
+        {{ isUpdatingRole ? 'Изменение...' : 'Изменить' }}
+      </AlertDialogAction>
     </AlertDialogContent>
   </AlertDialog>
 
   <AlertDialog :open="removeDialog" @update:open="removeDialog = $event">
     <AlertDialogContent>
-      <AlertDialogHeader>
-        <AlertDialogTitle>Удалить пользователя</AlertDialogTitle>
-        <AlertDialogDescription>
-          Вы уверены, что хотите удалить пользователя {{ memberToRemove?.email }} из пространства?
-          Это действие нельзя отменить.
-        </AlertDialogDescription>
-      </AlertDialogHeader>
-      <AlertDialogFooter>
-        <AlertDialogCancel :disabled="isRemoving">Отмена</AlertDialogCancel>
-        <AlertDialogAction @click="handleRemoveMember" :disabled="isRemoving" class="bg-destructive hover:bg-destructive/90">
-          {{ isRemoving ? 'Удаление...' : 'Удалить' }}
-        </AlertDialogAction>
-      </AlertDialogFooter>
+      <AlertDialogTitle>Удалить пользователя</AlertDialogTitle>
+      <AlertDialogDescription>
+        Вы уверены, что хотите удалить пользователя {{ memberToRemove?.email }} из пространства?
+        Это действие нельзя отменить.
+      </AlertDialogDescription>
+      <AlertDialogCancel :disabled="isRemoving">Отмена</AlertDialogCancel>
+      <AlertDialogAction @click="handleRemoveMember" :disabled="isRemoving" class="bg-destructive hover:bg-destructive/90">
+        {{ isRemoving ? 'Удаление...' : 'Удалить' }}
+      </AlertDialogAction>
     </AlertDialogContent>
   </AlertDialog>
 
   <AlertDialog :open="revokeDialog" @update:open="revokeDialog = $event">
     <AlertDialogContent>
-      <AlertDialogHeader>
-        <AlertDialogTitle>Отозвать приглашение</AlertDialogTitle>
-        <AlertDialogDescription>
-          Вы уверены, что хотите отозвать приглашение для {{ invitationToRevoke?.email }}?
-          Ссылка-приглашение перестанет работать.
-        </AlertDialogDescription>
-      </AlertDialogHeader>
-      <AlertDialogFooter>
-        <AlertDialogCancel :disabled="isRevoking">Отмена</AlertDialogCancel>
-        <AlertDialogAction @click="handleRevokeInvitation" :disabled="isRevoking" class="bg-destructive hover:bg-destructive/90">
-          {{ isRevoking ? 'Отзыв...' : 'Отозвать' }}
-        </AlertDialogAction>
-      </AlertDialogFooter>
+      <AlertDialogTitle>Отозвать приглашение</AlertDialogTitle>
+      <AlertDialogDescription>
+        Вы уверены, что хотите отозвать приглашение для {{ invitationToRevoke?.email }}?
+        Ссылка-приглашение перестанет работать.
+      </AlertDialogDescription>
+      <AlertDialogCancel :disabled="isRevoking">Отмена</AlertDialogCancel>
+      <AlertDialogAction @click="handleRevokeInvitation" :disabled="isRevoking" class="bg-destructive hover:bg-destructive/90">
+        {{ isRevoking ? 'Отзыв...' : 'Отозвать' }}
+      </AlertDialogAction>
     </AlertDialogContent>
   </AlertDialog>
 </template>
