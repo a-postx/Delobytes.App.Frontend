@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
-import { EllipsisVertical } from 'lucide-vue-next'
+import { X, EllipsisVertical } from 'lucide-vue-next'
 import {
   Table,
   TableBody,
@@ -24,6 +24,15 @@ import {
   AlertDialogDescription,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import {
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogOverlay,
+  DialogPortal,
+  DialogRoot,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Label } from '@/components/ui/label'
 import { tenantApi, type TenantMemberInfo, type PendingInvitationInfo } from '@/services/api/endpoints/tenant'
@@ -58,7 +67,7 @@ const allRows = computed(() => {
     role: m.role,
     data: m,
   }))
-  
+
   const invitationRows = pendingInvitations.value.map(i => ({
     type: 'invitation' as const,
     email: i.email,
@@ -66,13 +75,13 @@ const allRows = computed(() => {
     role: i.role,
     data: i,
   }))
-  
+
   return [...memberRows, ...invitationRows]
 })
 
 const loadMembers = async (): Promise<void> => {
   isLoading.value = true
-  
+
   try {
     const response = await tenantApi.getTenantMembers()
     members.value = response.members
@@ -117,9 +126,9 @@ const handleChangeRole = async (): Promise<void> => {
   if (!selectedMember.value || !newRole.value) {
     return
   }
-  
+
   isUpdatingRole.value = true
-  
+
   try {
     await tenantApi.updateMemberRole(selectedMember.value.userId, newRole.value)
     toast.success('Роль пользователя изменена')
@@ -135,6 +144,14 @@ const handleChangeRole = async (): Promise<void> => {
   }
 }
 
+const handleChangeRoleOpenChange = (open: boolean): void => {
+  changeRoleDialog.value = open
+  if (!open) {
+    selectedMember.value = null
+    newRole.value = ''
+  }
+}
+
 const openRemoveDialog = (member: TenantMemberInfo): void => {
   memberToRemove.value = member
   removeDialog.value = true
@@ -144,9 +161,9 @@ const handleRemoveMember = async (): Promise<void> => {
   if (!memberToRemove.value) {
     return
   }
-  
+
   isRemoving.value = true
-  
+
   try {
     await tenantApi.removeMember(memberToRemove.value.userId)
     toast.success('Пользователь удалён из пространства')
@@ -164,7 +181,7 @@ const handleRemoveMember = async (): Promise<void> => {
 
 const handleCopyInvitationLink = async (invitation: PendingInvitationInfo): Promise<void> => {
   const link = `${window.location.origin}/invite/${invitation.token}`
-  
+
   try {
     await navigator.clipboard.writeText(link)
     toast.success('Ссылка скопирована в буфер обмена')
@@ -182,9 +199,9 @@ const handleRevokeInvitation = async (): Promise<void> => {
   if (!invitationToRevoke.value) {
     return
   }
-  
+
   isRevoking.value = true
-  
+
   try {
     await tenantApi.revokeInvitation(invitationToRevoke.value.invitationId)
     toast.success('Приглашение отозвано')
@@ -274,50 +291,76 @@ const handleRevokeInvitation = async (): Promise<void> => {
     </Table>
   </div>
 
-  <AlertDialog :open="changeRoleDialog" @update:open="changeRoleDialog = $event">
-    <AlertDialogContent>
-      <AlertDialogTitle>Изменить роль</AlertDialogTitle>
-      <AlertDialogDescription>
+  <!-- Dialog для изменения роли (не деструктивное действие — нужен обычный Dialog) -->
+  <DialogRoot :open="changeRoleDialog" @update:open="handleChangeRoleOpenChange">
+    <DialogPortal>
+      <DialogOverlay class="data-[state=open]:animate-overlayShow fixed inset-0 z-30 bg-black/80" />
+      <DialogContent
+        class="data-[state=open]:animate-contentShow bg-popover text-popover-foreground fixed top-[50%] left-[50%] max-h-[85vh] w-[90vw] max-w-[450px] translate-x-[-50%] translate-y-[-50%] rounded-lg border shadow-lg p-6 focus:outline-none z-[100]"
+      >
+        <DialogTitle class="text-foreground m-0 text-lg font-semibold">
+          Изменить роль
+        </DialogTitle>
+        <DialogDescription class="text-muted-foreground mt-2 mb-4 text-sm leading-normal">
           Выберите роль пользователя {{ selectedMember?.email }}
-      </AlertDialogDescription>
-      <div class="py-4">
-        <RadioGroup v-model="newRole" :disabled="isUpdatingRole">
-          <div class="flex items-center space-x-2">
-            <RadioGroupItem value="Administrator" id="change-role-admin" />
-            <Label for="change-role-admin" class="font-normal cursor-pointer">
-              Администратор
-            </Label>
-          </div>
-          <div class="flex items-center space-x-2">
-            <RadioGroupItem value="Manager" id="change-role-manager" />
-            <Label for="change-role-manager" class="font-normal cursor-pointer">
-              Менеджер
-            </Label>
-          </div>
-          <div class="flex items-center space-x-2">
-            <RadioGroupItem value="ReadOnly" id="change-role-readonly" />
-            <Label for="change-role-readonly" class="font-normal cursor-pointer">
-              Только чтение
-            </Label>
-          </div>
-        </RadioGroup>
-      </div>
-      <AlertDialogCancel :disabled="isUpdatingRole">Отмена</AlertDialogCancel>
-      <AlertDialogAction @click="handleChangeRole" :disabled="isUpdatingRole || !newRole">
-        {{ isUpdatingRole ? 'Изменение...' : 'Изменить' }}
-      </AlertDialogAction>
-    </AlertDialogContent>
-  </AlertDialog>
+        </DialogDescription>
+
+        <div class="py-2">
+          <RadioGroup v-model="newRole" :disabled="isUpdatingRole">
+            <div class="flex items-center space-x-2">
+              <RadioGroupItem value="Administrator" id="change-role-admin" />
+              <Label for="change-role-admin" class="font-normal cursor-pointer">
+                Администратор
+              </Label>
+            </div>
+            <div class="flex items-center space-x-2">
+              <RadioGroupItem value="Manager" id="change-role-manager" />
+              <Label for="change-role-manager" class="font-normal cursor-pointer">
+                Менеджер
+              </Label>
+            </div>
+            <div class="flex items-center space-x-2">
+              <RadioGroupItem value="ReadOnly" id="change-role-readonly" />
+              <Label for="change-role-readonly" class="font-normal cursor-pointer">
+                Только чтение
+              </Label>
+            </div>
+          </RadioGroup>
+        </div>
+
+        <div class="flex justify-end gap-3 mt-6">
+          <DialogClose as-child>
+            <Button type="button" variant="outline" :disabled="isUpdatingRole">
+              Отмена
+            </Button>
+          </DialogClose>
+          <Button
+            type="button"
+            @click="handleChangeRole"
+            :disabled="isUpdatingRole || !newRole"
+          >
+            {{ isUpdatingRole ? 'Изменение...' : 'Изменить' }}
+          </Button>
+        </div>
+
+        <DialogClose
+          class="text-muted-foreground hover:text-foreground hover:bg-secondary absolute top-4 right-4 inline-flex h-6 w-6 appearance-none items-center justify-center rounded-xs focus:ring-ring focus:ring-2 focus:outline-none transition-colors"
+          aria-label="Close"
+        >
+          <X class="size-4" />
+        </DialogClose>
+      </DialogContent>
+    </DialogPortal>
+  </DialogRoot>
 
   <AlertDialog :open="removeDialog" @update:open="removeDialog = $event">
     <AlertDialogContent>
       <AlertDialogTitle>Удалить пользователя</AlertDialogTitle>
       <AlertDialogDescription>
         Вы уверены, что хотите удалить пользователя {{ memberToRemove?.email }} из пространства?
-        Это действие нельзя отменить.
       </AlertDialogDescription>
       <AlertDialogCancel :disabled="isRemoving">Отмена</AlertDialogCancel>
-      <AlertDialogAction @click="handleRemoveMember" :disabled="isRemoving" class="bg-destructive hover:bg-destructive/90">
+      <AlertDialogAction @click="handleRemoveMember" :disabled="isRemoving">
         {{ isRemoving ? 'Удаление...' : 'Удалить' }}
       </AlertDialogAction>
     </AlertDialogContent>
@@ -328,10 +371,9 @@ const handleRevokeInvitation = async (): Promise<void> => {
       <AlertDialogTitle>Отозвать приглашение</AlertDialogTitle>
       <AlertDialogDescription>
         Вы уверены, что хотите отозвать приглашение для {{ invitationToRevoke?.email }}?
-        Ссылка-приглашение перестанет работать.
       </AlertDialogDescription>
       <AlertDialogCancel :disabled="isRevoking">Отмена</AlertDialogCancel>
-      <AlertDialogAction @click="handleRevokeInvitation" :disabled="isRevoking" class="bg-destructive hover:bg-destructive/90">
+      <AlertDialogAction @click="handleRevokeInvitation" :disabled="isRevoking">
         {{ isRevoking ? 'Отзыв...' : 'Отозвать' }}
       </AlertDialogAction>
     </AlertDialogContent>
