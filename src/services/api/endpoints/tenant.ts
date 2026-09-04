@@ -17,6 +17,15 @@ export interface SwitchTenantResponse {
   accessToken: string
 }
 
+export interface CreateTenantForUserRequest {
+  tenantName: string
+}
+
+export interface CreateTenantForUserResponse {
+  tenantId: string
+  tenantName: string
+}
+
 export const tenantApi = {
   updateTenantName: async (name: string): Promise<UpdateTenantNameResponse> => {
     const response = await axiosInstance.patch<UpdateTenantNameResponse>(
@@ -30,6 +39,14 @@ export const tenantApi = {
     const response = await axiosInstance.post<SwitchTenantResponse>(
       '/api/tenant/switch',
       { targetTenantId } as SwitchTenantRequest
+    )
+    return response.data
+  },
+
+  createTenantForUser: async (tenantName: string): Promise<CreateTenantForUserResponse> => {
+    const response = await axiosInstance.post<CreateTenantForUserResponse>(
+      '/api/tenant/create',
+      { tenantName } as CreateTenantForUserRequest
     )
     return response.data
   },

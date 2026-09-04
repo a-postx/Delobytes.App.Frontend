@@ -3,6 +3,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import {
   Card,
   CardContent,
+  CardDescription,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
@@ -10,6 +11,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Spinner } from '@/components/ui/spinner'
 import { CopyButton } from '@/components/ui/copy-button'
+import CreateTenantDialog from '@/components/features/CreateTenantDialog.vue'
 import { useCurrentUser } from '@/composables/useCurrentUser'
 import { tenantApi } from '@/services/api'
 import { toast } from 'vue-sonner'
@@ -24,11 +26,12 @@ onMounted(async () => {
 
 const tenantId = computed(() => currentUser.value?.tenantId ?? '')
 
+const isAdministrator = computed(() => currentUser.value?.role === 'Administrator')
+
 const localTenantName = ref<string>('')
 const isUpdating = ref<boolean>(false)
 const initialName = ref<string>('')
 
-// Watch currentUser to sync tenant name when it changes
 watch(
   () => currentUser.value,
   (user: any) => {
@@ -117,6 +120,19 @@ const handleBlur = async (): Promise<void> => {
             </div>
           </div>
         </div>
+      </CardContent>
+    </Card>
+
+    <Card v-if="isAdministrator">
+      <CardHeader>
+        <CardTitle class="text-lg">Создание нового пространства</CardTitle>
+        <CardDescription>
+          Как администратор текущего пространства, вы можете создать новое рабочее пространство. 
+          Вы автоматически станете администратором нового пространства.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <CreateTenantDialog />
       </CardContent>
     </Card>
   </div>
