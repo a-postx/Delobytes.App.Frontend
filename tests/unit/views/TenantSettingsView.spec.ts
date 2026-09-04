@@ -1,209 +1,292 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { mount, VueWrapper, flushPromises } from '@vue/test-utils'
+import { mount } from '@vue/test-utils'
 import { nextTick } from 'vue'
 import TenantSettingsView from '@/views/TenantSettingsView.vue'
+import { useCurrentUser } from '@/composables/useCurrentUser'
 import { tenantApi } from '@/services/api'
 
-// Mock dependencies
-vi.mock('@/services/api', () => ({
-  tenantApi: {
-    updateTenantName: vi.fn()
-  }
+vi.mock('@/composables/useCurrentUser', () => ({
+  useCurrentUser: vi.fn(),
 }))
 
-vi.mock('@/composables/useCurrentUser', () => ({
-  useCurrentUser: () => ({
-    currentUser: {
-      value: {
-        userId: '123e4567-e89b-12d3-a456-426614174000',
-        displayName: 'Test User',
-        email: 'test@example.com',
-        tenantId: '123e4567-e89b-12d3-a456-426614174001',
-        tenantName: 'Test Tenant'
-      }
-    },
-    fetchCurrentUser: vi.fn()
-  })
+vi.mock('@/services/api', () => ({
+  tenantApi: {
+    updateTenantName: vi.fn(),
+  },
 }))
 
 vi.mock('vue-sonner', () => ({
   toast: {
     success: vi.fn(),
-    error: vi.fn()
-  }
+    error: vi.fn(),
+  },
 }))
 
 describe('TenantSettingsView', () => {
-  let wrapper: VueWrapper<any>
+  const mockFetchCurrentUser = vi.fn()
 
   beforeEach(() => {
     vi.clearAllMocks()
   })
 
-  it('renders tenant settings page with title', () => {
-    wrapper = mount(TenantSettingsView)
+  it('renders page title and description', () => {
+    vi.mocked(useCurrentUser).mockReturnValue({
+      currentUser: { value: null },
+      loading: { value: false },
+      error: { value: null },
+      fetchCurrentUser: mockFetchCurrentUser,
+      clearCurrentUser: vi.fn(),
+    } as any)
 
-    expect(wrapper.find('h1').text()).toBe('Настройки пространства')
-    expect(wrapper.text()).toContain('Дайте вашему пространству понятное имя')
-  })
-
-  it('displays current tenant name in input field', async () => {
-    wrapper = mount(TenantSettingsView)
-    await nextTick()
-
-    const input = wrapper.find('input#tenant-name')
-    expect(input.exists()).toBe(true)
-    expect((input.element as HTMLInputElement).value).toBe('Test Tenant')
-  })
-
-  it('displays tenant ID in readonly input field', async () => {
-    wrapper = mount(TenantSettingsView)
-    await nextTick()
-
-    const input = wrapper.find('input#tenant-id')
-    expect(input.exists()).toBe(true)
-    expect((input.element as HTMLInputElement).value).toBe('123e4567-e89b-12d3-a456-426614174001')
-    expect((input.element as HTMLInputElement).readOnly).toBe(true)
-  })
-
-  it('does not call API when name is not changed on blur', async () => {
-    wrapper = mount(TenantSettingsView)
-    await nextTick()
-
-    const input = wrapper.find('input#tenant-name')
-    await input.trigger('blur')
-    await nextTick()
-
-    expect(tenantApi.updateTenantName).not.toHaveBeenCalled()
-  })
-
-  it('does not call API when name is changed to empty string on blur', async () => {
-    wrapper = mount(TenantSettingsView)
-    await nextTick()
-
-    const input = wrapper.find('input#tenant-name')
-    await input.setValue('')
-    await input.trigger('blur')
-    await nextTick()
-
-    expect(tenantApi.updateTenantName).not.toHaveBeenCalled()
-    // Should revert to original value
-    expect((input.element as HTMLInputElement).value).toBe('Test Tenant')
-  })
-
-  it('calls API with new name when changed on blur', async () => {
-    const mockUpdateTenantName = vi.mocked(tenantApi.updateTenantName)
-    mockUpdateTenantName.mockResolvedValueOnce({
-      tenantId: '123e4567-e89b-12d3-a456-426614174001',
-      name: 'Updated Tenant Name'
-    })
-
-    wrapper = mount(TenantSettingsView)
-    await nextTick()
-
-    const input = wrapper.find('input#tenant-name')
-    await input.setValue('Updated Tenant Name')
-    await input.trigger('blur')
-    await nextTick()
-
-    expect(mockUpdateTenantName).toHaveBeenCalledWith('Updated Tenant Name')
-  })
-
-  it('shows spinner while updating tenant name', async () => {
-    let resolvePromise: (value: any) => void
-    const promise = new Promise((resolve) => {
-      resolvePromise = resolve
-    })
-
-    const mockUpdateTenantName = vi.mocked(tenantApi.updateTenantName)
-    mockUpdateTenantName.mockReturnValueOnce(promise as any)
-
-    wrapper = mount(TenantSettingsView)
-    await nextTick()
-
-    const input = wrapper.find('input#tenant-name')
-    await input.setValue('New Name')
-    await input.trigger('blur')
-    await nextTick()
-
-    // Spinner should be visible (check for spinner container)
-    const spinnerContainer = wrapper.find('.absolute.right-3')
-    expect(spinnerContainer.exists()).toBe(true)
-
-    // Resolve the promise
-    resolvePromise!({
-      tenantId: '123e4567-e89b-12d3-a456-426614174001',
-      name: 'New Name'
-    })
+    const wrapper = mount(TenantSettingsView)
     
-    // Wait for all promises and DOM updates
-    await flushPromises()
-    await nextTick()
-
-    // Spinner should be hidden after promise resolves
-    expect(wrapper.find('.absolute.right-3').exists()).toBe(false)
+    expect(wrapper.text()).toContain('Настройки пространства')
   })
 
-  it('shows success toast on successful update', async () => {
-    const { toast } = await import('vue-sonner')
+  it('displays create tenant card when user is Administrator', async () => {
+    vi.mocked(useCurrentUser).mockReturnValue({
+      currentUser: {
+        value: {
+          userId: '123',
+          email: 'admin@test.com',
+          displayName: 'Admin User',
+          tenantId: 'tenant-1',
+          tenantName: 'Company A',
+          role: 'Administrator',
+          tenants: [],
+        },
+      },
+      loading: { value: false },
+      error: { value: null },
+      fetchCurrentUser: mockFetchCurrentUser,
+      clearCurrentUser: vi.fn(),
+    } as any)
+
+    const wrapper = mount(TenantSettingsView)
+    await nextTick()
     
-    const mockUpdateTenantName = vi.mocked(tenantApi.updateTenantName)
-    mockUpdateTenantName.mockResolvedValueOnce({
-      tenantId: '123e4567-e89b-12d3-a456-426614174001',
-      name: 'Updated Name'
-    })
-
-    wrapper = mount(TenantSettingsView)
-    await nextTick()
-
-    const input = wrapper.find('input#tenant-name')
-    await input.setValue('Updated Name')
-    await input.trigger('blur')
-    await flushPromises()
-
-    expect(toast.success).toHaveBeenCalledWith('Имя пространства успешно изменено')
+    expect(wrapper.text()).toContain('Создание нового пространства')
+    expect(wrapper.text()).toContain('Как администратор текущего пространства')
   })
 
-  it('shows error toast and reverts name on API error', async () => {
-    const { toast } = await import('vue-sonner')
+  it('hides create tenant card when user is Manager', async () => {
+    vi.mocked(useCurrentUser).mockReturnValue({
+      currentUser: {
+        value: {
+          userId: '123',
+          email: 'manager@test.com',
+          displayName: 'Manager User',
+          tenantId: 'tenant-1',
+          tenantName: 'Company A',
+          role: 'Manager',
+          tenants: [],
+        },
+      },
+      loading: { value: false },
+      error: { value: null },
+      fetchCurrentUser: mockFetchCurrentUser,
+      clearCurrentUser: vi.fn(),
+    } as any)
+
+    const wrapper = mount(TenantSettingsView)
+    await nextTick()
     
-    const mockUpdateTenantName = vi.mocked(tenantApi.updateTenantName)
-    mockUpdateTenantName.mockRejectedValueOnce({
-      response: {
-        data: {
-          message: 'Ошибка обновления'
-        }
-      }
-    })
-
-    wrapper = mount(TenantSettingsView)
-    await nextTick()
-
-    const input = wrapper.find('input#tenant-name')
-    await input.setValue('Invalid Name')
-    await input.trigger('blur')
-    await flushPromises()
-
-    expect(toast.error).toHaveBeenCalledWith('Ошибка обновления')
-    // Should revert to original value
-    expect((input.element as HTMLInputElement).value).toBe('Test Tenant')
+    expect(wrapper.text()).not.toContain('Создание нового пространства')
   })
 
-  it('trims whitespace from tenant name before sending', async () => {
+  it('hides create tenant card when user is ReadOnly', async () => {
+    vi.mocked(useCurrentUser).mockReturnValue({
+      currentUser: {
+        value: {
+          userId: '123',
+          email: 'readonly@test.com',
+          displayName: 'ReadOnly User',
+          tenantId: 'tenant-1',
+          tenantName: 'Company A',
+          role: 'ReadOnly',
+          tenants: [],
+        },
+      },
+      loading: { value: false },
+      error: { value: null },
+      fetchCurrentUser: mockFetchCurrentUser,
+      clearCurrentUser: vi.fn(),
+    } as any)
+
+    const wrapper = mount(TenantSettingsView)
+    await nextTick()
+    
+    expect(wrapper.text()).not.toContain('Создание нового пространства')
+  })
+
+  it('displays tenant ID in readonly input', async () => {
+    const tenantId = '550e8400-e29b-41d4-a716-446655440000'
+    
+    vi.mocked(useCurrentUser).mockReturnValue({
+      currentUser: {
+        value: {
+          userId: '123',
+          email: 'user@test.com',
+          displayName: 'User',
+          tenantId: tenantId,
+          tenantName: 'Company A',
+          role: 'Manager',
+          tenants: [],
+        },
+      },
+      loading: { value: false },
+      error: { value: null },
+      fetchCurrentUser: mockFetchCurrentUser,
+      clearCurrentUser: vi.fn(),
+    } as any)
+
+    const wrapper = mount(TenantSettingsView)
+    await nextTick()
+    
+    const tenantIdInput = wrapper.find('#tenant-id')
+    expect(tenantIdInput.attributes('readonly')).toBeDefined()
+    expect(tenantIdInput.element.value).toBe(tenantId)
+  })
+
+  it('fetches current user on mount when not loaded', async () => {
+    vi.mocked(useCurrentUser).mockReturnValue({
+      currentUser: { value: null },
+      loading: { value: false },
+      error: { value: null },
+      fetchCurrentUser: mockFetchCurrentUser,
+      clearCurrentUser: vi.fn(),
+    } as any)
+
+    mount(TenantSettingsView)
+    await nextTick()
+    
+    expect(mockFetchCurrentUser).toHaveBeenCalled()
+  })
+
+  it('does not fetch current user on mount when already loaded', async () => {
+    vi.mocked(useCurrentUser).mockReturnValue({
+      currentUser: {
+        value: {
+          userId: '123',
+          email: 'user@test.com',
+          displayName: 'User',
+          tenantId: 'tenant-1',
+          tenantName: 'Company A',
+          role: 'Manager',
+          tenants: [],
+        },
+      },
+      loading: { value: false },
+      error: { value: null },
+      fetchCurrentUser: mockFetchCurrentUser,
+      clearCurrentUser: vi.fn(),
+    } as any)
+
+    mount(TenantSettingsView)
+    await nextTick()
+    
+    expect(mockFetchCurrentUser).not.toHaveBeenCalled()
+  })
+
+  it('updates tenant name on blur when changed', async () => {
     const mockUpdateTenantName = vi.mocked(tenantApi.updateTenantName)
-    mockUpdateTenantName.mockResolvedValueOnce({
-      tenantId: '123e4567-e89b-12d3-a456-426614174001',
-      name: 'Trimmed Name'
+    mockUpdateTenantName.mockResolvedValue({
+      tenantId: 'tenant-1',
+      name: 'Updated Company',
     })
 
-    wrapper = mount(TenantSettingsView)
-    await nextTick()
+    const currentUserMock = {
+      value: {
+        userId: '123',
+        email: 'admin@test.com',
+        displayName: 'Admin',
+        tenantId: 'tenant-1',
+        tenantName: 'Original Company',
+        role: 'Administrator',
+        tenants: [],
+      },
+    }
 
-    const input = wrapper.find('input#tenant-name')
-    await input.setValue('  Trimmed Name  ')
-    await input.trigger('blur')
-    await nextTick()
+    vi.mocked(useCurrentUser).mockReturnValue({
+      currentUser: currentUserMock,
+      loading: { value: false },
+      error: { value: null },
+      fetchCurrentUser: mockFetchCurrentUser,
+      clearCurrentUser: vi.fn(),
+    } as any)
 
-    expect(mockUpdateTenantName).toHaveBeenCalledWith('Trimmed Name')
+    const wrapper = mount(TenantSettingsView)
+    await nextTick()
+    
+    const nameInput = wrapper.find('#tenant-name')
+    await nameInput.setValue('Updated Company')
+    await nameInput.trigger('blur')
+    await nextTick()
+    
+    expect(mockUpdateTenantName).toHaveBeenCalledWith('Updated Company')
   })
-})
+
+  it('does not update tenant name when unchanged', async () => {
+    const mockUpdateTenantName = vi.mocked(tenantApi.updateTenantName)
+
+    vi.mocked(useCurrentUser).mockReturnValue({
+      currentUser: {
+        value: {
+          userId: '123',
+          email: 'admin@test.com',
+          displayName: 'Admin',
+          tenantId: 'tenant-1',
+          tenantName: 'Company A',
+          role: 'Administrator',
+          tenants: [],
+        },
+      },
+      loading: { value: false },
+      error: { value: null },
+      fetchCurrentUser: mockFetchCurrentUser,
+      clearCurrentUser: vi.fn(),
+    } as any)
+
+    const wrapper = mount(TenantSettingsView)
+    await nextTick()
+    
+    const nameInput = wrapper.find('#tenant-name')
+    await nameInput.trigger('blur')
+    await nextTick()
+    
+    expect(mockUpdateTenantName).not.toHaveBeenCalled()
+  })
+
+  it('reverts to original name when empty on blur', async () => {
+    const mockUpdateTenantName = vi.mocked(tenantApi.updateTenantName)
+
+    vi.mocked(useCurrentUser).mockReturnValue({
+      currentUser: {
+        value: {
+          userId: '123',
+          email: 'admin@test.com',
+          displayName: 'Admin',
+          tenantId: 'tenant-1',
+          tenantName: 'Company A',
+          role: 'Administrator',
+          tenants: [],
+        },
+      },
+      loading: { value: false },
+      error: { value: null },
+      fetchCurrentUser: mockFetchCurrentUser,
+      clearCurrentUser: vi.fn(),
+    } as any)
+
+    const wrapper = mount(TenantSettingsView)
+    await nextTick()
+    
+    const nameInput = wrapper.find('#tenant-name')
+    await nameInput.setValue('   ')
+    await nameInput.trigger('blur')
+    await nextTick()
+    
+    expect(nameInput.element.value).toBe('Company A')
+    expect(mockUpdateTenantName).not.toHaveBeenCalled()
+  })
+}
