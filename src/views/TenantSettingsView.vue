@@ -22,11 +22,21 @@ onMounted(async () => {
   if (!currentUser.value) {
     await fetchCurrentUser()
   }
+  
+  // Отладка: выводим всю информацию о текущем пользователе
+  console.log('TenantSettingsView - currentUser:', currentUser.value)
+  console.log('TenantSettingsView - role:', currentUser.value?.role)
+  console.log('TenantSettingsView - role type:', typeof currentUser.value?.role)
 })
 
 const tenantId = computed(() => currentUser.value?.tenantId ?? '')
 
-const isAdministrator = computed(() => currentUser.value?.role === 'Administrator')
+const isAdministrator = computed(() => {
+  const result = currentUser.value?.role === 'Administrator'
+  console.log('TenantSettingsView - isAdministrator computed:', result)
+  console.log('TenantSettingsView - comparing:', currentUser.value?.role, 'with', 'Administrator')
+  return result
+})
 
 const localTenantName = ref<string>('')
 const isUpdating = ref<boolean>(false)
@@ -35,6 +45,7 @@ const initialName = ref<string>('')
 watch(
   () => currentUser.value,
   (user: any) => {
+    console.log('TenantSettingsView - user changed:', user)
     if (user?.tenantName) {
       localTenantName.value = user.tenantName
       initialName.value = user.tenantName
@@ -86,6 +97,20 @@ const handleBlur = async (): Promise<void> => {
       </p>
     </div>
 
+    <!-- Debug info -->
+    <Card class="border-yellow-500">
+      <CardHeader>
+        <CardTitle class="text-lg text-yellow-600">Отладочная информация</CardTitle>
+      </CardHeader>
+      <CardContent class="space-y-2 text-sm font-mono">
+        <div>currentUser: {{ currentUser ? 'loaded' : 'null' }}</div>
+        <div>role: {{ currentUser?.role }}</div>
+        <div>role type: {{ typeof currentUser?.role }}</div>
+        <div>isAdministrator: {{ isAdministrator }}</div>
+        <div>Full user object: {{ JSON.stringify(currentUser, null, 2) }}</div>
+      </CardContent>
+    </Card>
+
     <Card>
       <CardHeader>
         <CardTitle class="text-lg">Информация о пространстве</CardTitle>
@@ -133,6 +158,16 @@ const handleBlur = async (): Promise<void> => {
       </CardHeader>
       <CardContent>
         <CreateTenantDialog />
+      </CardContent>
+    </Card>
+
+    <Card v-else class="border-red-500">
+      <CardHeader>
+        <CardTitle class="text-lg text-red-600">Карточка создания скрыта</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <p>isAdministrator = {{ isAdministrator }}</p>
+        <p>role = {{ currentUser?.role }}</p>
       </CardContent>
     </Card>
   </div>
