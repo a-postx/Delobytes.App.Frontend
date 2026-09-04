@@ -26,7 +26,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Label } from '@/components/ui/label'
-import { tenantApi, type TenantMemberInfo, type PendingInvitationInfo } from '@/services/api'
+import { tenantApi, type TenantMemberInfo, type PendingInvitationInfo } from '@/services/api/endpoints'
 import { toast } from 'vue-sonner'
 
 const emit = defineEmits<{
