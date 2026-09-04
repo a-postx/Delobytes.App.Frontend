@@ -51,7 +51,7 @@ const handleSubmit = async (): Promise<void> => {
     const response = await tenantApi.createInvitation(trimmedEmail, role.value)
     
     invitationToken.value = response.token
-    invitationLink.value = `${window.location.origin}/invite/${response.token}`
+    invitationLink.value = `${window.location.origin}/invite?token=${response.token}`
     step.value = 'success'
     
     emit('invitationCreated')

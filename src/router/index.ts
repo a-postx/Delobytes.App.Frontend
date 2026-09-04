@@ -8,6 +8,7 @@ import SettingsView from '@/views/SettingsView.vue'
 import TenantSettingsView from '@/views/TenantSettingsView.vue'
 import YandexCallbackView from '@/views/YandexCallbackView.vue'
 import GoogleCallbackView from '@/views/GoogleCallbackView.vue'
+import AcceptInvitationView from '@/views/AcceptInvitationView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -86,6 +87,23 @@ const router = createRouter({
       component: GoogleCallbackView,
       meta: {
         title: 'Вход через Google',
+      },
+    },
+    {
+      path: '/invite',
+      name: 'accept-invitation',
+      component: AcceptInvitationView,
+      meta: {
+        title: 'Принятие приглашения',
+      },
+    },
+  ],
+})
+      path: '/invite',
+      name: 'accept-invitation',
+      component: AcceptInvitationView,
+      meta: {
+        title: 'Принятие приглашения',
       },
     },
   ],

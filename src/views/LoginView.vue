@@ -35,7 +35,13 @@ const handleLogin = async () => {
 
       await fetchCurrentUser()
 
-      router.push('/')
+      const pendingToken: string | null = sessionStorage.getItem('pendingInvitationToken')
+      if (pendingToken) {
+        sessionStorage.removeItem('pendingInvitationToken')
+        router.push(`/invite?token=${pendingToken}`)
+      } else {
+        router.push('/')
+      }
     }
   } catch (err: unknown) {
     const apiError = err as { response?: { data?: { message?: string } } }

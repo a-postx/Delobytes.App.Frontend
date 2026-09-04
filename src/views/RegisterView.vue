@@ -31,8 +31,7 @@ const handleRegister = async () => {
     })
 
     localStorage.setItem('userId', response.userId)
-    
-    // Save accessToken from registration response
+
     if (response.accessToken) {
       localStorage.setItem('accessToken', response.accessToken)
     }
@@ -40,12 +39,15 @@ const handleRegister = async () => {
     if (response.requiresTenantSetup) {
       router.push('/setup-tenant')
     } else {
-      // User already has tenant (edge case)
-      if (!response.accessToken) {
-        localStorage.setItem('accessToken', response.accessToken)
-      }
       localStorage.setItem('tenantId', response.tenantId)
-      router.push('/')
+
+      const pendingToken: string | null = sessionStorage.getItem('pendingInvitationToken')
+      if (pendingToken) {
+        sessionStorage.removeItem('pendingInvitationToken')
+        router.push(`/invite?token=${pendingToken}`)
+      } else {
+        router.push('/')
+      }
     }
   } catch (err: unknown) {
     error.value = extractErrorMessage(err, 'Ошибка регистрации. Попробуйте ещё раз.')
