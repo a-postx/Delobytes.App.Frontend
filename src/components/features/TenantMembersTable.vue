@@ -17,13 +17,15 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import {
-  AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
+  AlertDialogOverlay,
+  AlertDialogPortal,
+  AlertDialogRoot,
   AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
+} from 'reka-ui'
 import {
   DialogClose,
   DialogContent,
@@ -353,29 +355,35 @@ const handleRevokeInvitation = async (): Promise<void> => {
     </DialogPortal>
   </DialogRoot>
 
-  <AlertDialog :open="removeDialog" @update:open="removeDialog = $event">
-    <AlertDialogContent>
-      <AlertDialogTitle>Удалить пользователя</AlertDialogTitle>
-      <AlertDialogDescription>
-        Вы уверены, что хотите удалить пользователя {{ memberToRemove?.email }} из пространства?
-      </AlertDialogDescription>
-      <AlertDialogCancel :disabled="isRemoving">Отмена</AlertDialogCancel>
-      <AlertDialogAction @click="handleRemoveMember" :disabled="isRemoving">
-        {{ isRemoving ? 'Удаление...' : 'Удалить' }}
-      </AlertDialogAction>
-    </AlertDialogContent>
-  </AlertDialog>
+  <AlertDialogRoot :open="removeDialog" @update:open="removeDialog = $event">
+    <AlertDialogPortal>
+      <AlertDialogOverlay class="data-[state=open]:animate-overlayShow fixed inset-0 z-30 bg-black/80" />
+      <AlertDialogContent>
+        <AlertDialogTitle>Удалить пользователя</AlertDialogTitle>
+        <AlertDialogDescription>
+          Вы уверены, что хотите удалить пользователя {{ memberToRemove?.email }} из пространства?
+        </AlertDialogDescription>
+        <AlertDialogCancel :disabled="isRemoving">Отмена</AlertDialogCancel>
+        <AlertDialogAction @click="handleRemoveMember" :disabled="isRemoving">
+          {{ isRemoving ? 'Удаление...' : 'Удалить' }}
+        </AlertDialogAction>
+      </AlertDialogContent>
+    </AlertDialogPortal>
+  </AlertDialogRoot>
 
-  <AlertDialog :open="revokeDialog" @update:open="revokeDialog = $event">
-    <AlertDialogContent>
-      <AlertDialogTitle>Отозвать приглашение</AlertDialogTitle>
-      <AlertDialogDescription>
-        Вы уверены, что хотите отозвать приглашение для {{ invitationToRevoke?.email }}?
-      </AlertDialogDescription>
-      <AlertDialogCancel :disabled="isRevoking">Отмена</AlertDialogCancel>
-      <AlertDialogAction @click="handleRevokeInvitation" :disabled="isRevoking">
-        {{ isRevoking ? 'Отзыв...' : 'Отозвать' }}
-      </AlertDialogAction>
-    </AlertDialogContent>
-  </AlertDialog>
+  <AlertDialogRoot :open="revokeDialog" @update:open="revokeDialog = $event">
+    <AlertDialogPortal>
+      <AlertDialogOverlay class="data-[state=open]:animate-overlayShow fixed inset-0 z-30 bg-black/80" />
+      <AlertDialogContent>
+        <AlertDialogTitle>Отозвать приглашение</AlertDialogTitle>
+        <AlertDialogDescription>
+          Вы уверены, что хотите отозвать приглашение для {{ invitationToRevoke?.email }}?
+        </AlertDialogDescription>
+        <AlertDialogCancel :disabled="isRevoking">Отмена</AlertDialogCancel>
+        <AlertDialogAction @click="handleRevokeInvitation" :disabled="isRevoking">
+          {{ isRevoking ? 'Отзыв...' : 'Отозвать' }}
+        </AlertDialogAction>
+      </AlertDialogContent>
+    </AlertDialogPortal>
+  </AlertDialogRoot>
 </template>
