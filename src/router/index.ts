@@ -89,16 +89,7 @@ const router = createRouter({
         title: 'Вход через Google',
       },
     },
-    {
-      path: '/invite',
-      name: 'accept-invitation',
-      component: AcceptInvitationView,
-      meta: {
-        title: 'Принятие приглашения',
-      },
-    },
-  ],
-})
+	{
       path: '/invite',
       name: 'accept-invitation',
       component: AcceptInvitationView,
