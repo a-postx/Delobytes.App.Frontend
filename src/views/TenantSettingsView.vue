@@ -12,29 +12,26 @@ import { Label } from '@/components/ui/label'
 import { Spinner } from '@/components/ui/spinner'
 import { CopyButton } from '@/components/ui/copy-button'
 import CreateTenantDialog from '@/components/features/CreateTenantDialog.vue'
+import InviteUserDialog from '@/components/features/InviteUserDialog.vue'
+import TenantMembersTable from '@/components/features/TenantMembersTable.vue'
 import { useCurrentUser } from '@/composables/useCurrentUser'
 import { tenantApi } from '@/services/api'
 import { toast } from 'vue-sonner'
 
 const { currentUser, fetchCurrentUser } = useCurrentUser()
 
+const membersTableRef = ref<InstanceType<typeof TenantMembersTable> | null>(null)
+
 onMounted(async () => {
   if (!currentUser.value) {
     await fetchCurrentUser()
   }
-  
-  // Отладка: выводим всю информацию о текущем пользователе
-  console.log('TenantSettingsView - currentUser:', currentUser.value)
-  console.log('TenantSettingsView - role:', currentUser.value?.role)
-  console.log('TenantSettingsView - role type:', typeof currentUser.value?.role)
 })
 
 const tenantId = computed(() => currentUser.value?.tenantId ?? '')
 
 const isAdministrator = computed(() => {
   const result = currentUser.value?.role === 'Administrator'
-  console.log('TenantSettingsView - isAdministrator computed:', result)
-  console.log('TenantSettingsView - comparing:', currentUser.value?.role, 'with', 'Administrator')
   return result
 })
 
@@ -45,7 +42,6 @@ const initialName = ref<string>('')
 watch(
   () => currentUser.value,
   (user: any) => {
-    console.log('TenantSettingsView - user changed:', user)
     if (user?.tenantName) {
       localTenantName.value = user.tenantName
       initialName.value = user.tenantName
@@ -86,6 +82,14 @@ const handleBlur = async (): Promise<void> => {
     isUpdating.value = false
   }
 }
+
+const handleInvitationCreated = (): void => {
+  membersTableRef.value?.refresh()
+}
+
+const handleMembersRefresh = (): void => {
+  membersTableRef.value?.refresh()
+}
 </script>
 
 <template>
@@ -96,20 +100,6 @@ const handleBlur = async (): Promise<void> => {
         Дайте вашему пространству понятное имя, чтобы ваша команда могла удобно переключаться между ними.
       </p>
     </div>
-
-    <!-- Debug info -->
-    <Card class="border-yellow-500">
-      <CardHeader>
-        <CardTitle class="text-lg text-yellow-600">Отладочная информация</CardTitle>
-      </CardHeader>
-      <CardContent class="space-y-2 text-sm font-mono">
-        <div>currentUser: {{ currentUser ? 'loaded' : 'null' }}</div>
-        <div>role: {{ currentUser?.role }}</div>
-        <div>role type: {{ typeof currentUser?.role }}</div>
-        <div>isAdministrator: {{ isAdministrator }}</div>
-        <div>Full user object: {{ JSON.stringify(currentUser, null, 2) }}</div>
-      </CardContent>
-    </Card>
 
     <Card>
       <CardHeader>
@@ -150,6 +140,27 @@ const handleBlur = async (): Promise<void> => {
 
     <Card v-if="isAdministrator">
       <CardHeader>
+        <CardTitle class="text-lg">Доступы</CardTitle>
+        <CardDescription>
+          Управляйте пользователями и их ролями в этом пространстве
+        </CardDescription>
+      </CardHeader>
+      <CardContent class="space-y-4">
+        <div class="flex justify-end">
+          <InviteUserDialog @invitation-created="handleInvitationCreated">
+            <template #trigger>
+              <button class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2">
+                Пригласить пользователя
+              </button>
+            </template>
+          </InviteUserDialog>
+        </div>
+        <TenantMembersTable ref="membersTableRef" @refresh="handleMembersRefresh" />
+      </CardContent>
+    </Card>
+
+    <Card v-if="isAdministrator">
+      <CardHeader>
         <CardTitle class="text-lg">Создание нового пространства</CardTitle>
         <CardDescription>
           Как администратор текущего пространства, вы можете создать новое рабочее пространство. 
@@ -158,16 +169,6 @@ const handleBlur = async (): Promise<void> => {
       </CardHeader>
       <CardContent>
         <CreateTenantDialog />
-      </CardContent>
-    </Card>
-
-    <Card v-else class="border-red-500">
-      <CardHeader>
-        <CardTitle class="text-lg text-red-600">Карточка создания скрыта</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <p>isAdministrator = {{ isAdministrator }}</p>
-        <p>role = {{ currentUser?.role }}</p>
       </CardContent>
     </Card>
   </div>
