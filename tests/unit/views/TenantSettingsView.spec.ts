@@ -289,4 +289,4 @@ describe('TenantSettingsView', () => {
     expect(nameInput.element.value).toBe('Company A')
     expect(mockUpdateTenantName).not.toHaveBeenCalled()
   })
-}
+})
