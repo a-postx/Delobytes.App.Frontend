@@ -65,8 +65,8 @@ describe('TenantSettingsView', () => {
     const wrapper = mount(TenantSettingsView)
     await nextTick()
     
-    expect(wrapper.text()).toContain('Создание нового пространства')
-    expect(wrapper.text()).toContain('Как администратор текущего пространства')
+    expect(wrapper.text()).toContain('Новое')
+    expect(wrapper.text()).toContain('Вы можете создать дополнительное')
   })
 
   it('hides create tenant card when user is Manager', async () => {
@@ -91,7 +91,7 @@ describe('TenantSettingsView', () => {
     const wrapper = mount(TenantSettingsView)
     await nextTick()
     
-    expect(wrapper.text()).not.toContain('Создание нового пространства')
+    expect(wrapper.text()).not.toContain('Новое')
   })
 
   it('hides create tenant card when user is ReadOnly', async () => {
@@ -116,7 +116,7 @@ describe('TenantSettingsView', () => {
     const wrapper = mount(TenantSettingsView)
     await nextTick()
     
-    expect(wrapper.text()).not.toContain('Создание нового пространства')
+    expect(wrapper.text()).not.toContain('Новое')
   })
 
   it('displays tenant ID in readonly input', async () => {
