@@ -15,10 +15,16 @@ import CreateTenantDialog from '@/components/features/CreateTenantDialog.vue'
 import InviteUserDialog from '@/components/features/InviteUserDialog.vue'
 import TenantMembersTable from '@/components/features/TenantMembersTable.vue'
 import { useCurrentUser } from '@/composables/useCurrentUser'
+import { usePermissions } from '@/composables/usePermissions'
 import { tenantApi } from '@/services/api'
 import { toast } from 'vue-sonner'
 
 const { currentUser, fetchCurrentUser } = useCurrentUser()
+const {
+  canEditTenantSettings,
+  canManageMembers,
+  canCreateTenant,
+} = usePermissions()
 
 const membersTableRef = ref<InstanceType<typeof TenantMembersTable> | null>(null)
 
@@ -29,11 +35,6 @@ onMounted(async () => {
 })
 
 const tenantId = computed(() => currentUser.value?.tenantId ?? '')
-
-const isAdministrator = computed(() => {
-  const result = currentUser.value?.role === 'Administrator'
-  return result
-})
 
 const localTenantName = ref<string>('')
 const isUpdating = ref<boolean>(false)
@@ -51,6 +52,10 @@ watch(
 )
 
 const handleBlur = async (): Promise<void> => {
+  if (!canEditTenantSettings.value) {
+    return
+  }
+
   const trimmedName: string = localTenantName.value.trim()
 
   if (trimmedName === initialName.value) {
@@ -113,12 +118,18 @@ const handleMembersRefresh = (): void => {
               id="tenant-name"
               v-model="localTenantName"
               placeholder="Имя пространства"
+              :disabled="!canEditTenantSettings"
+              :readonly="!canEditTenantSettings"
+              :class="{ 'cursor-not-allowed opacity-60': !canEditTenantSettings }"
               @blur="handleBlur"
             />
             <div v-if="isUpdating" class="absolute right-3 top-1/2 -translate-y-1/2">
               <Spinner size="sm" />
             </div>
           </div>
+          <p v-if="!canEditTenantSettings" class="text-xs text-muted-foreground">
+            Только администраторы могут изменять имя пространства
+          </p>
         </div>
         <div class="space-y-2">
           <Label for="tenant-id">Идентификатор пространства</Label>
@@ -138,7 +149,7 @@ const handleMembersRefresh = (): void => {
       </CardContent>
     </Card>
 
-    <Card v-if="isAdministrator">
+    <Card v-if="canManageMembers">
       <CardHeader>
         <CardTitle class="text-lg">Доступы</CardTitle>
         <CardDescription>
@@ -159,7 +170,7 @@ const handleMembersRefresh = (): void => {
       </CardContent>
     </Card>
 
-    <Card v-if="isAdministrator">
+    <Card v-if="canCreateTenant">
       <CardHeader>
         <CardTitle class="text-lg">Создание нового пространства</CardTitle>
         <CardDescription>
