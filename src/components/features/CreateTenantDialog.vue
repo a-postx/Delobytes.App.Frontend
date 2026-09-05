@@ -76,7 +76,7 @@ const handleOpenChange = (open: boolean): void => {
           Создать новое пространство
         </DialogTitle>
         <DialogDescription class="text-muted-foreground mt-2 mb-4 text-sm leading-normal">
-          Создайте новое рабочее пространство для организации или проекта. Вы автоматически станете администратором.
+          Создайте новое рабочее пространство (вы автоматически станете администратором).
         </DialogDescription>
         
         <form @submit.prevent="handleSubmit">

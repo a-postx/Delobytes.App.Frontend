@@ -184,7 +184,7 @@ const handleRemoveMember = async (): Promise<void> => {
 }
 
 const handleCopyInvitationLink = async (invitation: PendingInvitationInfo): Promise<void> => {
-  const link = `${window.location.origin}/invite/${invitation.token}`
+  const link = `${window.location.origin}/invite?token=${invitation.token}`
 
   try {
     await navigator.clipboard.writeText(link)
