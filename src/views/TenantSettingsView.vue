@@ -108,7 +108,7 @@ const handleMembersRefresh = (): void => {
 
     <Card>
       <CardHeader>
-        <CardTitle class="text-lg">Информация о пространстве</CardTitle>
+        <CardTitle class="text-lg">Главное</CardTitle>
       </CardHeader>
       <CardContent class="space-y-4">
         <div class="space-y-2">
@@ -172,10 +172,9 @@ const handleMembersRefresh = (): void => {
 
     <Card v-if="canCreateTenant">
       <CardHeader>
-        <CardTitle class="text-lg">Создание нового пространства</CardTitle>
+        <CardTitle class="text-lg">Новое</CardTitle>
         <CardDescription>
-          Как администратор текущего пространства, вы можете создать новое рабочее пространство. 
-          Вы автоматически станете администратором нового пространства.
+          Вы можете создать дополнительное рабочее пространство.
         </CardDescription>
       </CardHeader>
       <CardContent>
