@@ -212,7 +212,7 @@ const handleOpenChange = (open: boolean): void => {
           class="text-muted-foreground hover:text-foreground hover:bg-secondary absolute top-4 right-4 inline-flex h-6 w-6 appearance-none items-center justify-center rounded-xs focus:ring-ring focus:ring-2 focus:outline-none transition-colors"
           aria-label="Close"
         >
-          <X class="size-4" />
+          <X class="h-4 w-4" />
         </DialogClose>
       </DialogContent>
     </DialogPortal>
