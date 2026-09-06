@@ -12,7 +12,7 @@ import { Label } from '@/components/ui/label'
 import { Spinner } from '@/components/ui/spinner'
 import { CopyButton } from '@/components/ui/copy-button'
 import CreateTenantDialog from '@/components/features/CreateTenantDialog.vue'
-import InviteUserDialog from '@/components/features/InviteUserDialog.vue'
+import TenantMemberAccessDialog from '@/components/features/TenantMemberAccessDialog.vue'
 import TenantMembersTable from '@/components/features/TenantMembersTable.vue'
 import { useCurrentUser } from '@/composables/useCurrentUser'
 import { usePermissions } from '@/composables/usePermissions'
@@ -158,13 +158,13 @@ const handleMembersRefresh = (): void => {
       </CardHeader>
       <CardContent class="space-y-4">
         <div class="flex justify-end">
-          <InviteUserDialog @invitation-created="handleInvitationCreated">
+          <TenantMemberAccessDialog @invitation-created="handleInvitationCreated">
             <template #trigger>
               <button class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2">
                 Пригласить пользователя
               </button>
             </template>
-          </InviteUserDialog>
+          </TenantMemberAccessDialog>
         </div>
         <TenantMembersTable ref="membersTableRef" @refresh="handleMembersRefresh" />
       </CardContent>
