@@ -89,8 +89,8 @@ describe('ManageConnectionDialog — рендер', () => {
   it('поле API-ключа только для чтения и задизейблено', () => {
     const wrapper = factory()
     const input = wrapper.find('input')
-    expect(input.attributes('readonly')).toBeDefined()
-    expect(input.attributes('disabled')).toBeDefined()
+    expect((input.element as HTMLInputElement).readOnly).toBe(true)
+    expect((input.element as HTMLInputElement).disabled).toBe(true)
   })
 
   it('рендерит кнопку "Удалить"', () => {
