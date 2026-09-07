@@ -100,7 +100,7 @@ const handleMembersRefresh = (): void => {
 <template>
   <div class="flex flex-col gap-6 p-6">
     <div class="flex flex-col gap-2">
-      <h1 class="text-2xl font-bold">Настройки пространства</h1>
+      <h1 class="text-xl font-bold">Настройки пространства</h1>
       <p class="text-muted-foreground">
         Дайте вашему пространству понятное имя, чтобы другие пользователи могли удобно переключаться между ними.
       </p>
