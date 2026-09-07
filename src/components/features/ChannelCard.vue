@@ -17,6 +17,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   connect: []
+  manage: []
 }>()
 </script>
 
@@ -40,7 +41,7 @@ const emit = defineEmits<{
       <Button
         v-if="props.channel.isConnected"
         variant="outline"
-        disabled
+        @click="emit('manage')"
       >
         Управление
       </Button>

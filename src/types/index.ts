@@ -67,6 +67,8 @@ export interface AvailableChannel {
   description: string | null
   apiVersion: string
   isConnected: boolean
+  connectionId: string | null
+  maskedApiKey: string | null
 }
 
 export interface Connection {

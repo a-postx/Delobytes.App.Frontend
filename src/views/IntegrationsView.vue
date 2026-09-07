@@ -6,11 +6,13 @@ import type { AvailableChannel } from '@/types'
 import { Skeleton } from '@/components/ui/skeleton'
 import ChannelCard from '@/components/features/ChannelCard.vue'
 import CreateConnectionDialog from '@/components/features/CreateConnectionDialog.vue'
+import ManageConnectionDialog from '@/components/features/ManageConnectionDialog.vue'
 
 const channels = ref<AvailableChannel[]>([])
 const isLoading = ref<boolean>(true)
 const selectedChannel = ref<AvailableChannel | null>(null)
-const isDialogOpen = ref<boolean>(false)
+const isConnectDialogOpen = ref<boolean>(false)
+const isManageDialogOpen = ref<boolean>(false)
 
 const loadChannels = async (): Promise<void> => {
   try {
@@ -26,12 +28,22 @@ onMounted(async () => {
   await loadChannels()
 })
 
-const openDialog = (channel: AvailableChannel): void => {
+const openConnectDialog = (channel: AvailableChannel): void => {
   selectedChannel.value = channel
-  isDialogOpen.value = true
+  isConnectDialogOpen.value = true
+}
+
+const openManageDialog = (channel: AvailableChannel): void => {
+  selectedChannel.value = channel
+  isManageDialogOpen.value = true
 }
 
 const handleConnected = async (): Promise<void> => {
+  isLoading.value = true
+  await loadChannels()
+}
+
+const handleDeleted = async (): Promise<void> => {
   isLoading.value = true
   await loadChannels()
 }
@@ -69,16 +81,25 @@ const handleConnected = async (): Promise<void> => {
         v-for="channel in channels"
         :key="channel.code"
         :channel="channel"
-        @connect="openDialog(channel)"
+        @connect="openConnectDialog(channel)"
+        @manage="openManageDialog(channel)"
       />
     </div>
   </div>
 
-  <!-- Dialog rendered once, outside the grid -->
+  <!-- Connect dialog -->
   <CreateConnectionDialog
-    v-if="selectedChannel"
+    v-if="selectedChannel && !selectedChannel.isConnected"
     :channel="selectedChannel"
-    v-model="isDialogOpen"
+    v-model="isConnectDialogOpen"
     @connected="handleConnected"
+  />
+
+  <!-- Manage / delete dialog -->
+  <ManageConnectionDialog
+    v-if="selectedChannel && selectedChannel.isConnected"
+    :channel="selectedChannel"
+    v-model="isManageDialogOpen"
+    @deleted="handleDeleted"
   />
 </template>
