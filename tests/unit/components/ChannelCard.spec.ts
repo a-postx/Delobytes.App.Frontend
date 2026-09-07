@@ -9,6 +9,8 @@ const base: AvailableChannel = {
   description: 'Крупнейший маркетплейс',
   apiVersion: 'v2',
   isConnected: false,
+  connectionId: null,
+  maskedApiKey: null,
 }
 
 describe('ChannelCard — общий рендер', () => {
@@ -59,7 +61,12 @@ describe('ChannelCard — isConnected === false', () => {
 })
 
 describe('ChannelCard — isConnected === true', () => {
-  const connected: AvailableChannel = { ...base, isConnected: true }
+  const connected: AvailableChannel = {
+    ...base,
+    isConnected: true,
+    connectionId: 'conn-123',
+    maskedApiKey: '******abcdef',
+  }
 
   it('применяет opacity-75 и bg-muted', () => {
     const wrapper = mount(ChannelCard, { props: { channel: connected } })
@@ -74,15 +81,23 @@ describe('ChannelCard — isConnected === true', () => {
     expect(wrapper.text()).toContain('Подключён')
   })
 
-  it('рендерит задизейбленную кнопку "Управление"', () => {
+  it('рендерит активную кнопку "Управление"', () => {
     const wrapper = mount(ChannelCard, { props: { channel: connected } })
     const btn = wrapper.find('button')
 
     expect(btn.text()).toBe('Управление')
-    expect(btn.attributes()).toHaveProperty('disabled')
+    expect(btn.attributes('disabled')).toBeUndefined()
   })
 
-  it('не эмитирует "connect" при клике на задизейбленную кнопку', async () => {
+  it('эмитирует "manage" при клике на кнопку "Управление"', async () => {
+    const wrapper = mount(ChannelCard, { props: { channel: connected } })
+
+    await wrapper.find('button').trigger('click')
+
+    expect(wrapper.emitted('manage')).toHaveLength(1)
+  })
+
+  it('не эмитирует "connect" при клике', async () => {
     const wrapper = mount(ChannelCard, { props: { channel: connected } })
 
     await wrapper.find('button').trigger('click')
