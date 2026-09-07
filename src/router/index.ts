@@ -6,6 +6,7 @@ import RegisterView from '@/views/RegisterView.vue'
 import SetupTenantView from '@/views/SetupTenantView.vue'
 import SettingsView from '@/views/SettingsView.vue'
 import TenantSettingsView from '@/views/TenantSettingsView.vue'
+import IntegrationsView from '@/views/IntegrationsView.vue'
 import YandexCallbackView from '@/views/YandexCallbackView.vue'
 import GoogleCallbackView from '@/views/GoogleCallbackView.vue'
 import AcceptInvitationView from '@/views/AcceptInvitationView.vue'
@@ -44,6 +45,15 @@ const router = createRouter({
           component: TenantSettingsView,
           meta: {
             title: 'Настройки пространства',
+            requiresAuth: true,
+          },
+        },
+        {
+          path: 'integrations',
+          name: 'integrations',
+          component: IntegrationsView,
+          meta: {
+            title: 'Интеграции',
             requiresAuth: true,
           },
         },

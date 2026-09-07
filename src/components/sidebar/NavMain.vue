@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ChevronRight, BookOpen } from 'lucide-vue-next'
+import { ChevronRight, BookOpen, Settings } from 'lucide-vue-next'
 import { RouterLink } from 'vue-router'
 import {
   Collapsible,
@@ -41,6 +41,38 @@ import {
                 <SidebarMenuSubButton as-child>
                   <RouterLink to="/">
                     <span>Компоненты</span>
+                  </RouterLink>
+                </SidebarMenuSubButton>
+              </SidebarMenuSubItem>
+            </SidebarMenuSub>
+          </CollapsibleContent>
+        </SidebarMenuItem>
+      </Collapsible>
+    </SidebarMenu>
+  </SidebarGroup>
+
+  <SidebarGroup>
+    <SidebarGroupLabel>Система</SidebarGroupLabel>
+    <SidebarMenu>
+      <Collapsible
+        as-child
+        :default-open="false"
+        class="group/collapsible"
+      >
+        <SidebarMenuItem>
+          <CollapsibleTrigger as-child>
+            <SidebarMenuButton :tooltip="'Настройки'">
+              <Settings />
+              <span>Настройки</span>
+              <ChevronRight class="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+            </SidebarMenuButton>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <SidebarMenuSub>
+              <SidebarMenuSubItem>
+                <SidebarMenuSubButton as-child>
+                  <RouterLink to="/integrations">
+                    <span>Интеграции</span>
                   </RouterLink>
                 </SidebarMenuSubButton>
               </SidebarMenuSubItem>
