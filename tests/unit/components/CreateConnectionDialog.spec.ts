@@ -26,6 +26,7 @@ const toastSuccess = toast.success as ReturnType<typeof vi.fn>
 // Стабы Radix UI и UI-компонентов — рендерят слоты без реальной логики portal/анимаций
 const globalStubs = {
   DialogRoot: {
+    name: 'DialogRoot',
     props: ['open'],
     emits: ['update:open'],
     template: '<div><slot /></div>',
@@ -221,16 +222,26 @@ describe('CreateConnectionDialog — обработка ошибок API', () =>
     expect(toastError).not.toHaveBeenCalled()
   })
 
-  it('вызывает toast.error при сетевой ошибке (есть response.status != 400/409)', async () => {
-    createApi.mockRejectedValue({ response: { status: 404 }, message: 'Не найден' })
+  it('показывает toast.error при 404', async () => {
+    createApi.mockRejectedValue({ response: { status: 404 }, message: 'Канал не найден' })
     const wrapper = factory(wbChannel)
 
     await wrapper.find('#conn-api-key').setValue('validApiKey123456')
     await wrapper.find('form').trigger('submit')
     await flushPromises()
 
-    expect(toastError).toHaveBeenCalled()
-    expect(wrapper.emitted('connected')).toBeFalsy()
+    expect(toastError).toHaveBeenCalledWith('Канал не найден')
+  })
+
+  it('показывает toast.error при сетевой ошибке', async () => {
+    createApi.mockRejectedValue({ response: { status: 500 } })
+    const wrapper = factory(wbChannel)
+
+    await wrapper.find('#conn-api-key').setValue('validApiKey123456')
+    await wrapper.find('form').trigger('submit')
+    await flushPromises()
+
+    expect(toastError).toHaveBeenCalledWith('Сетевая ошибка, попробуйте позже')
   })
 })
 

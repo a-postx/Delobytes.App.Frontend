@@ -44,11 +44,13 @@ function factory() {
     global: {
       stubs: {
         ChannelCard: {
+          name: 'ChannelCard',
           props: ['channel'],
           emits: ['connect'],
           template: '<div class="channel-card" @click="$emit(\'connect\')">{{ channel.displayName }}</div>',
         },
         CreateConnectionDialog: {
+          name: 'CreateConnectionDialog',
           props: ['channel', 'modelValue'],
           emits: ['update:modelValue', 'connected'],
           template: '<div class="create-dialog" />',
