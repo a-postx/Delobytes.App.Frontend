@@ -52,9 +52,9 @@ const handleDeleted = async (): Promise<void> => {
 <template>
   <div class="flex flex-col gap-6 p-6">
     <div class="flex flex-col gap-2">
-      <h1 class="text-2xl font-bold">Каналы продаж</h1>
+      <h1 class="text-xl font-bold">Интеграции</h1>
       <p class="text-muted-foreground">
-        Подключите маркетплейсы для автоматического сбора данных о продажах.
+        Подключите ваши каналы продаж с помощью внешних интеграций.
       </p>
     </div>
 

@@ -24,7 +24,7 @@ const emit = defineEmits<{
 <template>
   <Card :class="props.channel.isConnected ? 'opacity-75 bg-muted' : ''">
     <CardHeader class="relative">
-      <CardTitle>{{ props.channel.displayName }}</CardTitle>
+      <CardTitle class="text-xl">{{ props.channel.displayName }}</CardTitle>
       <CardDescription>{{ props.channel.description ?? '' }}</CardDescription>
       <Badge
         v-if="props.channel.isConnected"
