@@ -60,3 +60,32 @@ export interface UserTenant {
   tenantName: string
   role: string
 }
+
+export interface AvailableChannel {
+  code: string
+  displayName: string
+  description: string | null
+  apiVersion: string
+  isConnected: boolean
+}
+
+export interface Connection {
+  id: string
+  channelCode: string
+  channelDisplayName: string
+  isActive: boolean
+  lastSyncAt: string | null
+  createdAt: string
+}
+
+export interface CreateConnectionPayload {
+  systemChannelTemplateCode: string
+  apiKey: string
+  apiSecret?: string
+  settings?: Record<string, string>
+}
+
+export interface CreateConnectionResult {
+  connectionId: string
+  channelId: string
+}
