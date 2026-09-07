@@ -19,9 +19,9 @@ const forwardedProps = useForwardProps(delegatedProps)
     v-bind="forwardedProps"
     :class="cn(
       'bg-background w-[1.125rem] h-[1.125rem] rounded-full border border-border shadow-sm',
-      'data-[state=checked]:border-primary data-[state=checked]:bg-primary',
-      'focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2',
-      'disabled:cursor-not-allowed disabled:opacity-50',
+      'data-[state=checked]:bg-primary data-[state=checked]:border-primary',
+      'focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+      'disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer',
       'cursor-pointer',
       props.class
     )"

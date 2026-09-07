@@ -7,10 +7,12 @@ const props = defineProps<RadioGroupRootProps>()
 const emit = defineEmits<RadioGroupRootEmits>()
 
 const forwarded = useForwardPropsEmits(props, emit)
+
 </script>
 
 <template>
   <RadioGroupRoot
+    class="flex flex-col gap-2.5"
     data-slot="radio-group"
     v-bind="forwarded"
   >

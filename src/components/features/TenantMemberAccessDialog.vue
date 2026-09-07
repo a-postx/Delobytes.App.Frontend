@@ -131,7 +131,7 @@ const handleOpenChange = (open: boolean): void => {
 
             <div class="space-y-2">
               <Label>Роль</Label>
-              <RadioGroup v-model="role" :disabled="isCreating" class="flex flex-col gap-2.5">
+              <RadioGroup v-model="role" :disabled="isCreating">
                 <div class="flex items-center">
                   <RadioGroupItem value="Administrator" id="role-admin" />
                   <Label
