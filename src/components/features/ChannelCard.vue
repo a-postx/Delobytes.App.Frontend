@@ -68,7 +68,7 @@ const handleDelete = async (): Promise<void> => {
 </script>
 
 <template>
-  <Card class="relative" :class="props.channel.isConnected ? 'opacity-75 bg-muted' : ''">
+  <Card class="flex flex-col" :class="props.channel.isConnected ? 'opacity-75 bg-muted' : ''">
     <CardHeader class="relative">
       <CardTitle class="text-xl">{{ props.channel.displayName }}</CardTitle>
       <CardDescription>{{ props.channel.description ?? '' }}</CardDescription>
@@ -83,55 +83,58 @@ const handleDelete = async (): Promise<void> => {
     <CardContent>
       <span class="text-xs text-muted-foreground">API {{ props.channel.apiVersion }}</span>
     </CardContent>
-    <CardFooter v-if="!props.channel.isConnected">
+
+    <!-- Подключённое состояние: информация об аккаунте слева, меню действий справа -->
+    <CardFooter v-if="props.channel.isConnected" class="mt-auto flex items-end justify-between">
+      <div
+        v-if="hasAccountInfo(props.channel)"
+        class="flex flex-col gap-0.5"
+      >
+        <span
+          v-if="props.channel.customerName"
+          class="text-xs font-medium text-foreground leading-tight"
+        >{{ props.channel.customerName }}</span>
+        <span
+          v-if="props.channel.legalName"
+          class="text-xs text-muted-foreground leading-tight"
+        >{{ props.channel.legalName }}</span>
+        <span
+          v-if="props.channel.inn"
+          class="text-xs text-muted-foreground leading-tight"
+        >ИНН: {{ props.channel.inn }}</span>
+      </div>
+      <div v-else />
+
+      <DropdownMenu>
+        <DropdownMenuTrigger as-child>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            :disabled="isDeleting"
+            aria-label="Действия с подключением"
+          >
+            <Spinner v-if="isDeleting" size="sm" />
+            <Ellipsis v-else />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem
+            variant="destructive"
+            @click="isDeleteDialogOpen = true"
+          >
+            <Trash2 />
+            Удалить
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </CardFooter>
+
+    <!-- Не подключённое состояние: кнопка подключения -->
+    <CardFooter v-else>
       <Button @click="emit('connect')">
         Подключить
       </Button>
     </CardFooter>
-
-    <!-- Информация о кабинете (левый нижний угол) для подключённых каналов -->
-    <div
-      v-if="props.channel.isConnected && hasAccountInfo(props.channel)"
-      class="absolute bottom-3 left-4 flex flex-col gap-0.5"
-    >
-      <span
-        v-if="props.channel.customerName"
-        class="text-xs font-medium text-foreground leading-tight"
-      >{{ props.channel.customerName }}</span>
-      <span
-        v-if="props.channel.legalName"
-        class="text-xs text-muted-foreground leading-tight"
-      >{{ props.channel.legalName }}</span>
-      <span
-        v-if="props.channel.inn"
-        class="text-xs text-muted-foreground leading-tight"
-      >ИНН: {{ props.channel.inn }}</span>
-    </div>
-
-    <!-- Dropdown в правом нижнем углу карточки для подключённых каналов -->
-    <DropdownMenu v-if="props.channel.isConnected">
-      <DropdownMenuTrigger as-child>
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          class="absolute bottom-3 right-3"
-          :disabled="isDeleting"
-          aria-label="Действия с подключением"
-        >
-          <Spinner v-if="isDeleting" size="sm" />
-          <Ellipsis v-else />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        <DropdownMenuItem
-          variant="destructive"
-          @click="isDeleteDialogOpen = true"
-        >
-          <Trash2 />
-          Удалить
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
   </Card>
 
   <!-- Диалог подтверждения удаления -->
