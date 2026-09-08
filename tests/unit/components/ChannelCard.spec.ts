@@ -104,10 +104,10 @@ describe('ChannelCard — isConnected === false', () => {
     expect(wrapper.text()).toContain('Подключить')
   })
 
-  it('не показывает Badge "Подключён"', () => {
+  it('не показывает Badge "Активно"', () => {
     const wrapper = mountCard(base)
 
-    expect(wrapper.text()).not.toContain('Подключён')
+    expect(wrapper.text()).not.toContain('Активно')
   })
 
   it('эмитирует "connect" при клике', async () => {
@@ -139,7 +139,7 @@ describe('ChannelCard — isConnected === true', () => {
   it('показывает Badge "Подключён"', () => {
     const wrapper = mountCard(connected)
 
-    expect(wrapper.text()).toContain('Подключён')
+    expect(wrapper.text()).toContain('Активно')
   })
 
   it('рендерит кнопку-триггер меню (ellipsis)', () => {
