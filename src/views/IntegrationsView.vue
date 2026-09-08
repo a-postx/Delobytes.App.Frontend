@@ -6,13 +6,11 @@ import type { AvailableChannel } from '@/types'
 import { Skeleton } from '@/components/ui/skeleton'
 import ChannelCard from '@/components/features/ChannelCard.vue'
 import CreateConnectionDialog from '@/components/features/CreateConnectionDialog.vue'
-import ManageConnectionDialog from '@/components/features/ManageConnectionDialog.vue'
 
 const channels = ref<AvailableChannel[]>([])
 const isLoading = ref<boolean>(true)
 const selectedChannel = ref<AvailableChannel | null>(null)
 const isConnectDialogOpen = ref<boolean>(false)
-const isManageDialogOpen = ref<boolean>(false)
 
 const loadChannels = async (): Promise<void> => {
   try {
@@ -31,11 +29,6 @@ onMounted(async () => {
 const openConnectDialog = (channel: AvailableChannel): void => {
   selectedChannel.value = channel
   isConnectDialogOpen.value = true
-}
-
-const openManageDialog = (channel: AvailableChannel): void => {
-  selectedChannel.value = channel
-  isManageDialogOpen.value = true
 }
 
 const handleConnected = async (): Promise<void> => {
@@ -82,7 +75,7 @@ const handleDeleted = async (): Promise<void> => {
         :key="channel.code"
         :channel="channel"
         @connect="openConnectDialog(channel)"
-        @manage="openManageDialog(channel)"
+        @deleted="handleDeleted"
       />
     </div>
   </div>
@@ -93,13 +86,5 @@ const handleDeleted = async (): Promise<void> => {
     :channel="selectedChannel"
     v-model="isConnectDialogOpen"
     @connected="handleConnected"
-  />
-
-  <!-- Manage / delete dialog -->
-  <ManageConnectionDialog
-    v-if="selectedChannel && selectedChannel.isConnected"
-    :channel="selectedChannel"
-    v-model="isManageDialogOpen"
-    @deleted="handleDeleted"
   />
 </template>
