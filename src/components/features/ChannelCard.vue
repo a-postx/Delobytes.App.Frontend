@@ -20,6 +20,15 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Spinner } from '@/components/ui/spinner'
+import {
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogOverlay,
+  AlertDialogTitle,
+  AlertDialogPortal,
+  AlertDialogRoot,
+} from '@/components/ui/alert-dialog'
 import { integrationsApi } from '@/services/api'
 
 const props = defineProps<{
@@ -32,6 +41,7 @@ const emit = defineEmits<{
 }>()
 
 const isDeleting = ref<boolean>(false)
+const isDeleteDialogOpen = ref<boolean>(false)
 
 const handleDelete = async (): Promise<void> => {
   if (!props.channel.connectionId) {
@@ -43,6 +53,7 @@ const handleDelete = async (): Promise<void> => {
   try {
     await integrationsApi.deleteConnection(props.channel.connectionId)
     toast.success('Подключение удалено')
+    isDeleteDialogOpen.value = false
     emit('deleted')
   } catch {
     toast.error('Не удалось удалить подключение, попробуйте позже')
@@ -91,8 +102,7 @@ const handleDelete = async (): Promise<void> => {
       <DropdownMenuContent align="end">
         <DropdownMenuItem
           variant="destructive"
-          :disabled="isDeleting"
-          @click="handleDelete"
+          @click="isDeleteDialogOpen = true"
         >
           <Trash2 />
           Удалить
@@ -100,4 +110,34 @@ const handleDelete = async (): Promise<void> => {
       </DropdownMenuContent>
     </DropdownMenu>
   </Card>
+
+  <!-- Диалог подтверждения удаления -->
+  <AlertDialogRoot :open="isDeleteDialogOpen" @update:open="isDeleteDialogOpen = $event">
+    <AlertDialogPortal>
+      <AlertDialogOverlay class="data-[state=open]:animate-overlayShow fixed inset-0 z-30 bg-black/80" />
+      <AlertDialogContent>
+        <AlertDialogTitle class="text-foreground text-lg font-semibold">
+          Удалить подключение
+        </AlertDialogTitle>
+        <AlertDialogDescription class="text-muted-foreground mt-2 mb-6 text-sm leading-normal">
+          Вы уверены, что хотите удалить это подключение?
+        </AlertDialogDescription>
+
+        <div class="flex justify-end gap-3">
+          <AlertDialogCancel :disabled="isDeleting">
+            Отмена
+          </AlertDialogCancel>
+          <!-- Используем Button напрямую, чтобы диалог закрывался только при успешном удалении -->
+          <Button
+            variant="destructive"
+            :disabled="isDeleting"
+            @click="handleDelete"
+          >
+            <span>Да</span>
+            <Spinner v-if="isDeleting" size="sm" class="ml-2" />
+          </Button>
+        </div>
+      </AlertDialogContent>
+    </AlertDialogPortal>
+  </AlertDialogRoot>
 </template>
