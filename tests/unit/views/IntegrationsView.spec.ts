@@ -51,12 +51,12 @@ function factory() {
         ChannelCard: {
           name: 'ChannelCard',
           props: ['channel'],
-          emits: ['connect', 'manage'],
+          emits: ['connect', 'deleted'],
           template: `
             <div class="channel-card">
               <span>{{ channel.displayName }}</span>
               <button class="btn-connect" @click="$emit('connect')">connect</button>
-              <button class="btn-manage" @click="$emit('manage')">manage</button>
+              <button class="btn-deleted" @click="$emit('deleted')">deleted</button>
             </div>
           `,
         },
@@ -65,12 +65,6 @@ function factory() {
           props: ['channel', 'modelValue'],
           emits: ['update:modelValue', 'connected'],
           template: '<div class="create-dialog" />',
-        },
-        ManageConnectionDialog: {
-          name: 'ManageConnectionDialog',
-          props: ['channel', 'modelValue'],
-          emits: ['update:modelValue', 'deleted'],
-          template: '<div class="manage-dialog" />',
         },
         Skeleton: { template: '<div class="skeleton" />' },
       },
@@ -142,53 +136,6 @@ describe('IntegrationsView — открытие диалога подключе�
     const dialog = wrapper.findComponent({ name: 'CreateConnectionDialog' })
     expect(dialog.props('channel')).toEqual(disconnectedChannel)
   })
-
-  it('не рендерит ManageConnectionDialog при открытии диалога подключения', async () => {
-    getChannels.mockResolvedValue(stubChannels)
-    const wrapper = factory()
-    await flushPromises()
-
-    await wrapper.findAll('.btn-connect')[0].trigger('click')
-
-    expect(wrapper.find('.manage-dialog').exists()).toBe(false)
-  })
-})
-
-describe('IntegrationsView — открытие диалога управления', () => {
-  beforeEach(() => vi.clearAllMocks())
-
-  it('рендерит ManageConnectionDialog после события manage', async () => {
-    getChannels.mockResolvedValue(stubChannels)
-    const wrapper = factory()
-    await flushPromises()
-
-    expect(wrapper.find('.manage-dialog').exists()).toBe(false)
-
-    await wrapper.findAll('.btn-manage')[1].trigger('click')
-
-    expect(wrapper.find('.manage-dialog').exists()).toBe(true)
-  })
-
-  it('передаёт выбранный канал в ManageConnectionDialog', async () => {
-    getChannels.mockResolvedValue(stubChannels)
-    const wrapper = factory()
-    await flushPromises()
-
-    await wrapper.findAll('.btn-manage')[1].trigger('click')
-
-    const dialog = wrapper.findComponent({ name: 'ManageConnectionDialog' })
-    expect(dialog.props('channel')).toEqual(connectedChannel)
-  })
-
-  it('не рендерит CreateConnectionDialog при открытии диалога управления', async () => {
-    getChannels.mockResolvedValue(stubChannels)
-    const wrapper = factory()
-    await flushPromises()
-
-    await wrapper.findAll('.btn-manage')[1].trigger('click')
-
-    expect(wrapper.find('.create-dialog').exists()).toBe(false)
-  })
 })
 
 describe('IntegrationsView — handleConnected', () => {
@@ -216,7 +163,7 @@ describe('IntegrationsView — handleConnected', () => {
 describe('IntegrationsView — handleDeleted', () => {
   beforeEach(() => vi.clearAllMocks())
 
-  it('перезагружает каналы после события deleted', async () => {
+  it('перезагружает каналы после события deleted от ChannelCard', async () => {
     const updated: AvailableChannel[] = [
       disconnectedChannel,
       { ...connectedChannel, isConnected: false, connectionId: null, maskedApiKey: null },
@@ -226,9 +173,7 @@ describe('IntegrationsView — handleDeleted', () => {
     const wrapper = factory()
     await flushPromises()
 
-    await wrapper.findAll('.btn-manage')[1].trigger('click')
-    const dialog = wrapper.findComponent({ name: 'ManageConnectionDialog' })
-    await dialog.vm.$emit('deleted')
+    await wrapper.findAll('.btn-deleted')[1].trigger('click')
     await flushPromises()
 
     expect(getChannels).toHaveBeenCalledTimes(2)

@@ -1,7 +1,27 @@
-import { describe, it, expect } from 'vitest'
-import { mount } from '@vue/test-utils'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { mount, flushPromises } from '@vue/test-utils'
 import ChannelCard from '@/components/features/ChannelCard.vue'
 import type { AvailableChannel } from '@/types'
+
+vi.mock('@/services/api', () => ({
+  integrationsApi: {
+    deleteConnection: vi.fn(),
+  },
+}))
+
+vi.mock('vue-sonner', () => ({
+  toast: {
+    error: vi.fn(),
+    success: vi.fn(),
+  },
+}))
+
+import { integrationsApi } from '@/services/api'
+import { toast } from 'vue-sonner'
+
+const deleteConnection = integrationsApi.deleteConnection as ReturnType<typeof vi.fn>
+const toastSuccess = toast.success as ReturnType<typeof vi.fn>
+const toastError = toast.error as ReturnType<typeof vi.fn>
 
 const base: AvailableChannel = {
   code: 'wildberries',
@@ -68,6 +88,8 @@ describe('ChannelCard — isConnected === true', () => {
     maskedApiKey: '******abcdef',
   }
 
+  beforeEach(() => vi.clearAllMocks())
+
   it('применяет opacity-75 и bg-muted', () => {
     const wrapper = mount(ChannelCard, { props: { channel: connected } })
 
@@ -81,27 +103,60 @@ describe('ChannelCard — isConnected === true', () => {
     expect(wrapper.text()).toContain('Подключён')
   })
 
-  it('рендерит активную кнопку "Управление"', () => {
+  it('рендерит кнопку-триггер меню (ellipsis)', () => {
     const wrapper = mount(ChannelCard, { props: { channel: connected } })
-    const btn = wrapper.find('button')
 
-    expect(btn.text()).toBe('Управление')
+    // кнопка-триггер — ghost icon-sm без текста, содержит svg
+    const btn = wrapper.find('button')
+    expect(btn.exists()).toBe(true)
     expect(btn.attributes('disabled')).toBeUndefined()
   })
 
-  it('эмитирует "manage" при клике на кнопку "Управление"', async () => {
+  it('не рендерит кнопку "Подключить"', () => {
     const wrapper = mount(ChannelCard, { props: { channel: connected } })
 
-    await wrapper.find('button').trigger('click')
-
-    expect(wrapper.emitted('manage')).toHaveLength(1)
+    expect(wrapper.text()).not.toContain('Подключить')
   })
 
-  it('не эмитирует "connect" при клике', async () => {
+  it('не эмитирует "connect" при клике на триггер меню', async () => {
     const wrapper = mount(ChannelCard, { props: { channel: connected } })
 
     await wrapper.find('button').trigger('click')
 
     expect(wrapper.emitted('connect')).toBeFalsy()
+  })
+
+  it('вызывает deleteConnection и эмитирует "deleted" при успехе', async () => {
+    deleteConnection.mockResolvedValue(undefined)
+    const wrapper = mount(ChannelCard, { props: { channel: connected } })
+
+    await wrapper.vm.handleDelete()
+    await flushPromises()
+
+    expect(deleteConnection).toHaveBeenCalledWith('conn-123')
+    expect(toastSuccess).toHaveBeenCalledWith('Подключение удалено')
+    expect(wrapper.emitted('deleted')).toHaveLength(1)
+  })
+
+  it('показывает toast.error при ошибке удаления', async () => {
+    deleteConnection.mockRejectedValue(new Error('Network error'))
+    const wrapper = mount(ChannelCard, { props: { channel: connected } })
+
+    await wrapper.vm.handleDelete()
+    await flushPromises()
+
+    expect(toastError).toHaveBeenCalledWith('Не удалось удалить подключение, попробуйте позже')
+    expect(wrapper.emitted('deleted')).toBeFalsy()
+  })
+
+  it('не вызывает deleteConnection если connectionId отсутствует', async () => {
+    const wrapper = mount(ChannelCard, {
+      props: { channel: { ...connected, connectionId: null } },
+    })
+
+    await wrapper.vm.handleDelete()
+    await flushPromises()
+
+    expect(deleteConnection).not.toHaveBeenCalled()
   })
 })
