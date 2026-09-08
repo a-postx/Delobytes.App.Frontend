@@ -60,6 +60,11 @@ const ozonChannel: AvailableChannel = {
   description: null,
   apiVersion: 'v3',
   isConnected: false,
+  connectionId: null,
+  maskedApiKey: null,
+  customerName: null,
+  legalName: null,
+  inn: null,
 }
 
 const wbChannel: AvailableChannel = {
@@ -68,6 +73,11 @@ const wbChannel: AvailableChannel = {
   description: null,
   apiVersion: 'v2',
   isConnected: false,
+  connectionId: null,
+  maskedApiKey: null,
+  customerName: null,
+  legalName: null,
+  inn: null,
 }
 
 function factory(channel: AvailableChannel, modelValue = true) {

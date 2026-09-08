@@ -24,6 +24,11 @@ const stubChannel: AvailableChannel = {
   description: 'Маркетплейс',
   apiVersion: 'v3',
   isConnected: false,
+  connectionId: null,
+  maskedApiKey: null,
+  customerName: null,
+  legalName: null,
+  inn: null,
 }
 
 const stubConnection: Connection = {

@@ -31,6 +31,9 @@ const base: AvailableChannel = {
   isConnected: false,
   connectionId: null,
   maskedApiKey: null,
+  customerName: null,
+  legalName: null,
+  inn: null,
 }
 
 // Стабы reka-ui alert-dialog: рендерят slot независимо от состояния portal/анимаций,

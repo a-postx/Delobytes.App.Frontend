@@ -69,6 +69,9 @@ export interface AvailableChannel {
   isConnected: boolean
   connectionId: string | null
   maskedApiKey: string | null
+  customerName: string | null
+  legalName: string | null
+  inn: string | null
 }
 
 export interface Connection {

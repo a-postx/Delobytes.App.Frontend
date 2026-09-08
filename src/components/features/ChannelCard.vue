@@ -43,6 +43,10 @@ const emit = defineEmits<{
 const isDeleting = ref<boolean>(false)
 const isDeleteDialogOpen = ref<boolean>(false)
 
+const hasAccountInfo = (channel: AvailableChannel): boolean => {
+  return !!(channel.customerName || channel.legalName || channel.inn)
+}
+
 const handleDelete = async (): Promise<void> => {
   if (!props.channel.connectionId) {
     return
@@ -84,6 +88,25 @@ const handleDelete = async (): Promise<void> => {
         Подключить
       </Button>
     </CardFooter>
+
+    <!-- Информация о кабинете (левый нижний угол) для подключённых каналов -->
+    <div
+      v-if="props.channel.isConnected && hasAccountInfo(props.channel)"
+      class="absolute bottom-3 left-4 flex flex-col gap-0.5"
+    >
+      <span
+        v-if="props.channel.customerName"
+        class="text-xs font-medium text-foreground leading-tight"
+      >{{ props.channel.customerName }}</span>
+      <span
+        v-if="props.channel.legalName"
+        class="text-xs text-muted-foreground leading-tight"
+      >{{ props.channel.legalName }}</span>
+      <span
+        v-if="props.channel.inn"
+        class="text-xs text-muted-foreground leading-tight"
+      >ИНН: {{ props.channel.inn }}</span>
+    </div>
 
     <!-- Dropdown в правом нижнем углу карточки для подключённых каналов -->
     <DropdownMenu v-if="props.channel.isConnected">

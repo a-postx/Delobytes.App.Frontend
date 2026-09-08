@@ -30,6 +30,9 @@ const disconnectedChannel: AvailableChannel = {
   isConnected: false,
   connectionId: null,
   maskedApiKey: null,
+  customerName: null,
+  legalName: null,
+  inn: null,
 }
 
 const connectedChannel: AvailableChannel = {
@@ -40,6 +43,9 @@ const connectedChannel: AvailableChannel = {
   isConnected: true,
   connectionId: 'conn-wb-1',
   maskedApiKey: '******abcdef',
+  customerName: null,
+  legalName: null,
+  inn: null,
 }
 
 const stubChannels: AvailableChannel[] = [disconnectedChannel, connectedChannel]
