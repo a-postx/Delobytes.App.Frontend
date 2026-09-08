@@ -73,7 +73,7 @@ const handleDelete = async (): Promise<void> => {
         variant="success"
         class="absolute top-3 right-3"
       >
-        Подключён
+        Активно
       </Badge>
     </CardHeader>
     <CardContent>
