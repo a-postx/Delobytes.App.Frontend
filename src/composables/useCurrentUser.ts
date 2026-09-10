@@ -1,5 +1,6 @@
 import { computed } from 'vue'
 import type { CurrentUser } from '@/types'
+import { meApi } from '@/services/api'
 
 export function useCurrentUser() {
   const currentUser = computed<CurrentUser | null>(() => {
@@ -19,5 +20,14 @@ export function useCurrentUser() {
     return r === 'Administrator' || r === 'Manager'
   })
 
-  return { currentUser, role, canWrite }
+  const fetchCurrentUser = async (): Promise<void> => {
+    try {
+      const user = await meApi.getCurrentUser()
+      localStorage.setItem('currentUser', JSON.stringify(user))
+    } catch {
+      localStorage.removeItem('currentUser')
+    }
+  }
+
+  return { currentUser, role, canWrite, fetchCurrentUser }
 }

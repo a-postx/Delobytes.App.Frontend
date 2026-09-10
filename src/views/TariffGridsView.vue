@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
-import { Plus, Pencil, Trash2, Grid3x3, ChevronDown, ChevronUp, PlusCircle, Minus } from 'lucide-vue-next'
+import { Plus, Pencil, Trash2, Grid3x3, PlusCircle, Minus } from 'lucide-vue-next'
 import {
   DialogClose,
   DialogContent,
@@ -38,7 +38,7 @@ import {
 } from '@/components/ui/table'
 import { toast } from 'vue-sonner'
 import { tariffGridsApi, TariffType } from '@/services/api'
-import type { TariffGridItem, TariffGridEntry, CreateTariffGridRequest, UpdateTariffGridRequest } from '@/services/api'
+import type { TariffGridItem, CreateTariffGridRequest, UpdateTariffGridRequest } from '@/services/api'
 import { useCurrentUser } from '@/composables/useCurrentUser'
 import { X } from 'lucide-vue-next'
 
@@ -71,9 +71,6 @@ const tariffTypeOptions = [
   { value: TariffType.WbLogistics, label: 'Тарифы WB (по регионам)' },
   { value: TariffType.FulfillmentCenter, label: 'Тарифы фулфилмент-центра (по городам)' },
 ]
-
-const tariffTypeLabel = (t: TariffType): string =>
-  tariffTypeOptions.find(o => o.value === t)?.label ?? String(t)
 
 const tariffTypeBadge = (t: TariffType): 'default' | 'success' =>
   t === TariffType.WbLogistics ? 'default' : 'success'

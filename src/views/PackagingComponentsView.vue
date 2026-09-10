@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted } from 'vue'
 import { Plus, Pencil, Trash2, PackageOpen } from 'lucide-vue-next'
 import {
   DialogClose,
