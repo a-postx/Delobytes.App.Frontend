@@ -113,7 +113,7 @@ const currentStep = ref<number>(1)
 
     <!-- Vertical stepper -->
     <div class="flex flex-col gap-4">
-      <h2 class="text-base font-semibold text-foreground">Вертикальный</h2>
+      <h2 class="text-base font-semibold text-foreground">Вертикальный </h2>
       <StepperRoot
         :default-value="2"
         orientation="vertical"
