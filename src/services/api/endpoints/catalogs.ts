@@ -16,6 +16,31 @@ export enum TariffType {
   FulfillmentCenter = 1,
 }
 
+// ---------- Suppliers ----------
+
+export interface SupplierItem {
+  id: string
+  name: string
+  contactInfo?: string
+  isActive: boolean
+  createdAt: string
+}
+
+export interface GetSuppliersResponse {
+  items: SupplierItem[]
+}
+
+export interface CreateSupplierRequest {
+  name: string
+  contactInfo?: string
+}
+
+export interface UpdateSupplierRequest {
+  name: string
+  contactInfo?: string
+  isActive: boolean
+}
+
 // ---------- Packaging Components ----------
 
 export interface PackagingComponentItem {
@@ -24,7 +49,8 @@ export interface PackagingComponentItem {
   description?: string
   unit: Unit
   pricePerUnit: number
-  supplier?: string
+  supplierId?: string
+  supplierName?: string
   isActive: boolean
   createdAt: string
 }
@@ -38,7 +64,7 @@ export interface CreatePackagingComponentRequest {
   description?: string
   unit: Unit
   pricePerUnit: number
-  supplier?: string
+  supplierId?: string
 }
 
 export interface UpdatePackagingComponentRequest {
@@ -46,7 +72,7 @@ export interface UpdatePackagingComponentRequest {
   description?: string
   unit: Unit
   pricePerUnit: number
-  supplier?: string
+  supplierId?: string
   isActive: boolean
 }
 
@@ -141,6 +167,26 @@ export interface CreateRawMaterialRateRequest {
 }
 
 // ---------- API objects ----------
+
+export const suppliersApi = {
+  getAll: async (): Promise<GetSuppliersResponse> => {
+    const response = await axiosInstance.get<GetSuppliersResponse>('/api/catalogs/suppliers')
+    return response.data
+  },
+
+  create: async (data: CreateSupplierRequest): Promise<SupplierItem> => {
+    const response = await axiosInstance.post<SupplierItem>('/api/catalogs/suppliers', data)
+    return response.data
+  },
+
+  update: async (id: string, data: UpdateSupplierRequest): Promise<void> => {
+    await axiosInstance.put(`/api/catalogs/suppliers/${id}`, data)
+  },
+
+  delete: async (id: string): Promise<void> => {
+    await axiosInstance.delete(`/api/catalogs/suppliers/${id}`)
+  },
+}
 
 export const packagingComponentsApi = {
   getAll: async (): Promise<GetPackagingComponentsResponse> => {

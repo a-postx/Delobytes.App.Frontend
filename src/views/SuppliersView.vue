@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { Plus, Pencil, Trash2, PackageOpen } from 'lucide-vue-next'
+import { Plus, Pencil, Trash2, Truck } from 'lucide-vue-next'
 import {
   DialogClose,
   DialogContent,
@@ -37,79 +37,47 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { toast } from 'vue-sonner'
-import { packagingComponentsApi, suppliersApi, Unit } from '@/services/api'
-import type {
-  PackagingComponentItem,
-  CreatePackagingComponentRequest,
-  UpdatePackagingComponentRequest,
-  SupplierItem,
-} from '@/services/api'
+import { suppliersApi } from '@/services/api'
+import type { SupplierItem, CreateSupplierRequest, UpdateSupplierRequest } from '@/services/api'
 import { useCurrentUser } from '@/composables/useCurrentUser'
 import { X } from 'lucide-vue-next'
 
 const { canWrite } = useCurrentUser()
 
-const items = ref<PackagingComponentItem[]>([])
-const suppliers = ref<SupplierItem[]>([])
+const items = ref<SupplierItem[]>([])
 const isLoading = ref<boolean>(true)
 
 const createDialogOpen = ref<boolean>(false)
 const editDialogOpen = ref<boolean>(false)
 const deleteDialogOpen = ref<boolean>(false)
 
-const editTarget = ref<PackagingComponentItem | null>(null)
-const deleteTarget = ref<PackagingComponentItem | null>(null)
+const editTarget = ref<SupplierItem | null>(null)
+const deleteTarget = ref<SupplierItem | null>(null)
 const isSaving = ref<boolean>(false)
 const isDeleting = ref<boolean>(false)
 
-const form = ref({
-  name: '',
-  description: '',
-  unit: Unit.Piece,
-  pricePerUnit: 0,
-  supplierId: '' as string,
-})
+const form = ref({ name: '', contactInfo: '' })
 const editActive = ref<boolean>(true)
-
-const unitOptions = [
-  { value: Unit.Piece, label: 'шт.' },
-  { value: Unit.Kg, label: 'кг' },
-  { value: Unit.Meter, label: 'м' },
-  { value: Unit.Liter, label: 'л' },
-  { value: Unit.Ml, label: 'мл' },
-  { value: Unit.Gram, label: 'г' },
-]
-
-const unitLabel = (u: Unit): string => unitOptions.find(o => o.value === u)?.label ?? String(u)
 
 const formatDate = (dateStr: string): string =>
   new Date(dateStr).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' })
 
-const formatPrice = (v: number): string =>
-  v.toLocaleString('ru-RU', { style: 'currency', currency: 'RUB', maximumFractionDigits: 2 })
-
-const activeSuppliers = (): SupplierItem[] => suppliers.value.filter(s => s.isActive)
-
-const loadData = async (): Promise<void> => {
+const loadItems = async (): Promise<void> => {
   isLoading.value = true
   try {
-    const [componentsResp, suppliersResp] = await Promise.all([
-      packagingComponentsApi.getAll(),
-      suppliersApi.getAll(),
-    ])
-    items.value = componentsResp.items
-    suppliers.value = suppliersResp.items
+    const resp = await suppliersApi.getAll()
+    items.value = resp.items
   } catch {
-    toast.error('Не удалось загрузить данные')
+    toast.error('Не удалось загрузить поставщиков')
   } finally {
     isLoading.value = false
   }
 }
 
-onMounted(loadData)
+onMounted(loadItems)
 
 const resetForm = (): void => {
-  form.value = { name: '', description: '', unit: Unit.Piece, pricePerUnit: 0, supplierId: '' }
+  form.value = { name: '', contactInfo: '' }
   editActive.value = true
 }
 
@@ -118,20 +86,17 @@ const openCreate = (): void => {
   createDialogOpen.value = true
 }
 
-const openEdit = (item: PackagingComponentItem): void => {
+const openEdit = (item: SupplierItem): void => {
   editTarget.value = item
   form.value = {
     name: item.name,
-    description: item.description ?? '',
-    unit: item.unit,
-    pricePerUnit: item.pricePerUnit,
-    supplierId: item.supplierId ?? '',
+    contactInfo: item.contactInfo ?? '',
   }
   editActive.value = item.isActive
   editDialogOpen.value = true
 }
 
-const openDelete = (item: PackagingComponentItem): void => {
+const openDelete = (item: SupplierItem): void => {
   deleteTarget.value = item
   deleteDialogOpen.value = true
 }
@@ -140,19 +105,16 @@ const handleCreate = async (): Promise<void> => {
   if (!form.value.name.trim()) { toast.error('Введите название'); return }
   isSaving.value = true
   try {
-    const payload: CreatePackagingComponentRequest = {
+    const payload: CreateSupplierRequest = {
       name: form.value.name.trim(),
-      description: form.value.description.trim() || undefined,
-      unit: form.value.unit,
-      pricePerUnit: Number(form.value.pricePerUnit),
-      supplierId: form.value.supplierId || undefined,
+      contactInfo: form.value.contactInfo.trim() || undefined,
     }
-    await packagingComponentsApi.create(payload)
-    toast.success('Компонент добавлен')
+    await suppliersApi.create(payload)
+    toast.success('Поставщик добавлен')
     createDialogOpen.value = false
-    await loadData()
+    await loadItems()
   } catch {
-    toast.error('Не удалось создать компонент')
+    toast.error('Не удалось создать поставщика')
   } finally {
     isSaving.value = false
   }
@@ -162,20 +124,17 @@ const handleEdit = async (): Promise<void> => {
   if (!editTarget.value || !form.value.name.trim()) { toast.error('Введите название'); return }
   isSaving.value = true
   try {
-    const payload: UpdatePackagingComponentRequest = {
+    const payload: UpdateSupplierRequest = {
       name: form.value.name.trim(),
-      description: form.value.description.trim() || undefined,
-      unit: form.value.unit,
-      pricePerUnit: Number(form.value.pricePerUnit),
-      supplierId: form.value.supplierId || undefined,
+      contactInfo: form.value.contactInfo.trim() || undefined,
       isActive: editActive.value,
     }
-    await packagingComponentsApi.update(editTarget.value.id, payload)
-    toast.success('Компонент обновлён')
+    await suppliersApi.update(editTarget.value.id, payload)
+    toast.success('Поставщик обновлён')
     editDialogOpen.value = false
-    await loadData()
+    await loadItems()
   } catch {
-    toast.error('Не удалось обновить компонент')
+    toast.error('Не удалось обновить поставщика')
   } finally {
     isSaving.value = false
   }
@@ -185,12 +144,12 @@ const handleDelete = async (): Promise<void> => {
   if (!deleteTarget.value) return
   isDeleting.value = true
   try {
-    await packagingComponentsApi.delete(deleteTarget.value.id)
-    toast.success('Компонент удалён')
+    await suppliersApi.delete(deleteTarget.value.id)
+    toast.success('Поставщик удалён')
     deleteDialogOpen.value = false
-    await loadData()
+    await loadItems()
   } catch {
-    toast.error('Не удалось удалить компонент')
+    toast.error('Не удалось удалить поставщика')
   } finally {
     isDeleting.value = false
   }
@@ -206,10 +165,10 @@ const fieldClass = 'flex flex-col gap-1'
     <div class="flex items-center justify-between">
       <div class="flex flex-col gap-1">
         <h1 class="text-xl font-bold flex items-center gap-2">
-          <PackageOpen class="size-5 text-primary" />
-          Компоненты упаковки
+          <Truck class="size-5 text-primary" />
+          Поставщики
         </h1>
-        <p class="text-sm text-muted-foreground">Справочник материалов и компонентов для упаковки товаров</p>
+        <p class="text-sm text-muted-foreground">Справочник поставщиков упаковочных материалов</p>
       </div>
       <Button v-if="canWrite" @click="openCreate" class="gap-2">
         <Plus class="size-4" />
@@ -227,10 +186,10 @@ const fieldClass = 'flex flex-col gap-1'
       v-else-if="items.length === 0"
       class="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-card py-16 text-center"
     >
-      <PackageOpen class="size-10 text-muted-foreground/40" />
-      <p class="text-sm text-muted-foreground">Компоненты упаковки не добавлены</p>
+      <Truck class="size-10 text-muted-foreground/40" />
+      <p class="text-sm text-muted-foreground">Поставщики не добавлены</p>
       <Button v-if="canWrite" variant="outline" size="sm" @click="openCreate" class="gap-2">
-        <Plus class="size-4" /> Добавить первый
+        <Plus class="size-4" /> Добавить первого
       </Button>
     </div>
 
@@ -239,9 +198,7 @@ const fieldClass = 'flex flex-col gap-1'
         <TableHeader>
           <TableRow class="border-b border-border">
             <TableHead>Название</TableHead>
-            <TableHead>Единица</TableHead>
-            <TableHead class="text-right">Цена/ед.</TableHead>
-            <TableHead>Поставщик</TableHead>
+            <TableHead>Контактная информация</TableHead>
             <TableHead>Статус</TableHead>
             <TableHead>Добавлен</TableHead>
             <TableHead v-if="canWrite" class="w-24 text-right">Действия</TableHead>
@@ -253,13 +210,8 @@ const fieldClass = 'flex flex-col gap-1'
             :key="item.id"
             class="hover:bg-muted/40 transition-colors"
           >
-            <TableCell class="font-medium">
-              {{ item.name }}
-              <p v-if="item.description" class="text-xs text-muted-foreground mt-0.5 font-normal">{{ item.description }}</p>
-            </TableCell>
-            <TableCell>{{ unitLabel(item.unit) }}</TableCell>
-            <TableCell class="text-right tabular-nums">{{ formatPrice(item.pricePerUnit) }}</TableCell>
-            <TableCell class="text-muted-foreground text-sm">{{ item.supplierName || '—' }}</TableCell>
+            <TableCell class="font-medium">{{ item.name }}</TableCell>
+            <TableCell class="text-muted-foreground text-sm">{{ item.contactInfo || '—' }}</TableCell>
             <TableCell>
               <Badge :variant="item.isActive ? 'default' : 'secondary'">
                 {{ item.isActive ? 'Активен' : 'Неактивен' }}
@@ -287,51 +239,20 @@ const fieldClass = 'flex flex-col gap-1'
         <DialogOverlay class="fixed inset-0 bg-black/50 z-[90]" />
         <DialogContent :class="dialogContentClass">
           <div class="flex items-center justify-between mb-4">
-            <DialogTitle class="text-lg font-semibold">Новый компонент упаковки</DialogTitle>
+            <DialogTitle class="text-lg font-semibold">Новый поставщик</DialogTitle>
             <DialogClose as-child>
               <Button variant="ghost" size="icon" class="size-8"><X class="size-4" /></Button>
             </DialogClose>
           </div>
-          <DialogDescription class="sr-only">Форма добавления компонента упаковки</DialogDescription>
+          <DialogDescription class="sr-only">Форма добавления поставщика</DialogDescription>
           <div class="flex flex-col gap-4">
             <div :class="fieldClass">
               <Label for="create-name">Название <span class="text-destructive">*</span></Label>
-              <Input id="create-name" v-model="form.name" placeholder="Коробка 30×20×10" :class="inputClass" />
+              <Input id="create-name" v-model="form.name" placeholder="ООО Поставщик" :class="inputClass" />
             </div>
             <div :class="fieldClass">
-              <Label for="create-desc">Описание</Label>
-              <Input id="create-desc" v-model="form.description" placeholder="Дополнительная информация" :class="inputClass" />
-            </div>
-            <div class="grid grid-cols-2 gap-3">
-              <div :class="fieldClass">
-                <Label for="create-unit">Единица</Label>
-                <select
-                  id="create-unit"
-                  v-model="form.unit"
-                  class="mt-1 flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                >
-                  <option v-for="opt in unitOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
-                </select>
-              </div>
-              <div :class="fieldClass">
-                <Label for="create-price">Цена за единицу</Label>
-                <Input id="create-price" type="number" min="0" step="0.01" v-model="form.pricePerUnit" :class="inputClass" />
-              </div>
-            </div>
-            <div :class="fieldClass">
-              <Label for="create-supplier">Поставщик</Label>
-              <select
-                id="create-supplier"
-                v-model="form.supplierId"
-                class="mt-1 flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-              >
-                <option value="">— не выбран —</option>
-                <option
-                  v-for="s in activeSuppliers()"
-                  :key="s.id"
-                  :value="s.id"
-                >{{ s.name }}</option>
-              </select>
+              <Label for="create-contact">Контактная информация</Label>
+              <Input id="create-contact" v-model="form.contactInfo" placeholder="Телефон, email, сайт" :class="inputClass" />
             </div>
           </div>
           <div class="flex justify-end gap-2 mt-6">
@@ -353,51 +274,20 @@ const fieldClass = 'flex flex-col gap-1'
         <DialogOverlay class="fixed inset-0 bg-black/50 z-[90]" />
         <DialogContent :class="dialogContentClass">
           <div class="flex items-center justify-between mb-4">
-            <DialogTitle class="text-lg font-semibold">Редактировать компонент</DialogTitle>
+            <DialogTitle class="text-lg font-semibold">Редактировать поставщика</DialogTitle>
             <DialogClose as-child>
               <Button variant="ghost" size="icon" class="size-8"><X class="size-4" /></Button>
             </DialogClose>
           </div>
-          <DialogDescription class="sr-only">Форма редактирования компонента упаковки</DialogDescription>
+          <DialogDescription class="sr-only">Форма редактирования поставщика</DialogDescription>
           <div class="flex flex-col gap-4">
             <div :class="fieldClass">
               <Label for="edit-name">Название <span class="text-destructive">*</span></Label>
               <Input id="edit-name" v-model="form.name" :class="inputClass" />
             </div>
             <div :class="fieldClass">
-              <Label for="edit-desc">Описание</Label>
-              <Input id="edit-desc" v-model="form.description" :class="inputClass" />
-            </div>
-            <div class="grid grid-cols-2 gap-3">
-              <div :class="fieldClass">
-                <Label for="edit-unit">Единица</Label>
-                <select
-                  id="edit-unit"
-                  v-model="form.unit"
-                  class="mt-1 flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                >
-                  <option v-for="opt in unitOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
-                </select>
-              </div>
-              <div :class="fieldClass">
-                <Label for="edit-price">Цена за единицу</Label>
-                <Input id="edit-price" type="number" min="0" step="0.01" v-model="form.pricePerUnit" :class="inputClass" />
-              </div>
-            </div>
-            <div :class="fieldClass">
-              <Label for="edit-supplier">Поставщик</Label>
-              <select
-                id="edit-supplier"
-                v-model="form.supplierId"
-                class="mt-1 flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-              >
-                <option value="">— не выбран —</option>
-                <option
-                  v-for="s in suppliers"
-                  :key="s.id"
-                  :value="s.id"
-                >{{ s.name }}{{ !s.isActive ? ' (неактивен)' : '' }}</option>
-              </select>
+              <Label for="edit-contact">Контактная информация</Label>
+              <Input id="edit-contact" v-model="form.contactInfo" :class="inputClass" />
             </div>
             <div class="flex items-center gap-2">
               <input
@@ -427,9 +317,9 @@ const fieldClass = 'flex flex-col gap-1'
       <AlertDialogPortal>
         <AlertDialogOverlay class="fixed inset-0 bg-black/50 z-[90]" />
         <AlertDialogContent class="bg-popover text-popover-foreground fixed top-[50%] left-[50%] w-[90vw] max-w-[420px] translate-x-[-50%] translate-y-[-50%] rounded-lg border shadow-lg p-6 z-[100]">
-          <AlertDialogTitle class="text-lg font-semibold mb-2">Удалить компонент?</AlertDialogTitle>
+          <AlertDialogTitle class="text-lg font-semibold mb-2">Удалить поставщика?</AlertDialogTitle>
           <AlertDialogDescription class="text-sm text-muted-foreground mb-4">
-            «{{ deleteTarget?.name }}» будет удалён. Это действие нельзя отменить.
+            «{{ deleteTarget?.name }}» будет деактивирован. Существующие компоненты упаковки сохранят связь с ним.
           </AlertDialogDescription>
           <div class="flex justify-end gap-2">
             <AlertDialogCancel as-child>

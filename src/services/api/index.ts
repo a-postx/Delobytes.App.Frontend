@@ -5,12 +5,17 @@ export { meApi } from './endpoints/me'
 export { productsApi } from './endpoints/products'
 export { tenantApi } from './endpoints/tenant'
 export {
+  suppliersApi,
   packagingComponentsApi,
   tariffGridsApi,
   workRatesApi,
   rawMaterialRatesApi,
 } from './endpoints/catalogs'
 export type {
+  SupplierItem,
+  GetSuppliersResponse,
+  CreateSupplierRequest,
+  UpdateSupplierRequest,
   PackagingComponentItem,
   GetPackagingComponentsResponse,
   CreatePackagingComponentRequest,
