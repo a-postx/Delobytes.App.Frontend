@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import AppLayout from '@/layouts/AppLayout.vue'
 import HomeView from '@/views/HomeView.vue'
+import ApiConnectionTestView from '@/views/ApiConnectionTestView.vue'
 import LoginView from '@/views/LoginView.vue'
 import RegisterView from '@/views/RegisterView.vue'
 import SetupTenantView from '@/views/SetupTenantView.vue'
@@ -31,7 +32,16 @@ const router = createRouter({
           name: 'home',
           component: HomeView,
           meta: {
-            title: 'Компоненты',
+            title: 'Главная',
+            requiresAuth: true,
+          },
+        },
+        {
+          path: 'apitest',
+          name: 'api-connection-test',
+          component: ApiConnectionTestView,
+          meta: {
+            title: 'API Connection Test',
             requiresAuth: true,
           },
         },
