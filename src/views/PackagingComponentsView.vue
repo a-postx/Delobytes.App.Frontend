@@ -1,3 +1,51 @@
+import { ref, computed } from 'vue'
+import type { Ref, ComputedRef } from 'vue'
+import { meApi } from '@/services/api'
+import type { CurrentUser } from '@/types'
+
+// Singleton state — shared across all useCurrentUser() calls in the same app instance
+const currentUser: Ref<CurrentUser | null> = ref(null)
+const loading: Ref<boolean> = ref(false)
+const error: Ref<string | null> = ref(null)
+
+export function useCurrentUser() {
+  const role: ComputedRef<string> = computed(() => currentUser.value?.role ?? '')
+
+  const canWrite: ComputedRef<boolean> = computed(() => {
+    const r = role.value
+    return r === 'Administrator' || r === 'Manager'
+  })
+
+  const fetchCurrentUser = async (): Promise<void> => {
+    loading.value = true
+    error.value = null
+    try {
+      const user = await meApi.getCurrentUser()
+      currentUser.value = user
+      localStorage.setItem('currentUser', JSON.stringify(user))
+    } catch (e: unknown) {
+      currentUser.value = null
+      localStorage.removeItem('currentUser')
+      const apiError = e as { response?: { data?: { message?: string } } }
+      error.value = apiError?.response?.data?.message ?? 'Не удалось загрузить данные пользователя.'
+    } finally {
+      loading.value = false
+    }
+  }
+
+  const clearCurrentUser = (): void => {
+    currentUser.value = null
+    error.value = null
+    loading.value = false
+    localStorage.removeItem('currentUser')
+  }
+
+  return { currentUser, loading, error, role, canWrite, fetchCurrentUser, clearCurrentUser }
+}
+
+src/views/PackagingComponentsView.vue
+vue
+
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { Plus, Pencil, Trash2, PackageOpen } from 'lucide-vue-next'
@@ -76,9 +124,8 @@ const unitOptions = [
 
 const unitLabel = (u: Unit): string => unitOptions.find(o => o.value === u)?.label ?? String(u)
 
-const formatDate = (dateStr: string): string => {
-  return new Date(dateStr).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' })
-}
+const formatDate = (dateStr: string): string =>
+  new Date(dateStr).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' })
 
 const formatPrice = (v: number): string =>
   v.toLocaleString('ru-RU', { style: 'currency', currency: 'RUB', maximumFractionDigits: 2 })
@@ -192,7 +239,6 @@ const fieldClass = 'flex flex-col gap-1'
 
 <template>
   <div class="flex flex-col gap-6 p-6">
-    <!-- Header -->
     <div class="flex items-center justify-between">
       <div class="flex flex-col gap-1">
         <h1 class="text-xl font-bold flex items-center gap-2">
@@ -207,14 +253,12 @@ const fieldClass = 'flex flex-col gap-1'
       </Button>
     </div>
 
-    <!-- Loading skeletons -->
     <div v-if="isLoading" class="rounded-xl border border-border bg-card overflow-hidden">
       <div class="p-4 flex flex-col gap-3">
         <Skeleton v-for="n in 5" :key="n" class="h-10 w-full rounded-lg" />
       </div>
     </div>
 
-    <!-- Empty state -->
     <div
       v-else-if="items.length === 0"
       class="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-card py-16 text-center"
@@ -226,7 +270,6 @@ const fieldClass = 'flex flex-col gap-1'
       </Button>
     </div>
 
-    <!-- Table -->
     <div v-else class="rounded-xl border border-border bg-card overflow-hidden">
       <Table>
         <TableHeader>
@@ -265,16 +308,12 @@ const fieldClass = 'flex flex-col gap-1'
                   @click="openEdit(item)"
                   class="inline-flex items-center justify-center rounded-md p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
                   title="Редактировать"
-                >
-                  <Pencil class="size-3.5" />
-                </button>
+                ><Pencil class="size-3.5" /></button>
                 <button
                   @click="openDelete(item)"
                   class="inline-flex items-center justify-center rounded-md p-1.5 text-muted-foreground hover:text-destructive hover:bg-muted transition-colors"
                   title="Удалить"
-                >
-                  <Trash2 class="size-3.5" />
-                </button>
+                ><Trash2 class="size-3.5" /></button>
               </div>
             </TableCell>
           </TableRow>
@@ -320,9 +359,7 @@ const fieldClass = 'flex flex-col gap-1'
             </div>
           </div>
           <div class="mt-6 flex justify-end gap-3">
-            <DialogClose as-child>
-              <Button variant="outline">Отмена</Button>
-            </DialogClose>
+            <DialogClose as-child><Button variant="outline">Отмена</Button></DialogClose>
             <Button @click="handleCreate" :disabled="isSaving" class="gap-2">
               <Spinner v-if="isSaving" size="sm" />
               Добавить
@@ -377,9 +414,7 @@ const fieldClass = 'flex flex-col gap-1'
             </div>
           </div>
           <div class="mt-6 flex justify-end gap-3">
-            <DialogClose as-child>
-              <Button variant="outline">Отмена</Button>
-            </DialogClose>
+            <DialogClose as-child><Button variant="outline">Отмена</Button></DialogClose>
             <Button @click="handleEdit" :disabled="isSaving" class="gap-2">
               <Spinner v-if="isSaving" size="sm" />
               Сохранить
@@ -402,9 +437,7 @@ const fieldClass = 'flex flex-col gap-1'
             Компонент «{{ deleteTarget?.name }}» будет деактивирован. Исторические расчёты не пострадают.
           </AlertDialogDescription>
           <div class="mt-5 flex justify-end gap-3">
-            <AlertDialogCancel as-child>
-              <Button variant="outline">Отмена</Button>
-            </AlertDialogCancel>
+            <AlertDialogCancel as-child><Button variant="outline">Отмена</Button></AlertDialogCancel>
             <AlertDialogAction as-child>
               <Button variant="destructive" @click="handleDelete" :disabled="isDeleting" class="gap-2">
                 <Spinner v-if="isDeleting" size="sm" />
@@ -417,3 +450,4 @@ const fieldClass = 'flex flex-col gap-1'
     </AlertDialogRoot>
   </div>
 </template>
+

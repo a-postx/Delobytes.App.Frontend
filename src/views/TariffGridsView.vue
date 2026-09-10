@@ -202,7 +202,6 @@ const inputClass = 'mt-1'
 
 <template>
   <div class="flex flex-col gap-6 p-6">
-    <!-- Header -->
     <div class="flex items-center justify-between">
       <div class="flex flex-col gap-1">
         <h1 class="text-xl font-bold flex items-center gap-2">
@@ -226,14 +225,12 @@ const inputClass = 'mt-1'
       </div>
     </div>
 
-    <!-- Loading -->
     <div v-if="isLoading" class="rounded-xl border border-border bg-card overflow-hidden">
       <div class="p-4 flex flex-col gap-3">
         <Skeleton v-for="n in 4" :key="n" class="h-10 w-full rounded-lg" />
       </div>
     </div>
 
-    <!-- Empty -->
     <div
       v-else-if="filteredItems.length === 0"
       class="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-card py-16 text-center"
@@ -245,7 +242,6 @@ const inputClass = 'mt-1'
       </Button>
     </div>
 
-    <!-- Table -->
     <div v-else class="rounded-xl border border-border bg-card overflow-hidden">
       <Table>
         <TableHeader>
@@ -324,8 +320,6 @@ const inputClass = 'mt-1'
                 <Input id="tg-date" v-model="form.validFrom" type="date" :class="inputClass" />
               </div>
             </div>
-
-            <!-- Entries -->
             <div>
               <div class="flex items-center justify-between mb-2">
                 <Label>Строки тарифа</Label>
@@ -391,9 +385,7 @@ const inputClass = 'mt-1'
             </div>
           </div>
           <div class="mt-6 flex justify-end gap-3">
-            <DialogClose as-child>
-              <Button variant="outline">Отмена</Button>
-            </DialogClose>
+            <DialogClose as-child><Button variant="outline">Отмена</Button></DialogClose>
             <Button @click="handleCreate" :disabled="isSaving" class="gap-2">
               <Spinner v-if="isSaving" size="sm" />
               Добавить
@@ -427,9 +419,7 @@ const inputClass = 'mt-1'
             </div>
           </div>
           <div class="mt-6 flex justify-end gap-3">
-            <DialogClose as-child>
-              <Button variant="outline">Отмена</Button>
-            </DialogClose>
+            <DialogClose as-child><Button variant="outline">Отмена</Button></DialogClose>
             <Button @click="handleEdit" :disabled="isSaving" class="gap-2">
               <Spinner v-if="isSaving" size="sm" />
               Сохранить
@@ -452,9 +442,7 @@ const inputClass = 'mt-1'
             Сетка «{{ deleteTarget?.name }}» будет деактивирована. Исторические расчёты не пострадают.
           </AlertDialogDescription>
           <div class="mt-5 flex justify-end gap-3">
-            <AlertDialogCancel as-child>
-              <Button variant="outline">Отмена</Button>
-            </AlertDialogCancel>
+            <AlertDialogCancel as-child><Button variant="outline">Отмена</Button></AlertDialogCancel>
             <AlertDialogAction as-child>
               <Button variant="destructive" @click="handleDelete" :disabled="isDeleting" class="gap-2">
                 <Spinner v-if="isDeleting" size="sm" />
