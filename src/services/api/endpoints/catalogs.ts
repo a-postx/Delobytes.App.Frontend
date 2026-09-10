@@ -126,6 +126,7 @@ export interface RawMaterialRateItem {
   productId: string
   costPerUnit: number
   validFrom: string
+  isActive: boolean
   createdAt: string
 }
 
