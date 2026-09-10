@@ -56,8 +56,17 @@ const deleteTarget = ref<SupplierItem | null>(null)
 const isSaving = ref<boolean>(false)
 const isDeleting = ref<boolean>(false)
 
-const form = ref({ name: '', contactInfo: '' })
+const emptyForm = () => ({ inn: '', name: '', description: '', phone: '', email: '' })
+const form = ref(emptyForm())
 const editActive = ref<boolean>(true)
+
+// ИНН: 10 цифр (юрлица) или 12 цифр (ИП/физлица)
+const validateInn = (inn: string): string | null => {
+  if (!/^\d{10}$|^\d{12}$/.test(inn)) {
+    return 'ИНН должен содержать 10 или 12 цифр'
+  }
+  return null
+}
 
 const formatDate = (dateStr: string): string =>
   new Date(dateStr).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' })
@@ -76,21 +85,20 @@ const loadItems = async (): Promise<void> => {
 
 onMounted(loadItems)
 
-const resetForm = (): void => {
-  form.value = { name: '', contactInfo: '' }
-  editActive.value = true
-}
-
 const openCreate = (): void => {
-  resetForm()
+  form.value = emptyForm()
+  editActive.value = true
   createDialogOpen.value = true
 }
 
 const openEdit = (item: SupplierItem): void => {
   editTarget.value = item
   form.value = {
+    inn: item.inn,
     name: item.name,
-    contactInfo: item.contactInfo ?? '',
+    description: item.description ?? '',
+    phone: item.phone ?? '',
+    email: item.email ?? '',
   }
   editActive.value = item.isActive
   editDialogOpen.value = true
@@ -102,12 +110,18 @@ const openDelete = (item: SupplierItem): void => {
 }
 
 const handleCreate = async (): Promise<void> => {
+  const innError = validateInn(form.value.inn.trim())
+  if (innError) { toast.error(innError); return }
   if (!form.value.name.trim()) { toast.error('Введите название'); return }
+
   isSaving.value = true
   try {
     const payload: CreateSupplierRequest = {
+      inn: form.value.inn.trim(),
       name: form.value.name.trim(),
-      contactInfo: form.value.contactInfo.trim() || undefined,
+      description: form.value.description.trim() || undefined,
+      phone: form.value.phone.trim() || undefined,
+      email: form.value.email.trim() || undefined,
     }
     await suppliersApi.create(payload)
     toast.success('Поставщик добавлен')
@@ -121,12 +135,19 @@ const handleCreate = async (): Promise<void> => {
 }
 
 const handleEdit = async (): Promise<void> => {
-  if (!editTarget.value || !form.value.name.trim()) { toast.error('Введите название'); return }
+  if (!editTarget.value) return
+  const innError = validateInn(form.value.inn.trim())
+  if (innError) { toast.error(innError); return }
+  if (!form.value.name.trim()) { toast.error('Введите название'); return }
+
   isSaving.value = true
   try {
     const payload: UpdateSupplierRequest = {
+      inn: form.value.inn.trim(),
       name: form.value.name.trim(),
-      contactInfo: form.value.contactInfo.trim() || undefined,
+      description: form.value.description.trim() || undefined,
+      phone: form.value.phone.trim() || undefined,
+      email: form.value.email.trim() || undefined,
       isActive: editActive.value,
     }
     await suppliersApi.update(editTarget.value.id, payload)
@@ -155,9 +176,9 @@ const handleDelete = async (): Promise<void> => {
   }
 }
 
-const dialogContentClass = 'bg-popover text-popover-foreground fixed top-[50%] left-[50%] max-h-[90vh] w-[90vw] max-w-[520px] translate-x-[-50%] translate-y-[-50%] rounded-lg border shadow-lg p-6 focus:outline-none z-[100] overflow-y-auto'
-const inputClass = 'mt-1'
+const dialogContentClass = 'bg-popover text-popover-foreground fixed top-[50%] left-[50%] max-h-[90vh] w-[90vw] max-w-[560px] translate-x-[-50%] translate-y-[-50%] rounded-lg border shadow-lg p-6 focus:outline-none z-[100] overflow-y-auto'
 const fieldClass = 'flex flex-col gap-1'
+const inputClass = 'mt-1'
 </script>
 
 <template>
@@ -197,8 +218,10 @@ const fieldClass = 'flex flex-col gap-1'
       <Table>
         <TableHeader>
           <TableRow class="border-b border-border">
+            <TableHead>ИНН</TableHead>
             <TableHead>Название</TableHead>
-            <TableHead>Контактная информация</TableHead>
+            <TableHead>Телефон</TableHead>
+            <TableHead>Email</TableHead>
             <TableHead>Статус</TableHead>
             <TableHead>Добавлен</TableHead>
             <TableHead v-if="canWrite" class="w-24 text-right">Действия</TableHead>
@@ -210,20 +233,30 @@ const fieldClass = 'flex flex-col gap-1'
             :key="item.id"
             class="hover:bg-muted/40 transition-colors"
           >
-            <TableCell class="font-medium">{{ item.name }}</TableCell>
-            <TableCell class="text-muted-foreground text-sm">{{ item.contactInfo || '—' }}</TableCell>
+            <TableCell class="tabular-nums text-sm text-muted-foreground">{{ item.inn }}</TableCell>
+            <TableCell class="font-medium">
+              {{ item.name }}
+              <p v-if="item.description" class="text-xs text-muted-foreground mt-0.5 font-normal">{{ item.description }}</p>
+            </TableCell>
+            <TableCell class="text-sm text-muted-foreground">{{ item.phone || '—' }}</TableCell>
+            <TableCell class="text-sm text-muted-foreground">{{ item.email || '—' }}</TableCell>
             <TableCell>
-              <Badge :variant="item.isActive ? 'default' : 'secondary'">
+              <Badge :variant="item.isActive ? 'success' : 'secondary'">
                 {{ item.isActive ? 'Активен' : 'Неактивен' }}
               </Badge>
             </TableCell>
-            <TableCell class="text-muted-foreground text-sm">{{ formatDate(item.createdAt) }}</TableCell>
+            <TableCell class="text-sm text-muted-foreground">{{ formatDate(item.createdAt) }}</TableCell>
             <TableCell v-if="canWrite" class="text-right">
               <div class="flex justify-end gap-1">
                 <Button variant="ghost" size="icon" class="size-8" @click="openEdit(item)">
                   <Pencil class="size-4" />
                 </Button>
-                <Button variant="ghost" size="icon" class="size-8 text-destructive hover:text-destructive" @click="openDelete(item)">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  class="size-8 text-destructive hover:text-destructive"
+                  @click="openDelete(item)"
+                >
                   <Trash2 class="size-4" />
                 </Button>
               </div>
@@ -247,12 +280,26 @@ const fieldClass = 'flex flex-col gap-1'
           <DialogDescription class="sr-only">Форма добавления поставщика</DialogDescription>
           <div class="flex flex-col gap-4">
             <div :class="fieldClass">
-              <Label for="create-name">Название <span class="text-destructive">*</span></Label>
-              <Input id="create-name" v-model="form.name" placeholder="ООО Поставщик" :class="inputClass" />
+              <Label for="c-inn">ИНН <span class="text-destructive">*</span></Label>
+              <Input id="c-inn" v-model="form.inn" placeholder="10 или 12 цифр" :class="inputClass" />
             </div>
             <div :class="fieldClass">
-              <Label for="create-contact">Контактная информация</Label>
-              <Input id="create-contact" v-model="form.contactInfo" placeholder="Телефон, email, сайт" :class="inputClass" />
+              <Label for="c-name">Название <span class="text-destructive">*</span></Label>
+              <Input id="c-name" v-model="form.name" placeholder="ООО Поставщик" :class="inputClass" />
+            </div>
+            <div :class="fieldClass">
+              <Label for="c-desc">Описание</Label>
+              <Input id="c-desc" v-model="form.description" placeholder="Краткое описание" :class="inputClass" />
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <div :class="fieldClass">
+                <Label for="c-phone">Телефон</Label>
+                <Input id="c-phone" v-model="form.phone" placeholder="+7 999 000 00 00" :class="inputClass" />
+              </div>
+              <div :class="fieldClass">
+                <Label for="c-email">Email</Label>
+                <Input id="c-email" type="email" v-model="form.email" placeholder="info@supplier.ru" :class="inputClass" />
+              </div>
             </div>
           </div>
           <div class="flex justify-end gap-2 mt-6">
@@ -282,21 +329,35 @@ const fieldClass = 'flex flex-col gap-1'
           <DialogDescription class="sr-only">Форма редактирования поставщика</DialogDescription>
           <div class="flex flex-col gap-4">
             <div :class="fieldClass">
-              <Label for="edit-name">Название <span class="text-destructive">*</span></Label>
-              <Input id="edit-name" v-model="form.name" :class="inputClass" />
+              <Label for="e-inn">ИНН <span class="text-destructive">*</span></Label>
+              <Input id="e-inn" v-model="form.inn" :class="inputClass" />
             </div>
             <div :class="fieldClass">
-              <Label for="edit-contact">Контактная информация</Label>
-              <Input id="edit-contact" v-model="form.contactInfo" :class="inputClass" />
+              <Label for="e-name">Название <span class="text-destructive">*</span></Label>
+              <Input id="e-name" v-model="form.name" :class="inputClass" />
+            </div>
+            <div :class="fieldClass">
+              <Label for="e-desc">Описание</Label>
+              <Input id="e-desc" v-model="form.description" :class="inputClass" />
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <div :class="fieldClass">
+                <Label for="e-phone">Телефон</Label>
+                <Input id="e-phone" v-model="form.phone" :class="inputClass" />
+              </div>
+              <div :class="fieldClass">
+                <Label for="e-email">Email</Label>
+                <Input id="e-email" type="email" v-model="form.email" :class="inputClass" />
+              </div>
             </div>
             <div class="flex items-center gap-2">
               <input
-                id="edit-active"
+                id="e-active"
                 type="checkbox"
                 v-model="editActive"
                 class="size-4 rounded border-border accent-primary"
               />
-              <Label for="edit-active" class="cursor-pointer">Активен</Label>
+              <Label for="e-active" class="cursor-pointer">Активен</Label>
             </div>
           </div>
           <div class="flex justify-end gap-2 mt-6">
@@ -319,7 +380,7 @@ const fieldClass = 'flex flex-col gap-1'
         <AlertDialogContent class="bg-popover text-popover-foreground fixed top-[50%] left-[50%] w-[90vw] max-w-[420px] translate-x-[-50%] translate-y-[-50%] rounded-lg border shadow-lg p-6 z-[100]">
           <AlertDialogTitle class="text-lg font-semibold mb-2">Удалить поставщика?</AlertDialogTitle>
           <AlertDialogDescription class="text-sm text-muted-foreground mb-4">
-            «{{ deleteTarget?.name }}» будет деактивирован. Существующие компоненты упаковки сохранят связь с ним.
+            «{{ deleteTarget?.name }}» будет деактивирован. Существующие компоненты упаковки сохранят связь.
           </AlertDialogDescription>
           <div class="flex justify-end gap-2">
             <AlertDialogCancel as-child>

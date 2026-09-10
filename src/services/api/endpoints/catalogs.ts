@@ -20,8 +20,11 @@ export enum TariffType {
 
 export interface SupplierItem {
   id: string
+  inn: string
   name: string
-  contactInfo?: string
+  description?: string
+  phone?: string
+  email?: string
   isActive: boolean
   createdAt: string
 }
@@ -31,13 +34,19 @@ export interface GetSuppliersResponse {
 }
 
 export interface CreateSupplierRequest {
+  inn: string
   name: string
-  contactInfo?: string
+  description?: string
+  phone?: string
+  email?: string
 }
 
 export interface UpdateSupplierRequest {
+  inn: string
   name: string
-  contactInfo?: string
+  description?: string
+  phone?: string
+  email?: string
   isActive: boolean
 }
 
