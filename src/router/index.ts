@@ -10,6 +10,10 @@ import IntegrationsView from '@/views/IntegrationsView.vue'
 import YandexCallbackView from '@/views/YandexCallbackView.vue'
 import GoogleCallbackView from '@/views/GoogleCallbackView.vue'
 import AcceptInvitationView from '@/views/AcceptInvitationView.vue'
+import PackagingComponentsView from '@/views/PackagingComponentsView.vue'
+import TariffGridsView from '@/views/TariffGridsView.vue'
+import WorkRatesView from '@/views/WorkRatesView.vue'
+import RawMaterialRatesView from '@/views/RawMaterialRatesView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -57,6 +61,42 @@ const router = createRouter({
             requiresAuth: true,
           },
         },
+        {
+          path: 'catalogs/packaging-components',
+          name: 'packaging-components',
+          component: PackagingComponentsView,
+          meta: {
+            title: 'Компоненты упаковки',
+            requiresAuth: true,
+          },
+        },
+        {
+          path: 'catalogs/tariff-grids',
+          name: 'tariff-grids',
+          component: TariffGridsView,
+          meta: {
+            title: 'Тарифные сетки',
+            requiresAuth: true,
+          },
+        },
+        {
+          path: 'catalogs/work-rates',
+          name: 'work-rates',
+          component: WorkRatesView,
+          meta: {
+            title: 'Ставки работ',
+            requiresAuth: true,
+          },
+        },
+        {
+          path: 'catalogs/raw-material-rates',
+          name: 'raw-material-rates',
+          component: RawMaterialRatesView,
+          meta: {
+            title: 'Стоимость сырья',
+            requiresAuth: true,
+          },
+        },
       ],
     },
     {
@@ -99,7 +139,7 @@ const router = createRouter({
         title: 'Вход через Google',
       },
     },
-	{
+    {
       path: '/invite',
       name: 'accept-invitation',
       component: AcceptInvitationView,

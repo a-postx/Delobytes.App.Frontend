@@ -1,38 +1,23 @@
-import { ref } from 'vue'
-import type { Ref } from 'vue'
-import { meApi } from '@/services/api'
+import { computed } from 'vue'
 import type { CurrentUser } from '@/types'
 
-const currentUser: Ref<CurrentUser | null> = ref(null)
-const loading: Ref<boolean> = ref(false)
-const error: Ref<string | null> = ref(null)
-
 export function useCurrentUser() {
-  const fetchCurrentUser = async (): Promise<void> => {
-    loading.value = true
-    error.value = null
-
+  const currentUser = computed<CurrentUser | null>(() => {
+    const raw = localStorage.getItem('currentUser')
+    if (!raw) return null
     try {
-      currentUser.value = await meApi.getCurrentUser()
-    } catch (e: unknown) {
-      const apiError = e as { response?: { data?: { message?: string } } }
-      error.value = apiError.response?.data?.message ?? 'Не удалось загрузить данные пользователя.'
-      currentUser.value = null
-    } finally {
-      loading.value = false
+      return JSON.parse(raw) as CurrentUser
+    } catch {
+      return null
     }
-  }
+  })
 
-  const clearCurrentUser = (): void => {
-    currentUser.value = null
-    error.value = null
-  }
+  const role = computed<string>(() => currentUser.value?.role ?? '')
 
-  return {
-    currentUser,
-    loading,
-    error,
-    fetchCurrentUser,
-    clearCurrentUser,
-  }
+  const canWrite = computed<boolean>(() => {
+    const r = role.value
+    return r === 'Administrator' || r === 'Manager'
+  })
+
+  return { currentUser, role, canWrite }
 }
