@@ -14,6 +14,7 @@ import PackagingComponentsView from '@/views/PackagingComponentsView.vue'
 import TariffGridsView from '@/views/TariffGridsView.vue'
 import WorkRatesView from '@/views/WorkRatesView.vue'
 import RawMaterialRatesView from '@/views/RawMaterialRatesView.vue'
+import StepperDemoView from '@/views/StepperDemoView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -94,6 +95,15 @@ const router = createRouter({
           component: RawMaterialRatesView,
           meta: {
             title: 'Стоимость сырья',
+            requiresAuth: true,
+          },
+        },
+        {
+          path: 'stepper-demo',
+          name: 'stepper-demo',
+          component: StepperDemoView,
+          meta: {
+            title: 'Stepper Demo',
             requiresAuth: true,
           },
         },
