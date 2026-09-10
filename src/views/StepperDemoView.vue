@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, useTemplateRef } from 'vue'
+import { ref } from 'vue'
 import {
   StepperRoot,
   StepperItem,
@@ -12,7 +12,14 @@ import {
 import { Button } from '@/components/ui/button'
 import { CheckIcon } from 'lucide-vue-next'
 
-const stepper = useTemplateRef<InstanceType<typeof StepperRoot>>('stepper')
+interface StepperMethods {
+  hasPrev: () => boolean
+  hasNext: () => boolean
+  prevStep: () => void
+  nextStep: () => void
+}
+
+const stepper = ref<StepperMethods | null>(null)
 
 interface Step {
   step: number
