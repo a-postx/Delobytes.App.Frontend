@@ -80,7 +80,7 @@ const unitOptions = [
   { value: Unit.Gram, label: 'г' },
 ]
 
-const unitLabel = (u: Unit): string => unitOptions.find(o => o.value === u)?.label ?? String(u)
+const unitLabel = (u: Unit): string => unitOptions.find(o => o.value === Number(u))?.label ?? 'шт.'
 
 const formatDate = (dateStr: string): string =>
   new Date(dateStr).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' })
@@ -123,7 +123,7 @@ const openEdit = (item: PackagingComponentItem): void => {
   form.value = {
     name: item.name,
     description: item.description ?? '',
-    unit: item.unit,
+    unit: Number(item.unit) as Unit,
     pricePerUnit: item.pricePerUnit,
     supplierId: item.supplierId ?? '',
   }
@@ -259,20 +259,23 @@ const fieldClass = 'flex flex-col gap-1'
             </TableCell>
             <TableCell>{{ unitLabel(item.unit) }}</TableCell>
             <TableCell class="text-right tabular-nums">{{ formatPrice(item.pricePerUnit) }}</TableCell>
-            <TableCell class="text-muted-foreground text-sm">{{ item.supplierName || '—' }}</TableCell>
             <TableCell>
-              <Badge :variant="item.isActive ? 'default' : 'secondary'">
+              <span v-if="item.supplierName" class="text-sm">{{ item.supplierName }}</span>
+              <span v-else class="text-xs text-muted-foreground italic">—</span>
+            </TableCell>
+            <TableCell>
+              <Badge :variant="item.isActive ? 'success' : 'secondary'">
                 {{ item.isActive ? 'Активен' : 'Неактивен' }}
               </Badge>
             </TableCell>
-            <TableCell class="text-muted-foreground text-sm">{{ formatDate(item.createdAt) }}</TableCell>
+            <TableCell class="text-sm text-muted-foreground tabular-nums">{{ formatDate(item.createdAt) }}</TableCell>
             <TableCell v-if="canWrite" class="text-right">
-              <div class="flex justify-end gap-1">
-                <Button variant="ghost" size="icon" class="size-8" @click="openEdit(item)">
+              <div class="flex items-center justify-end gap-1">
+                <Button variant="ghost" size="icon-sm" @click="openEdit(item)">
                   <Pencil class="size-4" />
                 </Button>
-                <Button variant="ghost" size="icon" class="size-8 text-destructive hover:text-destructive" @click="openDelete(item)">
-                  <Trash2 class="size-4" />
+                <Button variant="ghost" size="icon-sm" @click="openDelete(item)">
+                  <Trash2 class="size-4 text-destructive" />
                 </Button>
               </div>
             </TableCell>
@@ -284,27 +287,46 @@ const fieldClass = 'flex flex-col gap-1'
     <!-- Create Dialog -->
     <DialogRoot v-model:open="createDialogOpen">
       <DialogPortal>
-        <DialogOverlay class="fixed inset-0 bg-black/50 z-[90]" />
+        <DialogOverlay class="bg-background/80 backdrop-blur-sm fixed inset-0 z-50" />
         <DialogContent :class="dialogContentClass">
-          <div class="flex items-center justify-between mb-4">
-            <DialogTitle class="text-lg font-semibold">Новый компонент упаковки</DialogTitle>
+          <div class="flex items-start justify-between mb-4">
+            <div>
+              <DialogTitle class="text-lg font-semibold">Добавить компонент упаковки</DialogTitle>
+              <DialogDescription class="text-sm text-muted-foreground mt-1">
+                Укажите название, единицу измерения и цену за единицу
+              </DialogDescription>
+            </div>
             <DialogClose as-child>
-              <Button variant="ghost" size="icon" class="size-8"><X class="size-4" /></Button>
+              <Button variant="ghost" size="icon-sm">
+                <X class="size-4" />
+              </Button>
             </DialogClose>
           </div>
-          <DialogDescription class="sr-only">Форма добавления компонента упаковки</DialogDescription>
+
           <div class="flex flex-col gap-4">
             <div :class="fieldClass">
-              <Label for="create-name">Название <span class="text-destructive">*</span></Label>
-              <Input id="create-name" v-model="form.name" placeholder="Коробка 30×20×10" :class="inputClass" />
+              <Label for="create-name">Название *</Label>
+              <Input
+                id="create-name"
+                v-model="form.name"
+                placeholder="Например: Коробка 30x20x10"
+                :class="inputClass"
+              />
             </div>
+
             <div :class="fieldClass">
-              <Label for="create-desc">Описание</Label>
-              <Input id="create-desc" v-model="form.description" placeholder="Дополнительная информация" :class="inputClass" />
+              <Label for="create-description">Описание</Label>
+              <Input
+                id="create-description"
+                v-model="form.description"
+                placeholder="Дополнительная информация"
+                :class="inputClass"
+              />
             </div>
-            <div class="grid grid-cols-2 gap-3">
+
+            <div class="grid grid-cols-2 gap-4">
               <div :class="fieldClass">
-                <Label for="create-unit">Единица</Label>
+                <Label for="create-unit">Единица *</Label>
                 <select
                   id="create-unit"
                   v-model="form.unit"
@@ -313,11 +335,21 @@ const fieldClass = 'flex flex-col gap-1'
                   <option v-for="opt in unitOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
                 </select>
               </div>
+
               <div :class="fieldClass">
-                <Label for="create-price">Цена за единицу</Label>
-                <Input id="create-price" type="number" min="0" step="0.01" v-model="form.pricePerUnit" :class="inputClass" />
+                <Label for="create-price">Цена за единицу *</Label>
+                <Input
+                  id="create-price"
+                  v-model="form.pricePerUnit"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  placeholder="0.00"
+                  :class="inputClass"
+                />
               </div>
             </div>
+
             <div :class="fieldClass">
               <Label for="create-supplier">Поставщик</Label>
               <select
@@ -325,15 +357,12 @@ const fieldClass = 'flex flex-col gap-1'
                 v-model="form.supplierId"
                 class="mt-1 flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               >
-                <option value="">— не выбран —</option>
-                <option
-                  v-for="s in activeSuppliers()"
-                  :key="s.id"
-                  :value="s.id"
-                >{{ s.name }}</option>
+                <option value="">Не выбран</option>
+                <option v-for="s in activeSuppliers()" :key="s.id" :value="s.id">{{ s.name }}</option>
               </select>
             </div>
           </div>
+
           <div class="flex justify-end gap-2 mt-6">
             <DialogClose as-child>
               <Button variant="outline">Отмена</Button>
@@ -350,27 +379,46 @@ const fieldClass = 'flex flex-col gap-1'
     <!-- Edit Dialog -->
     <DialogRoot v-model:open="editDialogOpen">
       <DialogPortal>
-        <DialogOverlay class="fixed inset-0 bg-black/50 z-[90]" />
+        <DialogOverlay class="bg-background/80 backdrop-blur-sm fixed inset-0 z-50" />
         <DialogContent :class="dialogContentClass">
-          <div class="flex items-center justify-between mb-4">
-            <DialogTitle class="text-lg font-semibold">Редактировать компонент</DialogTitle>
+          <div class="flex items-start justify-between mb-4">
+            <div>
+              <DialogTitle class="text-lg font-semibold">Редактировать компонент</DialogTitle>
+              <DialogDescription class="text-sm text-muted-foreground mt-1">
+                Измените данные компонента упаковки
+              </DialogDescription>
+            </div>
             <DialogClose as-child>
-              <Button variant="ghost" size="icon" class="size-8"><X class="size-4" /></Button>
+              <Button variant="ghost" size="icon-sm">
+                <X class="size-4" />
+              </Button>
             </DialogClose>
           </div>
-          <DialogDescription class="sr-only">Форма редактирования компонента упаковки</DialogDescription>
+
           <div class="flex flex-col gap-4">
             <div :class="fieldClass">
-              <Label for="edit-name">Название <span class="text-destructive">*</span></Label>
-              <Input id="edit-name" v-model="form.name" :class="inputClass" />
+              <Label for="edit-name">Название *</Label>
+              <Input
+                id="edit-name"
+                v-model="form.name"
+                placeholder="Например: Коробка 30x20x10"
+                :class="inputClass"
+              />
             </div>
+
             <div :class="fieldClass">
-              <Label for="edit-desc">Описание</Label>
-              <Input id="edit-desc" v-model="form.description" :class="inputClass" />
+              <Label for="edit-description">Описание</Label>
+              <Input
+                id="edit-description"
+                v-model="form.description"
+                placeholder="Дополнительная информация"
+                :class="inputClass"
+              />
             </div>
-            <div class="grid grid-cols-2 gap-3">
+
+            <div class="grid grid-cols-2 gap-4">
               <div :class="fieldClass">
-                <Label for="edit-unit">Единица</Label>
+                <Label for="edit-unit">Единица *</Label>
                 <select
                   id="edit-unit"
                   v-model="form.unit"
@@ -379,11 +427,21 @@ const fieldClass = 'flex flex-col gap-1'
                   <option v-for="opt in unitOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
                 </select>
               </div>
+
               <div :class="fieldClass">
-                <Label for="edit-price">Цена за единицу</Label>
-                <Input id="edit-price" type="number" min="0" step="0.01" v-model="form.pricePerUnit" :class="inputClass" />
+                <Label for="edit-price">Цена за единицу *</Label>
+                <Input
+                  id="edit-price"
+                  v-model="form.pricePerUnit"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  placeholder="0.00"
+                  :class="inputClass"
+                />
               </div>
             </div>
+
             <div :class="fieldClass">
               <Label for="edit-supplier">Поставщик</Label>
               <select
@@ -391,24 +449,22 @@ const fieldClass = 'flex flex-col gap-1'
                 v-model="form.supplierId"
                 class="mt-1 flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               >
-                <option value="">— не выбран —</option>
-                <option
-                  v-for="s in suppliers"
-                  :key="s.id"
-                  :value="s.id"
-                >{{ s.name }}{{ !s.isActive ? ' (неактивен)' : '' }}</option>
+                <option value="">Не выбран</option>
+                <option v-for="s in activeSuppliers()" :key="s.id" :value="s.id">{{ s.name }}</option>
               </select>
             </div>
-            <div class="flex items-center gap-2">
+
+            <div class="flex items-center gap-2 mt-2">
               <input
-                id="edit-active"
+                id="e-active"
                 type="checkbox"
                 v-model="editActive"
                 class="size-4 rounded border-border accent-primary"
               />
-              <Label for="edit-active" class="cursor-pointer">Активен</Label>
+              <Label for="e-active" class="cursor-pointer">Активен</Label>
             </div>
           </div>
+
           <div class="flex justify-end gap-2 mt-6">
             <DialogClose as-child>
               <Button variant="outline">Отмена</Button>
@@ -425,18 +481,18 @@ const fieldClass = 'flex flex-col gap-1'
     <!-- Delete Confirm -->
     <AlertDialogRoot v-model:open="deleteDialogOpen">
       <AlertDialogPortal>
-        <AlertDialogOverlay class="fixed inset-0 bg-black/50 z-[90]" />
-        <AlertDialogContent class="bg-popover text-popover-foreground fixed top-[50%] left-[50%] w-[90vw] max-w-[420px] translate-x-[-50%] translate-y-[-50%] rounded-lg border shadow-lg p-6 z-[100]">
-          <AlertDialogTitle class="text-lg font-semibold mb-2">Удалить компонент?</AlertDialogTitle>
-          <AlertDialogDescription class="text-sm text-muted-foreground mb-4">
-            «{{ deleteTarget?.name }}» будет удалён. Это действие нельзя отменить.
+        <AlertDialogOverlay class="bg-background/80 backdrop-blur-sm fixed inset-0 z-50" />
+        <AlertDialogContent class="bg-popover text-popover-foreground fixed top-[50%] left-[50%] max-h-[90vh] w-[90vw] max-w-[420px] translate-x-[-50%] translate-y-[-50%] rounded-lg border shadow-lg p-6 focus:outline-none z-[100]">
+          <AlertDialogTitle class="text-lg font-semibold">Удалить компонент?</AlertDialogTitle>
+          <AlertDialogDescription class="text-sm text-muted-foreground mt-2">
+            Компонент "{{ deleteTarget?.name }}" будет удалён. Это действие нельзя отменить.
           </AlertDialogDescription>
-          <div class="flex justify-end gap-2">
+          <div class="flex justify-end gap-2 mt-6">
             <AlertDialogCancel as-child>
               <Button variant="outline">Отмена</Button>
             </AlertDialogCancel>
             <AlertDialogAction as-child>
-              <Button variant="destructive" @click="handleDelete" :disabled="isDeleting" class="gap-2">
+              <Button @click="handleDelete" :disabled="isDeleting" variant="destructive" class="gap-2">
                 <Spinner v-if="isDeleting" class="size-4" />
                 Удалить
               </Button>
