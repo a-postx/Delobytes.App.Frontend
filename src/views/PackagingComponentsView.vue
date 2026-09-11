@@ -117,7 +117,10 @@ const loadData = async (): Promise<void> => {
       packagingComponentsApi.getAll(),
       suppliersApi.getAll(),
     ])
-    items.value = componentsResp.items
+    items.value = componentsResp.items.map(item => ({
+      ...item,
+      unit: Number(item.unit) as Unit,
+    }))
     suppliers.value = suppliersResp.items
   } catch {
     toast.error('Не удалось загрузить данные')
