@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { computed } from 'vue'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 
 interface FilterOption {
@@ -8,16 +7,11 @@ interface FilterOption {
   count: number
 }
 
-const props = withDefaults(
-  defineProps<{
-    modelValue: string
-    options: FilterOption[]
-    label?: string
-  }>(),
-  {
-    label: 'Показать',
-  }
-)
+defineProps<{
+  modelValue: string
+  options: FilterOption[]
+  label?: string
+}>()
 
 const emit = defineEmits<{
   'update:modelValue': [value: string]
@@ -30,7 +24,7 @@ const handleUpdate = (value: string) => {
 
 <template>
   <div class="flex items-center gap-2 px-1">
-    <span class="text-sm text-muted-foreground">{{ label }}:</span>
+    <span class="text-sm text-muted-foreground">{{ label ?? 'Показать' }}:</span>
     
     <ToggleGroup 
       :model-value="modelValue"
