@@ -361,7 +361,7 @@ const fieldClass = 'flex flex-col gap-1'
               <Input
                 id="create-name"
                 v-model="form.name"
-                placeholder="Название компонента"
+                placeholder=""
                 :class="inputClass"
               />
             </div>
@@ -371,7 +371,7 @@ const fieldClass = 'flex flex-col gap-1'
               <Input
                 id="create-description"
                 v-model="form.description"
-                placeholder="Дополнительная информация"
+                placeholder=""
                 :class="inputClass"
               />
             </div>
@@ -457,7 +457,7 @@ const fieldClass = 'flex flex-col gap-1'
               <Input
                 id="edit-name"
                 v-model="form.name"
-                placeholder="Название компонента"
+                placeholder=""
                 :class="inputClass"
               />
             </div>
@@ -467,7 +467,7 @@ const fieldClass = 'flex flex-col gap-1'
               <Input
                 id="edit-description"
                 v-model="form.description"
-                placeholder="Дополнительная информация"
+                placeholder=""
                 :class="inputClass"
               />
             </div>

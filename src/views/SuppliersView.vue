@@ -349,7 +349,7 @@ const inputClass = 'mt-1'
               <Input
                 id="create-name"
                 v-model="form.name"
-                placeholder="Название организации"
+                placeholder=""
                 :class="inputClass"
               />
             </div>
@@ -359,7 +359,7 @@ const inputClass = 'mt-1'
               <Input
                 id="create-description"
                 v-model="form.description"
-                placeholder="Дополнительная информация"
+                placeholder=""
                 :class="inputClass"
               />
             </div>
@@ -370,7 +370,7 @@ const inputClass = 'mt-1'
                 <Input
                   id="create-phone"
                   v-model="form.phone"
-                  placeholder="+7 (999) 123-45-67"
+                  placeholder=""
                   :class="inputClass"
                 />
               </div>
@@ -381,7 +381,7 @@ const inputClass = 'mt-1'
                   id="create-email"
                   v-model="form.email"
                   type="email"
-                  placeholder="email@example.com"
+                  placeholder=""
                   :class="inputClass"
                 />
               </div>
@@ -437,7 +437,7 @@ const inputClass = 'mt-1'
               <Input
                 id="edit-name"
                 v-model="form.name"
-                placeholder="Название организации"
+                placeholder=""
                 :class="inputClass"
               />
             </div>
@@ -447,7 +447,7 @@ const inputClass = 'mt-1'
               <Input
                 id="edit-description"
                 v-model="form.description"
-                placeholder="Дополнительная информация"
+                placeholder=""
                 :class="inputClass"
               />
             </div>
@@ -458,7 +458,7 @@ const inputClass = 'mt-1'
                 <Input
                   id="edit-phone"
                   v-model="form.phone"
-                  placeholder="+7 (999) 123-45-67"
+                  placeholder=""
                   :class="inputClass"
                 />
               </div>
@@ -469,7 +469,7 @@ const inputClass = 'mt-1'
                   id="edit-email"
                   v-model="form.email"
                   type="email"
-                  placeholder="email@example.com"
+                  placeholder=""
                   :class="inputClass"
                 />
               </div>
