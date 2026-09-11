@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { Plus, Pencil, Trash2, PackageOpen } from 'lucide-vue-next'
+import { ref, onMounted, computed } from 'vue'
+import { Plus, Pencil, Trash2, PackageOpen, Undo2 } from 'lucide-vue-next'
 import {
   DialogClose,
   DialogContent,
@@ -36,6 +36,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { StatusFilter } from '@/components/ui/status-filter'
 import { toast } from 'vue-sonner'
 import { packagingComponentsApi, suppliersApi, Unit } from '@/services/api'
 import type {
@@ -56,11 +57,15 @@ const isLoading = ref<boolean>(true)
 const createDialogOpen = ref<boolean>(false)
 const editDialogOpen = ref<boolean>(false)
 const deleteDialogOpen = ref<boolean>(false)
+const restoreDialogOpen = ref<boolean>(false)
 
 const editTarget = ref<PackagingComponentItem | null>(null)
 const deleteTarget = ref<PackagingComponentItem | null>(null)
+const restoreTarget = ref<PackagingComponentItem | null>(null)
 const isSaving = ref<boolean>(false)
 const isDeleting = ref<boolean>(false)
+
+const statusFilter = ref<'all' | 'active' | 'inactive'>('active')
 
 const form = ref({
   name: '',
@@ -69,7 +74,22 @@ const form = ref({
   pricePerUnit: 0,
   supplierId: '' as string,
 })
-const editActive = ref<boolean>(true)
+
+const activeCount = computed(() => items.value.filter(i => i.isActive).length)
+const inactiveCount = computed(() => items.value.filter(i => !i.isActive).length)
+const totalCount = computed(() => items.value.length)
+
+const filterOptions = computed(() => [
+  { value: 'active', label: 'Активные', count: activeCount.value },
+  { value: 'all', label: 'Все', count: totalCount.value },
+  { value: 'inactive', label: 'Неактивные', count: inactiveCount.value },
+])
+
+const filteredItems = computed(() => {
+  if (statusFilter.value === 'all') return items.value
+  if (statusFilter.value === 'active') return items.value.filter(i => i.isActive)
+  return items.value.filter(i => !i.isActive)
+})
 
 const unitOptions = [
   { value: Unit.Piece, label: 'шт.' },
@@ -110,7 +130,6 @@ onMounted(loadData)
 
 const resetForm = (): void => {
   form.value = { name: '', description: '', unit: Unit.Piece, pricePerUnit: 0, supplierId: '' }
-  editActive.value = true
 }
 
 const openCreate = (): void => {
@@ -127,13 +146,17 @@ const openEdit = (item: PackagingComponentItem): void => {
     pricePerUnit: item.pricePerUnit,
     supplierId: item.supplierId ?? '',
   }
-  editActive.value = item.isActive
   editDialogOpen.value = true
 }
 
 const openDelete = (item: PackagingComponentItem): void => {
   deleteTarget.value = item
   deleteDialogOpen.value = true
+}
+
+const openRestore = (item: PackagingComponentItem): void => {
+  restoreTarget.value = item
+  restoreDialogOpen.value = true
 }
 
 const handleCreate = async (): Promise<void> => {
@@ -168,7 +191,7 @@ const handleEdit = async (): Promise<void> => {
       unit: form.value.unit,
       pricePerUnit: Number(form.value.pricePerUnit),
       supplierId: form.value.supplierId || undefined,
-      isActive: editActive.value,
+      isActive: editTarget.value.isActive,
     }
     await packagingComponentsApi.update(editTarget.value.id, payload)
     toast.success('Компонент обновлён')
@@ -186,13 +209,36 @@ const handleDelete = async (): Promise<void> => {
   isDeleting.value = true
   try {
     await packagingComponentsApi.delete(deleteTarget.value.id)
-    toast.success('Компонент удалён')
+    toast.success('Компонент деактивирован')
     deleteDialogOpen.value = false
     await loadData()
   } catch {
-    toast.error('Не удалось удалить компонент')
+    toast.error('Не удалось деактивировать компонент')
   } finally {
     isDeleting.value = false
+  }
+}
+
+const handleRestore = async (): Promise<void> => {
+  if (!restoreTarget.value) return
+  isSaving.value = true
+  try {
+    const payload: UpdatePackagingComponentRequest = {
+      name: restoreTarget.value.name,
+      description: restoreTarget.value.description || undefined,
+      unit: restoreTarget.value.unit,
+      pricePerUnit: restoreTarget.value.pricePerUnit,
+      supplierId: restoreTarget.value.supplierId || undefined,
+      isActive: true,
+    }
+    await packagingComponentsApi.update(restoreTarget.value.id, payload)
+    toast.success('Компонент восстановлен')
+    restoreDialogOpen.value = false
+    await loadData()
+  } catch {
+    toast.error('Не удалось восстановить компонент')
+  } finally {
+    isSaving.value = false
   }
 }
 
@@ -217,6 +263,8 @@ const fieldClass = 'flex flex-col gap-1'
       </Button>
     </div>
 
+    <StatusFilter v-model="statusFilter" :options="filterOptions" />
+
     <div v-if="isLoading" class="rounded-xl border border-border bg-card overflow-hidden">
       <div class="p-4 flex flex-col gap-3">
         <Skeleton v-for="n in 5" :key="n" class="h-10 w-full rounded-lg" />
@@ -224,12 +272,14 @@ const fieldClass = 'flex flex-col gap-1'
     </div>
 
     <div
-      v-else-if="items.length === 0"
+      v-else-if="filteredItems.length === 0"
       class="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-card py-16 text-center"
     >
       <PackageOpen class="size-10 text-muted-foreground/40" />
-      <p class="text-sm text-muted-foreground">Компоненты упаковки не добавлены</p>
-      <Button v-if="canWrite" variant="outline" size="sm" @click="openCreate" class="gap-2">
+      <p class="text-sm text-muted-foreground">
+        {{ statusFilter === 'inactive' ? 'Нет неактивных компонентов' : 'Компоненты упаковки не добавлены' }}
+      </p>
+      <Button v-if="canWrite && statusFilter !== 'inactive'" variant="outline" size="sm" @click="openCreate" class="gap-2">
         <Plus class="size-4" /> Добавить первый
       </Button>
     </div>
@@ -249,7 +299,7 @@ const fieldClass = 'flex flex-col gap-1'
         </TableHeader>
         <TableBody>
           <TableRow
-            v-for="item in items"
+            v-for="item in filteredItems"
             :key="item.id"
             class="hover:bg-muted/40 transition-colors"
           >
@@ -257,11 +307,10 @@ const fieldClass = 'flex flex-col gap-1'
               {{ item.name }}
               <p v-if="item.description" class="text-xs text-muted-foreground mt-0.5 font-normal">{{ item.description }}</p>
             </TableCell>
-            <TableCell>{{ unitLabel(item.unit) }}</TableCell>
+            <TableCell class="text-sm">{{ unitLabel(item.unit) }}</TableCell>
             <TableCell class="text-right tabular-nums">{{ formatPrice(item.pricePerUnit) }}</TableCell>
-            <TableCell>
-              <span v-if="item.supplierName" class="text-sm">{{ item.supplierName }}</span>
-              <span v-else class="text-xs text-muted-foreground italic">—</span>
+            <TableCell class="text-sm">
+              {{ suppliers.find(s => s.id === item.supplierId)?.name || '—' }}
             </TableCell>
             <TableCell>
               <Badge :variant="item.isActive ? 'success' : 'secondary'">
@@ -274,8 +323,11 @@ const fieldClass = 'flex flex-col gap-1'
                 <Button variant="ghost" size="icon-sm" @click="openEdit(item)">
                   <Pencil class="size-4" />
                 </Button>
-                <Button variant="ghost" size="icon-sm" @click="openDelete(item)">
+                <Button v-if="item.isActive" variant="ghost" size="icon-sm" @click="openDelete(item)">
                   <Trash2 class="size-4 text-destructive" />
+                </Button>
+                <Button v-else variant="ghost" size="icon-sm" @click="openRestore(item)" title="Восстановить">
+                  <Undo2 class="size-4 text-green-600" />
                 </Button>
               </div>
             </TableCell>
@@ -293,7 +345,7 @@ const fieldClass = 'flex flex-col gap-1'
             <div>
               <DialogTitle class="text-lg font-semibold">Добавить компонент упаковки</DialogTitle>
               <DialogDescription class="text-sm text-muted-foreground mt-1">
-                Укажите название, единицу измерения и цену за единицу
+                Укажите название и параметры компонента
               </DialogDescription>
             </div>
             <DialogClose as-child>
@@ -309,7 +361,7 @@ const fieldClass = 'flex flex-col gap-1'
               <Input
                 id="create-name"
                 v-model="form.name"
-                placeholder="Например: Коробка 30x20x10"
+                placeholder="Название компонента"
                 :class="inputClass"
               />
             </div>
@@ -326,13 +378,15 @@ const fieldClass = 'flex flex-col gap-1'
 
             <div class="grid grid-cols-2 gap-4">
               <div :class="fieldClass">
-                <Label for="create-unit">Единица *</Label>
+                <Label for="create-unit">Единица измерения *</Label>
                 <select
                   id="create-unit"
                   v-model="form.unit"
-                  class="mt-1 flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 mt-1"
                 >
-                  <option v-for="opt in unitOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+                  <option v-for="opt in unitOptions" :key="opt.value" :value="opt.value">
+                    {{ opt.label }}
+                  </option>
                 </select>
               </div>
 
@@ -340,7 +394,7 @@ const fieldClass = 'flex flex-col gap-1'
                 <Label for="create-price">Цена за единицу *</Label>
                 <Input
                   id="create-price"
-                  v-model="form.pricePerUnit"
+                  v-model.number="form.pricePerUnit"
                   type="number"
                   step="0.01"
                   min="0"
@@ -355,10 +409,12 @@ const fieldClass = 'flex flex-col gap-1'
               <select
                 id="create-supplier"
                 v-model="form.supplierId"
-                class="mt-1 flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 mt-1"
               >
                 <option value="">Не выбран</option>
-                <option v-for="s in activeSuppliers()" :key="s.id" :value="s.id">{{ s.name }}</option>
+                <option v-for="s in activeSuppliers()" :key="s.id" :value="s.id">
+                  {{ s.name }}
+                </option>
               </select>
             </div>
           </div>
@@ -385,7 +441,7 @@ const fieldClass = 'flex flex-col gap-1'
             <div>
               <DialogTitle class="text-lg font-semibold">Редактировать компонент</DialogTitle>
               <DialogDescription class="text-sm text-muted-foreground mt-1">
-                Измените данные компонента упаковки
+                Измените параметры компонента
               </DialogDescription>
             </div>
             <DialogClose as-child>
@@ -401,7 +457,7 @@ const fieldClass = 'flex flex-col gap-1'
               <Input
                 id="edit-name"
                 v-model="form.name"
-                placeholder="Например: Коробка 30x20x10"
+                placeholder="Название компонента"
                 :class="inputClass"
               />
             </div>
@@ -418,13 +474,15 @@ const fieldClass = 'flex flex-col gap-1'
 
             <div class="grid grid-cols-2 gap-4">
               <div :class="fieldClass">
-                <Label for="edit-unit">Единица *</Label>
+                <Label for="edit-unit">Единица измерения *</Label>
                 <select
                   id="edit-unit"
                   v-model="form.unit"
-                  class="mt-1 flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 mt-1"
                 >
-                  <option v-for="opt in unitOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+                  <option v-for="opt in unitOptions" :key="opt.value" :value="opt.value">
+                    {{ opt.label }}
+                  </option>
                 </select>
               </div>
 
@@ -432,7 +490,7 @@ const fieldClass = 'flex flex-col gap-1'
                 <Label for="edit-price">Цена за единицу *</Label>
                 <Input
                   id="edit-price"
-                  v-model="form.pricePerUnit"
+                  v-model.number="form.pricePerUnit"
                   type="number"
                   step="0.01"
                   min="0"
@@ -447,21 +505,13 @@ const fieldClass = 'flex flex-col gap-1'
               <select
                 id="edit-supplier"
                 v-model="form.supplierId"
-                class="mt-1 flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 mt-1"
               >
                 <option value="">Не выбран</option>
-                <option v-for="s in activeSuppliers()" :key="s.id" :value="s.id">{{ s.name }}</option>
+                <option v-for="s in activeSuppliers()" :key="s.id" :value="s.id">
+                  {{ s.name }}
+                </option>
               </select>
-            </div>
-
-            <div class="flex items-center gap-2 mt-2">
-              <input
-                id="e-active"
-                type="checkbox"
-                v-model="editActive"
-                class="size-4 rounded border-border accent-primary"
-              />
-              <Label for="e-active" class="cursor-pointer">Активен</Label>
             </div>
           </div>
 
@@ -483,9 +533,9 @@ const fieldClass = 'flex flex-col gap-1'
       <AlertDialogPortal>
         <AlertDialogOverlay class="bg-background/80 backdrop-blur-sm fixed inset-0 z-50" />
         <AlertDialogContent class="bg-popover text-popover-foreground fixed top-[50%] left-[50%] max-h-[90vh] w-[90vw] max-w-[420px] translate-x-[-50%] translate-y-[-50%] rounded-lg border shadow-lg p-6 focus:outline-none z-[100]">
-          <AlertDialogTitle class="text-lg font-semibold">Удалить компонент?</AlertDialogTitle>
+          <AlertDialogTitle class="text-lg font-semibold">Деактивировать компонент?</AlertDialogTitle>
           <AlertDialogDescription class="text-sm text-muted-foreground mt-2">
-            Компонент "{{ deleteTarget?.name }}" будет удалён. Это действие нельзя отменить.
+            Компонент "{{ deleteTarget?.name }}" будет деактивирован и скрыт из основного списка. Вы сможете восстановить его позже.
           </AlertDialogDescription>
           <div class="flex justify-end gap-2 mt-6">
             <AlertDialogCancel as-child>
@@ -494,7 +544,31 @@ const fieldClass = 'flex flex-col gap-1'
             <AlertDialogAction as-child>
               <Button @click="handleDelete" :disabled="isDeleting" variant="destructive" class="gap-2">
                 <Spinner v-if="isDeleting" class="size-4" />
-                Удалить
+                Деактивировать
+              </Button>
+            </AlertDialogAction>
+          </div>
+        </AlertDialogContent>
+      </AlertDialogPortal>
+    </AlertDialogRoot>
+
+    <!-- Restore Confirm -->
+    <AlertDialogRoot v-model:open="restoreDialogOpen">
+      <AlertDialogPortal>
+        <AlertDialogOverlay class="bg-background/80 backdrop-blur-sm fixed inset-0 z-50" />
+        <AlertDialogContent class="bg-popover text-popover-foreground fixed top-[50%] left-[50%] max-h-[90vh] w-[90vw] max-w-[420px] translate-x-[-50%] translate-y-[-50%] rounded-lg border shadow-lg p-6 focus:outline-none z-[100]">
+          <AlertDialogTitle class="text-lg font-semibold">Восстановить компонент?</AlertDialogTitle>
+          <AlertDialogDescription class="text-sm text-muted-foreground mt-2">
+            Компонент "{{ restoreTarget?.name }}" будет активирован и появится в основном списке.
+          </AlertDialogDescription>
+          <div class="flex justify-end gap-2 mt-6">
+            <AlertDialogCancel as-child>
+              <Button variant="outline">Отмена</Button>
+            </AlertDialogCancel>
+            <AlertDialogAction as-child>
+              <Button @click="handleRestore" :disabled="isSaving" class="gap-2 bg-green-600 hover:bg-green-700">
+                <Spinner v-if="isSaving" class="size-4" />
+                Восстановить
               </Button>
             </AlertDialogAction>
           </div>

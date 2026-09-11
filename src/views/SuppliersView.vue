@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { Plus, Pencil, Trash2, Truck } from 'lucide-vue-next'
+import { ref, onMounted, computed } from 'vue'
+import { Plus, Pencil, Trash2, Truck, Undo2 } from 'lucide-vue-next'
 import {
   DialogClose,
   DialogContent,
@@ -36,6 +36,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { StatusFilter } from '@/components/ui/status-filter'
 import { toast } from 'vue-sonner'
 import { suppliersApi } from '@/services/api'
 import type { SupplierItem, CreateSupplierRequest, UpdateSupplierRequest } from '@/services/api'
@@ -50,17 +51,35 @@ const isLoading = ref<boolean>(true)
 const createDialogOpen = ref<boolean>(false)
 const editDialogOpen = ref<boolean>(false)
 const deleteDialogOpen = ref<boolean>(false)
+const restoreDialogOpen = ref<boolean>(false)
 
 const editTarget = ref<SupplierItem | null>(null)
 const deleteTarget = ref<SupplierItem | null>(null)
+const restoreTarget = ref<SupplierItem | null>(null)
 const isSaving = ref<boolean>(false)
 const isDeleting = ref<boolean>(false)
 
+const statusFilter = ref<'all' | 'active' | 'inactive'>('active')
+
 const emptyForm = () => ({ inn: '', name: '', description: '', phone: '', email: '' })
 const form = ref(emptyForm())
-const editActive = ref<boolean>(true)
 
-// ИНН: 10 цифр (юрлица) или 12 цифр (ИП/физлица)
+const activeCount = computed(() => items.value.filter(i => i.isActive).length)
+const inactiveCount = computed(() => items.value.filter(i => !i.isActive).length)
+const totalCount = computed(() => items.value.length)
+
+const filterOptions = computed(() => [
+  { value: 'active', label: 'Активные', count: activeCount.value },
+  { value: 'all', label: 'Все', count: totalCount.value },
+  { value: 'inactive', label: 'Неактивные', count: inactiveCount.value },
+])
+
+const filteredItems = computed(() => {
+  if (statusFilter.value === 'all') return items.value
+  if (statusFilter.value === 'active') return items.value.filter(i => i.isActive)
+  return items.value.filter(i => !i.isActive)
+})
+
 const validateInn = (inn: string): string | null => {
   if (!/^\d{10}$|^\d{12}$/.test(inn)) {
     return 'ИНН должен содержать 10 или 12 цифр'
@@ -87,7 +106,6 @@ onMounted(loadItems)
 
 const openCreate = (): void => {
   form.value = emptyForm()
-  editActive.value = true
   createDialogOpen.value = true
 }
 
@@ -100,13 +118,17 @@ const openEdit = (item: SupplierItem): void => {
     phone: item.phone ?? '',
     email: item.email ?? '',
   }
-  editActive.value = item.isActive
   editDialogOpen.value = true
 }
 
 const openDelete = (item: SupplierItem): void => {
   deleteTarget.value = item
   deleteDialogOpen.value = true
+}
+
+const openRestore = (item: SupplierItem): void => {
+  restoreTarget.value = item
+  restoreDialogOpen.value = true
 }
 
 const handleCreate = async (): Promise<void> => {
@@ -148,7 +170,7 @@ const handleEdit = async (): Promise<void> => {
       description: form.value.description.trim() || undefined,
       phone: form.value.phone.trim() || undefined,
       email: form.value.email.trim() || undefined,
-      isActive: editActive.value,
+      isActive: editTarget.value.isActive,
     }
     await suppliersApi.update(editTarget.value.id, payload)
     toast.success('Поставщик обновлён')
@@ -166,13 +188,36 @@ const handleDelete = async (): Promise<void> => {
   isDeleting.value = true
   try {
     await suppliersApi.delete(deleteTarget.value.id)
-    toast.success('Поставщик удалён')
+    toast.success('Поставщик деактивирован')
     deleteDialogOpen.value = false
     await loadItems()
   } catch {
-    toast.error('Не удалось удалить поставщика')
+    toast.error('Не удалось деактивировать поставщика')
   } finally {
     isDeleting.value = false
+  }
+}
+
+const handleRestore = async (): Promise<void> => {
+  if (!restoreTarget.value) return
+  isSaving.value = true
+  try {
+    const payload: UpdateSupplierRequest = {
+      inn: restoreTarget.value.inn,
+      name: restoreTarget.value.name,
+      description: restoreTarget.value.description || undefined,
+      phone: restoreTarget.value.phone || undefined,
+      email: restoreTarget.value.email || undefined,
+      isActive: true,
+    }
+    await suppliersApi.update(restoreTarget.value.id, payload)
+    toast.success('Поставщик восстановлен')
+    restoreDialogOpen.value = false
+    await loadItems()
+  } catch {
+    toast.error('Не удалось восстановить поставщика')
+  } finally {
+    isSaving.value = false
   }
 }
 
@@ -197,6 +242,8 @@ const inputClass = 'mt-1'
       </Button>
     </div>
 
+    <StatusFilter v-model="statusFilter" :options="filterOptions" />
+
     <div v-if="isLoading" class="rounded-xl border border-border bg-card overflow-hidden">
       <div class="p-4 flex flex-col gap-3">
         <Skeleton v-for="n in 5" :key="n" class="h-10 w-full rounded-lg" />
@@ -204,12 +251,14 @@ const inputClass = 'mt-1'
     </div>
 
     <div
-      v-else-if="items.length === 0"
+      v-else-if="filteredItems.length === 0"
       class="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-card py-16 text-center"
     >
       <Truck class="size-10 text-muted-foreground/40" />
-      <p class="text-sm text-muted-foreground">Поставщики не добавлены</p>
-      <Button v-if="canWrite" variant="outline" size="sm" @click="openCreate" class="gap-2">
+      <p class="text-sm text-muted-foreground">
+        {{ statusFilter === 'inactive' ? 'Нет неактивных поставщиков' : 'Поставщики не добавлены' }}
+      </p>
+      <Button v-if="canWrite && statusFilter !== 'inactive'" variant="outline" size="sm" @click="openCreate" class="gap-2">
         <Plus class="size-4" /> Добавить первого
       </Button>
     </div>
@@ -229,7 +278,7 @@ const inputClass = 'mt-1'
         </TableHeader>
         <TableBody>
           <TableRow
-            v-for="item in items"
+            v-for="item in filteredItems"
             :key="item.id"
             class="hover:bg-muted/40 transition-colors"
           >
@@ -238,26 +287,24 @@ const inputClass = 'mt-1'
               {{ item.name }}
               <p v-if="item.description" class="text-xs text-muted-foreground mt-0.5 font-normal">{{ item.description }}</p>
             </TableCell>
-            <TableCell class="text-sm text-muted-foreground">{{ item.phone || '—' }}</TableCell>
-            <TableCell class="text-sm text-muted-foreground">{{ item.email || '—' }}</TableCell>
+            <TableCell class="text-sm">{{ item.phone || '—' }}</TableCell>
+            <TableCell class="text-sm">{{ item.email || '—' }}</TableCell>
             <TableCell>
               <Badge :variant="item.isActive ? 'success' : 'secondary'">
                 {{ item.isActive ? 'Активен' : 'Неактивен' }}
               </Badge>
             </TableCell>
-            <TableCell class="text-sm text-muted-foreground">{{ formatDate(item.createdAt) }}</TableCell>
+            <TableCell class="text-sm text-muted-foreground tabular-nums">{{ formatDate(item.createdAt) }}</TableCell>
             <TableCell v-if="canWrite" class="text-right">
-              <div class="flex justify-end gap-1">
-                <Button variant="ghost" size="icon" class="size-8" @click="openEdit(item)">
+              <div class="flex items-center justify-end gap-1">
+                <Button variant="ghost" size="icon-sm" @click="openEdit(item)">
                   <Pencil class="size-4" />
                 </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  class="size-8 text-destructive hover:text-destructive"
-                  @click="openDelete(item)"
-                >
-                  <Trash2 class="size-4" />
+                <Button v-if="item.isActive" variant="ghost" size="icon-sm" @click="openDelete(item)">
+                  <Trash2 class="size-4 text-destructive" />
+                </Button>
+                <Button v-else variant="ghost" size="icon-sm" @click="openRestore(item)" title="Восстановить">
+                  <Undo2 class="size-4 text-green-600" />
                 </Button>
               </div>
             </TableCell>
@@ -269,39 +316,78 @@ const inputClass = 'mt-1'
     <!-- Create Dialog -->
     <DialogRoot v-model:open="createDialogOpen">
       <DialogPortal>
-        <DialogOverlay class="fixed inset-0 bg-black/50 z-[90]" />
+        <DialogOverlay class="bg-background/80 backdrop-blur-sm fixed inset-0 z-50" />
         <DialogContent :class="dialogContentClass">
-          <div class="flex items-center justify-between mb-4">
-            <DialogTitle class="text-lg font-semibold">Новый поставщик</DialogTitle>
+          <div class="flex items-start justify-between mb-4">
+            <div>
+              <DialogTitle class="text-lg font-semibold">Добавить поставщика</DialogTitle>
+              <DialogDescription class="text-sm text-muted-foreground mt-1">
+                Укажите ИНН и название поставщика
+              </DialogDescription>
+            </div>
             <DialogClose as-child>
-              <Button variant="ghost" size="icon" class="size-8"><X class="size-4" /></Button>
+              <Button variant="ghost" size="icon-sm">
+                <X class="size-4" />
+              </Button>
             </DialogClose>
           </div>
-          <DialogDescription class="sr-only">Форма добавления поставщика</DialogDescription>
+
           <div class="flex flex-col gap-4">
             <div :class="fieldClass">
-              <Label for="c-inn">ИНН <span class="text-destructive">*</span></Label>
-              <Input id="c-inn" v-model="form.inn" placeholder="10 или 12 цифр" :class="inputClass" />
+              <Label for="create-inn">ИНН *</Label>
+              <Input
+                id="create-inn"
+                v-model="form.inn"
+                placeholder="10 или 12 цифр"
+                maxlength="12"
+                :class="inputClass"
+              />
             </div>
+
             <div :class="fieldClass">
-              <Label for="c-name">Название <span class="text-destructive">*</span></Label>
-              <Input id="c-name" v-model="form.name" placeholder="ООО Поставщик" :class="inputClass" />
+              <Label for="create-name">Название *</Label>
+              <Input
+                id="create-name"
+                v-model="form.name"
+                placeholder="Название организации"
+                :class="inputClass"
+              />
             </div>
+
             <div :class="fieldClass">
-              <Label for="c-desc">Описание</Label>
-              <Input id="c-desc" v-model="form.description" placeholder="Краткое описание" :class="inputClass" />
+              <Label for="create-description">Описание</Label>
+              <Input
+                id="create-description"
+                v-model="form.description"
+                placeholder="Дополнительная информация"
+                :class="inputClass"
+              />
             </div>
-            <div class="grid grid-cols-2 gap-3">
+
+            <div class="grid grid-cols-2 gap-4">
               <div :class="fieldClass">
-                <Label for="c-phone">Телефон</Label>
-                <Input id="c-phone" v-model="form.phone" placeholder="+7 999 000 00 00" :class="inputClass" />
+                <Label for="create-phone">Телефон</Label>
+                <Input
+                  id="create-phone"
+                  v-model="form.phone"
+                  placeholder="+7 (999) 123-45-67"
+                  :class="inputClass"
+                />
               </div>
+
               <div :class="fieldClass">
-                <Label for="c-email">Email</Label>
-                <Input id="c-email" type="email" v-model="form.email" placeholder="info@supplier.ru" :class="inputClass" />
+                <Label for="create-email">Email</Label>
+                <Input
+                  id="create-email"
+                  v-model="form.email"
+                  type="email"
+                  placeholder="email@example.com"
+                  :class="inputClass"
+                />
               </div>
             </div>
           </div>
+
           <div class="flex justify-end gap-2 mt-6">
             <DialogClose as-child>
               <Button variant="outline">Отмена</Button>
@@ -318,48 +404,78 @@ const inputClass = 'mt-1'
     <!-- Edit Dialog -->
     <DialogRoot v-model:open="editDialogOpen">
       <DialogPortal>
-        <DialogOverlay class="fixed inset-0 bg-black/50 z-[90]" />
+        <DialogOverlay class="bg-background/80 backdrop-blur-sm fixed inset-0 z-50" />
         <DialogContent :class="dialogContentClass">
-          <div class="flex items-center justify-between mb-4">
-            <DialogTitle class="text-lg font-semibold">Редактировать поставщика</DialogTitle>
+          <div class="flex items-start justify-between mb-4">
+            <div>
+              <DialogTitle class="text-lg font-semibold">Редактировать поставщика</DialogTitle>
+              <DialogDescription class="text-sm text-muted-foreground mt-1">
+                Измените данные поставщика
+              </DialogDescription>
+            </div>
             <DialogClose as-child>
-              <Button variant="ghost" size="icon" class="size-8"><X class="size-4" /></Button>
+              <Button variant="ghost" size="icon-sm">
+                <X class="size-4" />
+              </Button>
             </DialogClose>
           </div>
-          <DialogDescription class="sr-only">Форма редактирования поставщика</DialogDescription>
+
           <div class="flex flex-col gap-4">
             <div :class="fieldClass">
-              <Label for="e-inn">ИНН <span class="text-destructive">*</span></Label>
-              <Input id="e-inn" v-model="form.inn" :class="inputClass" />
-            </div>
-            <div :class="fieldClass">
-              <Label for="e-name">Название <span class="text-destructive">*</span></Label>
-              <Input id="e-name" v-model="form.name" :class="inputClass" />
-            </div>
-            <div :class="fieldClass">
-              <Label for="e-desc">Описание</Label>
-              <Input id="e-desc" v-model="form.description" :class="inputClass" />
-            </div>
-            <div class="grid grid-cols-2 gap-3">
-              <div :class="fieldClass">
-                <Label for="e-phone">Телефон</Label>
-                <Input id="e-phone" v-model="form.phone" :class="inputClass" />
-              </div>
-              <div :class="fieldClass">
-                <Label for="e-email">Email</Label>
-                <Input id="e-email" type="email" v-model="form.email" :class="inputClass" />
-              </div>
-            </div>
-            <div class="flex items-center gap-2">
-              <input
-                id="e-active"
-                type="checkbox"
-                v-model="editActive"
-                class="size-4 rounded border-border accent-primary"
+              <Label for="edit-inn">ИНН *</Label>
+              <Input
+                id="edit-inn"
+                v-model="form.inn"
+                placeholder="10 или 12 цифр"
+                maxlength="12"
+                :class="inputClass"
               />
-              <Label for="e-active" class="cursor-pointer">Активен</Label>
+            </div>
+
+            <div :class="fieldClass">
+              <Label for="edit-name">Название *</Label>
+              <Input
+                id="edit-name"
+                v-model="form.name"
+                placeholder="Название организации"
+                :class="inputClass"
+              />
+            </div>
+
+            <div :class="fieldClass">
+              <Label for="edit-description">Описание</Label>
+              <Input
+                id="edit-description"
+                v-model="form.description"
+                placeholder="Дополнительная информация"
+                :class="inputClass"
+              />
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+              <div :class="fieldClass">
+                <Label for="edit-phone">Телефон</Label>
+                <Input
+                  id="edit-phone"
+                  v-model="form.phone"
+                  placeholder="+7 (999) 123-45-67"
+                  :class="inputClass"
+                />
+              </div>
+
+              <div :class="fieldClass">
+                <Label for="edit-email">Email</Label>
+                <Input
+                  id="edit-email"
+                  v-model="form.email"
+                  type="email"
+                  placeholder="email@example.com"
+                  :class="inputClass"
+                />
+              </div>
             </div>
           </div>
+
           <div class="flex justify-end gap-2 mt-6">
             <DialogClose as-child>
               <Button variant="outline">Отмена</Button>
@@ -376,20 +492,44 @@ const inputClass = 'mt-1'
     <!-- Delete Confirm -->
     <AlertDialogRoot v-model:open="deleteDialogOpen">
       <AlertDialogPortal>
-        <AlertDialogOverlay class="fixed inset-0 bg-black/50 z-[90]" />
-        <AlertDialogContent class="bg-popover text-popover-foreground fixed top-[50%] left-[50%] w-[90vw] max-w-[420px] translate-x-[-50%] translate-y-[-50%] rounded-lg border shadow-lg p-6 z-[100]">
-          <AlertDialogTitle class="text-lg font-semibold mb-2">Удалить поставщика?</AlertDialogTitle>
-          <AlertDialogDescription class="text-sm text-muted-foreground mb-4">
-            «{{ deleteTarget?.name }}» будет деактивирован. Существующие компоненты упаковки сохранят связь.
+        <AlertDialogOverlay class="bg-background/80 backdrop-blur-sm fixed inset-0 z-50" />
+        <AlertDialogContent class="bg-popover text-popover-foreground fixed top-[50%] left-[50%] max-h-[90vh] w-[90vw] max-w-[420px] translate-x-[-50%] translate-y-[-50%] rounded-lg border shadow-lg p-6 focus:outline-none z-[100]">
+          <AlertDialogTitle class="text-lg font-semibold">Деактивировать поставщика?</AlertDialogTitle>
+          <AlertDialogDescription class="text-sm text-muted-foreground mt-2">
+            Поставщик "{{ deleteTarget?.name }}" будет деактивирован и скрыт из основного списка. Вы сможете восстановить его позже.
           </AlertDialogDescription>
-          <div class="flex justify-end gap-2">
+          <div class="flex justify-end gap-2 mt-6">
             <AlertDialogCancel as-child>
               <Button variant="outline">Отмена</Button>
             </AlertDialogCancel>
             <AlertDialogAction as-child>
-              <Button variant="destructive" @click="handleDelete" :disabled="isDeleting" class="gap-2">
+              <Button @click="handleDelete" :disabled="isDeleting" variant="destructive" class="gap-2">
                 <Spinner v-if="isDeleting" class="size-4" />
-                Удалить
+                Деактивировать
+              </Button>
+            </AlertDialogAction>
+          </div>
+        </AlertDialogContent>
+      </AlertDialogPortal>
+    </AlertDialogRoot>
+
+    <!-- Restore Confirm -->
+    <AlertDialogRoot v-model:open="restoreDialogOpen">
+      <AlertDialogPortal>
+        <AlertDialogOverlay class="bg-background/80 backdrop-blur-sm fixed inset-0 z-50" />
+        <AlertDialogContent class="bg-popover text-popover-foreground fixed top-[50%] left-[50%] max-h-[90vh] w-[90vw] max-w-[420px] translate-x-[-50%] translate-y-[-50%] rounded-lg border shadow-lg p-6 focus:outline-none z-[100]">
+          <AlertDialogTitle class="text-lg font-semibold">Восстановить поставщика?</AlertDialogTitle>
+          <AlertDialogDescription class="text-sm text-muted-foreground mt-2">
+            Поставщик "{{ restoreTarget?.name }}" будет активирован и появится в основном списке.
+          </AlertDialogDescription>
+          <div class="flex justify-end gap-2 mt-6">
+            <AlertDialogCancel as-child>
+              <Button variant="outline">Отмена</Button>
+            </AlertDialogCancel>
+            <AlertDialogAction as-child>
+              <Button @click="handleRestore" :disabled="isSaving" class="gap-2 bg-green-600 hover:bg-green-700">
+                <Spinner v-if="isSaving" class="size-4" />
+                Восстановить
               </Button>
             </AlertDialogAction>
           </div>
