@@ -8,18 +8,11 @@ interface FilterOption {
 }
 
 defineProps<{
-  modelValue: string
   options: FilterOption[]
   label?: string
 }>()
 
-const emit = defineEmits<{
-  'update:modelValue': [value: string]
-}>()
-
-const handleUpdate = (value: string) => {
-  emit('update:modelValue', value)
-}
+const modelValue = defineModel<string>({ required: true })
 </script>
 
 <template>
@@ -27,8 +20,7 @@ const handleUpdate = (value: string) => {
     <span class="text-sm text-muted-foreground">{{ label ?? 'Показать' }}:</span>
     
     <ToggleGroup 
-      :model-value="modelValue"
-      @update:model-value="handleUpdate"
+      v-model="modelValue"
       type="single"
     >
       <ToggleGroupItem 
