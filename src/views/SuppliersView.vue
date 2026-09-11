@@ -232,9 +232,9 @@ const inputClass = 'mt-1'
       <div class="flex flex-col gap-1">
         <h1 class="text-xl font-bold flex items-center gap-2">
           <Truck class="size-5 text-primary" />
-          Поставщики
+          Контрагенты
         </h1>
-        <p class="text-sm text-muted-foreground">Справочник поставщиков упаковочных материалов</p>
+        <p class="text-sm text-muted-foreground">Справочник поставщиков и партнёров</p>
       </div>
       <Button v-if="canWrite" @click="openCreate" class="gap-2">
         <Plus class="size-4" />

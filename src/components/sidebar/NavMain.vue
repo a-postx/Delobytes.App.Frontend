@@ -19,7 +19,7 @@ import {
 
 const catalogItems = [
   { to: '/catalogs/packaging-components', label: 'Компоненты упаковки', icon: PackageOpen },
-  { to: '/catalogs/suppliers', label: 'Поставщики', icon: Truck },
+  { to: '/catalogs/suppliers', label: 'Контрагенты', icon: Truck },
   { to: '/catalogs/tariff-grids', label: 'Тарифные сетки', icon: Grid3x3 },
   { to: '/catalogs/work-rates', label: 'Ставки работ', icon: Hammer },
   { to: '/catalogs/raw-material-rates', label: 'Стоимость сырья', icon: FlaskConical },
