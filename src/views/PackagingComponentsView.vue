@@ -100,7 +100,7 @@ const unitOptions = [
   { value: Unit.Gram, label: 'г' },
 ]
 
-const unitLabel = (u: Unit): string => unitOptions.find(o => o.value === Number(u))?.label ?? 'шт.'
+const unitLabel = (u: Unit): string => unitOptions.find(o => o.value === u)?.label ?? 'шт.'
 
 const formatDate = (dateStr: string): string =>
   new Date(dateStr).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' })
@@ -117,10 +117,7 @@ const loadData = async (): Promise<void> => {
       packagingComponentsApi.getAll(),
       suppliersApi.getAll(),
     ])
-    items.value = componentsResp.items.map(item => ({
-      ...item,
-      unit: Number(item.unit) as Unit,
-    }))
+    items.value = componentsResp.items
     suppliers.value = suppliersResp.items
   } catch {
     toast.error('Не удалось загрузить данные')
@@ -145,7 +142,7 @@ const openEdit = (item: PackagingComponentItem): void => {
   form.value = {
     name: item.name,
     description: item.description ?? '',
-    unit: Number(item.unit) as Unit,
+    unit: item.unit,
     pricePerUnit: item.pricePerUnit,
     supplierId: item.supplierId ?? '',
   }

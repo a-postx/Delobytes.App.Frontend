@@ -3,12 +3,12 @@ import { axiosInstance } from '../client'
 // ---------- Enums ----------
 
 export enum Unit {
-  Piece = 0,
-  Kg = 1,
-  Meter = 2,
-  Liter = 3,
-  Ml = 4,
-  Gram = 5,
+  Piece = 'Piece',
+  Kg = 'Kg',
+  Meter = 'Meter',
+  Liter = 'Liter',
+  Ml = 'Ml',
+  Gram = 'Gram',
 }
 
 export enum TariffType {
