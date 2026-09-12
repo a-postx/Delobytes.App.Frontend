@@ -10,7 +10,6 @@ export {
   tariffGridsApi,
   workRatesApi,
   productWorkRatesApi,
-  rawMaterialRatesApi,
 } from './endpoints/catalogs'
 export type {
   SupplierItem,
@@ -34,8 +33,5 @@ export type {
   ProductWorkRateItem,
   GetProductWorkRatesResponse,
   CreateProductWorkRateRequest,
-  RawMaterialRateItem,
-  GetRawMaterialRatesResponse,
-  CreateRawMaterialRateRequest,
 } from './endpoints/catalogs'
 export { Unit, TariffType } from './endpoints/catalogs'

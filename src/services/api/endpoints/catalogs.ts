@@ -170,27 +170,6 @@ export interface CreateProductWorkRateRequest {
   validFrom: string
 }
 
-// ---------- Raw Material Rates ----------
-
-export interface RawMaterialRateItem {
-  id: string
-  productId: string
-  costPerUnit: number
-  validFrom: string
-  isActive: boolean
-  createdAt: string
-}
-
-export interface GetRawMaterialRatesResponse {
-  items: RawMaterialRateItem[]
-}
-
-export interface CreateRawMaterialRateRequest {
-  productId: string
-  costPerUnit: number
-  validFrom: string
-}
-
 // ---------- API objects ----------
 
 export const suppliersApi = {
@@ -311,26 +290,5 @@ export const productWorkRatesApi = {
 
   delete: async (id: string): Promise<void> => {
     await axiosInstance.delete(`/api/catalogs/product-work-rates/${id}`)
-  },
-}
-
-export const rawMaterialRatesApi = {
-  getAll: async (): Promise<GetRawMaterialRatesResponse> => {
-    const response = await axiosInstance.get<GetRawMaterialRatesResponse>(
-      '/api/catalogs/raw-material-rates',
-    )
-    return response.data
-  },
-
-  create: async (data: CreateRawMaterialRateRequest): Promise<RawMaterialRateItem> => {
-    const response = await axiosInstance.post<RawMaterialRateItem>(
-      '/api/catalogs/raw-material-rates',
-      data,
-    )
-    return response.data
-  },
-
-  delete: async (id: string): Promise<void> => {
-    await axiosInstance.delete(`/api/catalogs/raw-material-rates/${id}`)
   },
 }
