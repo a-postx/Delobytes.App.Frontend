@@ -39,7 +39,7 @@ import {
 import { StatusFilter } from '@/components/ui/status-filter'
 import { toast } from 'vue-sonner'
 import { workRatesApi } from '@/services/api'
-import type { WorkRateItem, CreateWorkRateRequest } from '@/services/api'
+import type { WorkRateItem, CreateWorkRateRequest, UpdateWorkRateRequest } from '@/services/api'
 import { useCurrentUser } from '@/composables/useCurrentUser'
 import { X } from 'lucide-vue-next'
 
