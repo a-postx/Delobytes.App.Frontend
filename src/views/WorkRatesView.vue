@@ -86,7 +86,7 @@ const openCreate = (): void => {
 
 const openEdit = (item: WorkRateItem): void => {
   editTarget.value = item
-  editForm.value = { name: item.name, dailyWage: item.dailyWage, assemblyRatePerDay: item.assemblyRatePerDay, isActive: item.isActive }
+  editForm.value = { name: item.name, dailyWage: item.dailyWage, isActive: item.isActive }
   editDialogOpen.value = true
 }
 
@@ -103,7 +103,6 @@ const handleCreate = async (): Promise<void> => {
     const payload: CreateWorkRateRequest = {
       name: form.value.name.trim(),
       dailyWage: Number(form.value.dailyWage),
-      assemblyRatePerDay: Number(form.value.assemblyRatePerDay),
       validFrom: form.value.validFrom,
     }
     await workRatesApi.create(payload)
@@ -124,7 +123,6 @@ const handleEdit = async (): Promise<void> => {
     const payload: UpdateWorkRateRequest = {
       name: editForm.value.name.trim(),
       dailyWage: Number(editForm.value.dailyWage),
-      assemblyRatePerDay: Number(editForm.value.assemblyRatePerDay),
       isActive: editForm.value.isActive,
     }
     await workRatesApi.update(editTarget.value.id, payload)
@@ -201,7 +199,6 @@ const inputClass = 'mt-1'
           <TableRow class="border-b border-border">
             <TableHead>Название</TableHead>
             <TableHead class="text-right">Дневная ставка</TableHead>
-            <TableHead class="text-right">Норма/день</TableHead>
             <TableHead>Действует с</TableHead>
             <TableHead>Статус</TableHead>
             <TableHead>Добавлена</TableHead>
@@ -216,7 +213,6 @@ const inputClass = 'mt-1'
           >
             <TableCell class="font-medium">{{ item.name }}</TableCell>
             <TableCell class="text-right tabular-nums">{{ formatCurrency(item.dailyWage) }}</TableCell>
-            <TableCell class="text-right tabular-nums">{{ item.assemblyRatePerDay }} шт.</TableCell>
             <TableCell class="tabular-nums text-muted-foreground">{{ item.validFrom }}</TableCell>
             <TableCell>
               <Badge :variant="item.isActive ? 'success' : 'warning'">
@@ -255,15 +251,9 @@ const inputClass = 'mt-1'
               <Label for="wr-name">Название <span class="text-destructive">*</span></Label>
               <Input id="wr-name" v-model="form.name" placeholder="Ставка сборки май 2025" :class="inputClass" />
             </div>
-            <div class="grid grid-cols-2 gap-4">
-              <div :class="fieldClass">
-                <Label for="wr-wage">Дневная ставка (₽)</Label>
-                <Input id="wr-wage" v-model="form.dailyWage" type="number" min="0" step="0.01" :class="inputClass" />
-              </div>
-              <div :class="fieldClass">
-                <Label for="wr-rate">Норма сборки / день (шт.)</Label>
-                <Input id="wr-rate" v-model="form.assemblyRatePerDay" type="number" min="0" :class="inputClass" />
-              </div>
+            <div :class="fieldClass">
+              <Label for="wr-wage">Дневная ставка (₽)</Label>
+              <Input id="wr-wage" v-model="form.dailyWage" type="number" min="0" step="0.01" :class="inputClass" />
             </div>
             <div :class="fieldClass">
               <Label for="wr-from">Действует с <span class="text-destructive">*</span></Label>
@@ -296,15 +286,9 @@ const inputClass = 'mt-1'
               <Label for="wre-name">Название <span class="text-destructive">*</span></Label>
               <Input id="wre-name" v-model="editForm.name" :class="inputClass" />
             </div>
-            <div class="grid grid-cols-2 gap-4">
-              <div :class="fieldClass">
-                <Label for="wre-wage">Дневная ставка (₽)</Label>
-                <Input id="wre-wage" v-model="editForm.dailyWage" type="number" min="0" step="0.01" :class="inputClass" />
-              </div>
-              <div :class="fieldClass">
-                <Label for="wre-rate">Норма сборки / день (шт.)</Label>
-                <Input id="wre-rate" v-model="editForm.assemblyRatePerDay" type="number" min="0" :class="inputClass" />
-              </div>
+            <div :class="fieldClass">
+              <Label for="wre-wage">Дневная ставка (₽)</Label>
+              <Input id="wre-wage" v-model="editForm.dailyWage" type="number" min="0" step="0.01" :class="inputClass" />
             </div>
             <div class="flex items-center gap-2">
               <input id="wre-active" type="checkbox" v-model="editForm.isActive" class="h-4 w-4 rounded border-input accent-primary" />
