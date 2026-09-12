@@ -146,8 +146,6 @@ export interface CreateWorkRateRequest {
 }
 
 export interface UpdateWorkRateRequest {
-  name: string
-  dailyWage: number
   isActive: boolean
 }
 
