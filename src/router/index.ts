@@ -15,6 +15,7 @@ import PackagingComponentsView from '@/views/PackagingComponentsView.vue'
 import SuppliersView from '@/views/SuppliersView.vue'
 import TariffGridsView from '@/views/TariffGridsView.vue'
 import WorkRatesView from '@/views/WorkRatesView.vue'
+import ProductWorkRatesView from '@/views/ProductWorkRatesView.vue'
 import RawMaterialRatesView from '@/views/RawMaterialRatesView.vue'
 import StepperDemoView from '@/views/StepperDemoView.vue'
 
@@ -106,6 +107,15 @@ const router = createRouter({
           component: WorkRatesView,
           meta: {
             title: 'Ставки работ',
+            requiresAuth: true,
+          },
+        },
+        {
+          path: 'catalogs/product-work-rates',
+          name: 'product-work-rates',
+          component: ProductWorkRatesView,
+          meta: {
+            title: 'Нормы выработки',
             requiresAuth: true,
           },
         },

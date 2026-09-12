@@ -130,7 +130,6 @@ export interface WorkRateItem {
   id: string
   name: string
   dailyWage: number
-  assemblyRatePerDay: number
   validFrom: string
   isActive: boolean
   createdAt: string
@@ -143,15 +142,34 @@ export interface GetWorkRatesResponse {
 export interface CreateWorkRateRequest {
   name: string
   dailyWage: number
-  assemblyRatePerDay: number
   validFrom: string
 }
 
 export interface UpdateWorkRateRequest {
   name: string
   dailyWage: number
-  assemblyRatePerDay: number
   isActive: boolean
+}
+
+// ---------- Product Work Rates ----------
+
+export interface ProductWorkRateItem {
+  id: string
+  productId: string
+  assemblyRatePerDay: number
+  validFrom: string
+  isActive: boolean
+  createdAt: string
+}
+
+export interface GetProductWorkRatesResponse {
+  items: ProductWorkRateItem[]
+}
+
+export interface CreateProductWorkRateRequest {
+  productId: string
+  assemblyRatePerDay: number
+  validFrom: string
 }
 
 // ---------- Raw Material Rates ----------
@@ -267,6 +285,34 @@ export const workRatesApi = {
 
   delete: async (id: string): Promise<void> => {
     await axiosInstance.delete(`/api/catalogs/work-rates/${id}`)
+  },
+}
+
+export const productWorkRatesApi = {
+  getAll: async (): Promise<GetProductWorkRatesResponse> => {
+    const response = await axiosInstance.get<GetProductWorkRatesResponse>(
+      '/api/catalogs/product-work-rates',
+    )
+    return response.data
+  },
+
+  getByProduct: async (productId: string): Promise<GetProductWorkRatesResponse> => {
+    const response = await axiosInstance.get<GetProductWorkRatesResponse>(
+      `/api/catalogs/product-work-rates/by-product/${productId}`,
+    )
+    return response.data
+  },
+
+  create: async (data: CreateProductWorkRateRequest): Promise<ProductWorkRateItem> => {
+    const response = await axiosInstance.post<ProductWorkRateItem>(
+      '/api/catalogs/product-work-rates',
+      data,
+    )
+    return response.data
+  },
+
+  delete: async (id: string): Promise<void> => {
+    await axiosInstance.delete(`/api/catalogs/product-work-rates/${id}`)
   },
 }
 

@@ -56,8 +56,8 @@ const deleteTarget = ref<WorkRateItem | null>(null)
 const isSaving = ref<boolean>(false)
 const isDeleting = ref<boolean>(false)
 
-const form = ref({ name: '', dailyWage: 0, assemblyRatePerDay: 0, validFrom: '' })
-const editForm = ref({ name: '', dailyWage: 0, assemblyRatePerDay: 0, isActive: true })
+const form = ref({ name: '', dailyWage: 0, validFrom: '' })
+const editForm = ref({ name: '', dailyWage: 0, isActive: true })
 
 const formatDate = (d: string): string =>
   new Date(d).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' })
@@ -80,7 +80,7 @@ const loadItems = async (): Promise<void> => {
 onMounted(loadItems)
 
 const openCreate = (): void => {
-  form.value = { name: '', dailyWage: 0, assemblyRatePerDay: 0, validFrom: new Date().toISOString().slice(0, 10) }
+  form.value = { name: '', dailyWage: 0, validFrom: new Date().toISOString().slice(0, 10) }
   createDialogOpen.value = true
 }
 

@@ -9,6 +9,7 @@ export {
   packagingComponentsApi,
   tariffGridsApi,
   workRatesApi,
+  productWorkRatesApi,
   rawMaterialRatesApi,
 } from './endpoints/catalogs'
 export type {
@@ -30,6 +31,9 @@ export type {
   GetWorkRatesResponse,
   CreateWorkRateRequest,
   UpdateWorkRateRequest,
+  ProductWorkRateItem,
+  GetProductWorkRatesResponse,
+  CreateProductWorkRateRequest,
   RawMaterialRateItem,
   GetRawMaterialRatesResponse,
   CreateRawMaterialRateRequest,

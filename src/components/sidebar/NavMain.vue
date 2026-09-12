@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ChevronRight, BookOpen, Settings, PackageOpen, Grid3x3, Hammer, FlaskConical, Layers, Truck } from 'lucide-vue-next'
+import { ChevronRight, BookOpen, Settings, PackageOpen, Grid3x3, Hammer, FlaskConical, Layers, Truck, Gauge } from 'lucide-vue-next'
 import { RouterLink } from 'vue-router'
 import {
   Collapsible,
@@ -22,6 +22,7 @@ const catalogItems = [
   { to: '/catalogs/suppliers', label: 'Контрагенты', icon: Truck },
   { to: '/catalogs/tariff-grids', label: 'Тарифные сетки', icon: Grid3x3 },
   { to: '/catalogs/work-rates', label: 'Ставки работ', icon: Hammer },
+  { to: '/catalogs/product-work-rates', label: 'Нормы выработки', icon: Gauge },
   { to: '/catalogs/raw-material-rates', label: 'Стоимость сырья', icon: FlaskConical },
 ]
 </script>
