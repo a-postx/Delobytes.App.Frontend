@@ -18,10 +18,10 @@ import {
 } from '@/components/ui/sidebar'
 
 const catalogItems = [
-  { to: '/catalogs/packaging-components', label: 'Компоненты упаковки', icon: PackageOpen },
   { to: '/catalogs/suppliers', label: 'Контрагенты', icon: Truck },
-  { to: '/catalogs/tariff-grids', label: 'Тарифные сетки', icon: Grid3x3 },
+  { to: '/catalogs/packaging-components', label: 'Компоненты упаковки', icon: PackageOpen },
   { to: '/catalogs/work-rates', label: 'Ставки работ', icon: Hammer },
+  { to: '/catalogs/tariff-grids', label: 'Тарифные сетки', icon: Grid3x3 },
   { to: '/catalogs/product-work-rates', label: 'Нормы выработки', icon: Gauge },
   { to: '/catalogs/raw-material-rates', label: 'Стоимость сырья', icon: FlaskConical },
 ]
