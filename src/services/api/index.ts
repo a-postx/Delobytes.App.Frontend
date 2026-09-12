@@ -30,6 +30,7 @@ export type {
   WorkRateItem,
   GetWorkRatesResponse,
   CreateWorkRateRequest,
+  UpdateWorkRateRequest,
   ProductWorkRateItem,
   GetProductWorkRatesResponse,
   CreateProductWorkRateRequest,
