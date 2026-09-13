@@ -46,7 +46,6 @@ import type {
   SupplierItem,
 } from '@/services/api'
 import { useCurrentUser } from '@/composables/useCurrentUser'
-import { X } from 'lucide-vue-next'
 
 const { canWrite } = useCurrentUser()
 
