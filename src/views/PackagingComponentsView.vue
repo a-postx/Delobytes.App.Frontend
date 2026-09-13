@@ -42,7 +42,6 @@ import { packagingComponentsApi, suppliersApi, Unit } from '@/services/api'
 import type {
   PackagingComponentItem,
   CreatePackagingComponentRequest,
-  UpdatePackagingComponentRequest,
   CreatePackagingComponentPriceRequest,
   SupplierItem,
 } from '@/services/api'

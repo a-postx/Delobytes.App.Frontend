@@ -222,6 +222,14 @@ export const packagingComponentsApi = {
     await axiosInstance.put(`/api/catalogs/packaging-components/${id}`, data)
   },
 
+  createPrice: async (id: string, data: CreatePackagingComponentPriceRequest): Promise<void> => {
+    await axiosInstance.post(`/api/catalogs/packaging-components/${id}/prices`, data)
+  },
+
+  restore: async (id: string): Promise<void> => {
+    await axiosInstance.post(`/api/catalogs/packaging-components/${id}/restore`)
+  },
+
   delete: async (id: string): Promise<void> => {
     await axiosInstance.delete(`/api/catalogs/packaging-components/${id}`)
   },
