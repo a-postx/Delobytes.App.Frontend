@@ -46,6 +46,7 @@ import type {
   SupplierItem,
 } from '@/services/api'
 import { useCurrentUser } from '@/composables/useCurrentUser'
+import { X } from 'lucide-vue-next'
 
 const { canWrite } = useCurrentUser()
 
@@ -376,7 +377,7 @@ const selectClass = 'flex h-10 w-full items-center justify-between rounded-md bo
         <DialogContent :class="dialogContentClass">
           <DialogTitle>Новый компонент</DialogTitle>
           <DialogDescription>
-            Добавление нового компонента
+            Добавление нового компонента в справочник
           </DialogDescription>
 
           <div class="flex flex-col gap-4 py-4">
@@ -386,7 +387,7 @@ const selectClass = 'flex h-10 w-full items-center justify-between rounded-md bo
                 id="name"
                 v-model="form.name"
                 :class="inputClass"
-                placeholder=""
+                placeholder="Введите название"
               />
             </div>
 
@@ -396,7 +397,7 @@ const selectClass = 'flex h-10 w-full items-center justify-between rounded-md bo
                 id="description"
                 v-model="form.description"
                 :class="inputClass"
-                placeholder=""
+                placeholder="Введите описание (необязательно)"
               />
             </div>
 
@@ -414,7 +415,7 @@ const selectClass = 'flex h-10 w-full items-center justify-between rounded-md bo
             </div>
 
             <div :class="fieldClass">
-              <Label for="pricePerUnit">Цена за единицу *</Label>
+              <Label for="pricePerUnit">Цена за единицу</Label>
               <Input
                 id="pricePerUnit"
                 v-model.number="form.pricePerUnit"
@@ -426,7 +427,7 @@ const selectClass = 'flex h-10 w-full items-center justify-between rounded-md bo
             </div>
 
             <div :class="fieldClass">
-              <Label for="supplier">Поставщик</Label>
+              <Label for="supplier">Поставщик (необязательно)</Label>
               <select
                 id="supplier"
                 v-model="form.supplierId"
@@ -442,7 +443,7 @@ const selectClass = 'flex h-10 w-full items-center justify-between rounded-md bo
             </div>
 
             <div :class="fieldClass">
-              <Label for="validFrom">Цена действует с *</Label>
+              <Label for="validFrom">Дата начала действия цены</Label>
               <Input
                 id="validFrom"
                 v-model="form.validFrom"
@@ -479,7 +480,7 @@ const selectClass = 'flex h-10 w-full items-center justify-between rounded-md bo
 
           <div class="flex flex-col gap-4 py-4">
             <div :class="fieldClass">
-              <Label for="newPricePerUnit">Цена за единицу *</Label>
+              <Label for="newPricePerUnit">Цена за единицу</Label>
               <Input
                 id="newPricePerUnit"
                 v-model.number="priceForm.pricePerUnit"
@@ -491,7 +492,7 @@ const selectClass = 'flex h-10 w-full items-center justify-between rounded-md bo
             </div>
 
             <div :class="fieldClass">
-              <Label for="newSupplier">Поставщик</Label>
+              <Label for="newSupplier">Поставщик (необязательно)</Label>
               <select
                 id="newSupplier"
                 v-model="priceForm.supplierId"
@@ -507,7 +508,7 @@ const selectClass = 'flex h-10 w-full items-center justify-between rounded-md bo
             </div>
 
             <div :class="fieldClass">
-              <Label for="newValidFrom">Действует с *</Label>
+              <Label for="newValidFrom">Дата начала действия</Label>
               <Input
                 id="newValidFrom"
                 v-model="priceForm.validFrom"
