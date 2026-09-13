@@ -50,9 +50,9 @@ export interface UpdateSupplierRequest {
   isActive: boolean
 }
 
-// ---------- Packaging Components ----------
+// ---------- Components ----------
 
-export interface PackagingComponentPriceDto {
+export interface ComponentPriceDto {
   id: string
   pricePerUnit: number
   supplierId?: string
@@ -60,21 +60,21 @@ export interface PackagingComponentPriceDto {
   validFrom: string // YYYY-MM-DD
 }
 
-export interface PackagingComponentItem {
+export interface ComponentItem {
   id: string
   name: string
   description?: string
   unit: Unit
-  activePrice: PackagingComponentPriceDto | null
+  activePrice: ComponentPriceDto | null
   isActive: boolean
   createdAt: string
 }
 
-export interface GetPackagingComponentsResponse {
-  items: PackagingComponentItem[]
+export interface GetComponentsResponse {
+  items: ComponentItem[]
 }
 
-export interface CreatePackagingComponentRequest {
+export interface CreateComponentRequest {
   name: string
   description?: string
   unit: Unit
@@ -83,13 +83,13 @@ export interface CreatePackagingComponentRequest {
   validFrom: string // YYYY-MM-DD
 }
 
-export interface UpdatePackagingComponentRequest {
+export interface UpdateComponentRequest {
   name: string
   description?: string
   unit: Unit
 }
 
-export interface CreatePackagingComponentPriceRequest {
+export interface CreateComponentPriceRequest {
   pricePerUnit: number
   supplierId?: string
   validFrom: string // YYYY-MM-DD
@@ -202,36 +202,36 @@ export const suppliersApi = {
   },
 }
 
-export const packagingComponentsApi = {
-  getAll: async (): Promise<GetPackagingComponentsResponse> => {
-    const response = await axiosInstance.get<GetPackagingComponentsResponse>(
-      '/api/catalogs/packaging-components',
+export const componentsApi = {
+  getAll: async (): Promise<GetComponentsResponse> => {
+    const response = await axiosInstance.get<GetComponentsResponse>(
+      '/api/catalogs/components',
     )
     return response.data
   },
 
-  create: async (data: CreatePackagingComponentRequest): Promise<PackagingComponentItem> => {
-    const response = await axiosInstance.post<PackagingComponentItem>(
-      '/api/catalogs/packaging-components',
+  create: async (data: CreateComponentRequest): Promise<ComponentItem> => {
+    const response = await axiosInstance.post<ComponentItem>(
+      '/api/catalogs/components',
       data,
     )
     return response.data
   },
 
-  update: async (id: string, data: UpdatePackagingComponentRequest): Promise<void> => {
-    await axiosInstance.put(`/api/catalogs/packaging-components/${id}`, data)
+  update: async (id: string, data: UpdateComponentRequest): Promise<void> => {
+    await axiosInstance.put(`/api/catalogs/components/${id}`, data)
   },
 
-  createPrice: async (id: string, data: CreatePackagingComponentPriceRequest): Promise<void> => {
-    await axiosInstance.post(`/api/catalogs/packaging-components/${id}/prices`, data)
+  createPrice: async (id: string, data: CreateComponentPriceRequest): Promise<void> => {
+    await axiosInstance.post(`/api/catalogs/components/${id}/prices`, data)
   },
 
   restore: async (id: string): Promise<void> => {
-    await axiosInstance.post(`/api/catalogs/packaging-components/${id}/restore`)
+    await axiosInstance.post(`/api/catalogs/components/${id}/restore`)
   },
 
   delete: async (id: string): Promise<void> => {
-    await axiosInstance.delete(`/api/catalogs/packaging-components/${id}`)
+    await axiosInstance.delete(`/api/catalogs/components/${id}`)
   },
 }
 

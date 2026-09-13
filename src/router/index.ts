@@ -11,7 +11,7 @@ import IntegrationsView from '@/views/IntegrationsView.vue'
 import YandexCallbackView from '@/views/YandexCallbackView.vue'
 import GoogleCallbackView from '@/views/GoogleCallbackView.vue'
 import AcceptInvitationView from '@/views/AcceptInvitationView.vue'
-import PackagingComponentsView from '@/views/PackagingComponentsView.vue'
+import ComponentsView from '@/views/ComponentsView.vue'
 import SuppliersView from '@/views/SuppliersView.vue'
 import TariffGridsView from '@/views/TariffGridsView.vue'
 import WorkRatesView from '@/views/WorkRatesView.vue'
@@ -74,11 +74,11 @@ const router = createRouter({
           },
         },
         {
-          path: 'catalogs/packaging-components',
-          name: 'packaging-components',
-          component: PackagingComponentsView,
+          path: 'catalogs/components',
+          name: 'components',
+          component: ComponentsView,
           meta: {
-            title: 'Компоненты упаковки',
+            title: 'Компоненты',
             requiresAuth: true,
           },
         },
