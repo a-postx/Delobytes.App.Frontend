@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
-import { Plus, Pencil, Trash2, PackageOpen, Undo2 } from 'lucide-vue-next'
+import { Plus, Trash2, PackageOpen, Undo2, Tag } from 'lucide-vue-next'
 import {
   DialogClose,
   DialogContent,
@@ -43,6 +43,7 @@ import type {
   PackagingComponentItem,
   CreatePackagingComponentRequest,
   UpdatePackagingComponentRequest,
+  CreatePackagingComponentPriceRequest,
   SupplierItem,
 } from '@/services/api'
 import { useCurrentUser } from '@/composables/useCurrentUser'
@@ -55,11 +56,11 @@ const suppliers = ref<SupplierItem[]>([])
 const isLoading = ref<boolean>(true)
 
 const createDialogOpen = ref<boolean>(false)
-const editDialogOpen = ref<boolean>(false)
+const priceDialogOpen = ref<boolean>(false)
 const deleteDialogOpen = ref<boolean>(false)
 const restoreDialogOpen = ref<boolean>(false)
 
-const editTarget = ref<PackagingComponentItem | null>(null)
+const priceTarget = ref<PackagingComponentItem | null>(null)
 const deleteTarget = ref<PackagingComponentItem | null>(null)
 const restoreTarget = ref<PackagingComponentItem | null>(null)
 const isSaving = ref<boolean>(false)
@@ -67,12 +68,21 @@ const isDeleting = ref<boolean>(false)
 
 const statusFilter = ref<'all' | 'active' | 'inactive'>('active')
 
+const today = (): string => new Date().toISOString().slice(0, 10)
+
 const form = ref({
   name: '',
   description: '',
   unit: Unit.Piece,
   pricePerUnit: 0,
   supplierId: '' as string,
+  validFrom: today(),
+})
+
+const priceForm = ref({
+  pricePerUnit: 0,
+  supplierId: '' as string,
+  validFrom: today(),
 })
 
 const activeCount = computed(() => items.value.filter(i => i.isActive).length)
@@ -110,6 +120,11 @@ const formatPrice = (v: number): string =>
 
 const activeSuppliers = (): SupplierItem[] => suppliers.value.filter(s => s.isActive)
 
+const isPriceDateInPast = computed<boolean>(() => {
+  if (!priceForm.value.validFrom) return false
+  return priceForm.value.validFrom < today()
+})
+
 const loadData = async (): Promise<void> => {
   isLoading.value = true
   try {
@@ -129,7 +144,7 @@ const loadData = async (): Promise<void> => {
 onMounted(loadData)
 
 const resetForm = (): void => {
-  form.value = { name: '', description: '', unit: Unit.Piece, pricePerUnit: 0, supplierId: '' }
+  form.value = { name: '', description: '', unit: Unit.Piece, pricePerUnit: 0, supplierId: '', validFrom: today() }
 }
 
 const openCreate = (): void => {
@@ -137,16 +152,14 @@ const openCreate = (): void => {
   createDialogOpen.value = true
 }
 
-const openEdit = (item: PackagingComponentItem): void => {
-  editTarget.value = item
-  form.value = {
-    name: item.name,
-    description: item.description ?? '',
-    unit: item.unit,
-    pricePerUnit: item.pricePerUnit,
-    supplierId: item.supplierId ?? '',
+const openNewPrice = (item: PackagingComponentItem): void => {
+  priceTarget.value = item
+  priceForm.value = {
+    pricePerUnit: item.activePrice?.pricePerUnit ?? 0,
+    supplierId: item.activePrice?.supplierId ?? '',
+    validFrom: today(),
   }
-  editDialogOpen.value = true
+  priceDialogOpen.value = true
 }
 
 const openDelete = (item: PackagingComponentItem): void => {
@@ -161,6 +174,8 @@ const openRestore = (item: PackagingComponentItem): void => {
 
 const handleCreate = async (): Promise<void> => {
   if (!form.value.name.trim()) { toast.error('Введите название'); return }
+  if (Number(form.value.pricePerUnit) <= 0) { toast.error('Укажите цену больше нуля'); return }
+  if (!form.value.validFrom) { toast.error('Укажите дату начала действия цены'); return }
   isSaving.value = true
   try {
     const payload: CreatePackagingComponentRequest = {
@@ -169,6 +184,7 @@ const handleCreate = async (): Promise<void> => {
       unit: form.value.unit,
       pricePerUnit: Number(form.value.pricePerUnit),
       supplierId: form.value.supplierId || undefined,
+      validFrom: form.value.validFrom,
     }
     await packagingComponentsApi.create(payload)
     toast.success('Компонент добавлен')
@@ -181,24 +197,29 @@ const handleCreate = async (): Promise<void> => {
   }
 }
 
-const handleEdit = async (): Promise<void> => {
-  if (!editTarget.value || !form.value.name.trim()) { toast.error('Введите название'); return }
+const handleCreatePrice = async (): Promise<void> => {
+  if (!priceTarget.value) return
+  if (Number(priceForm.value.pricePerUnit) <= 0) {
+    toast.error('Укажите цену больше нуля')
+    return
+  }
+  if (!priceForm.value.validFrom) {
+    toast.error('Укажите дату начала действия')
+    return
+  }
   isSaving.value = true
   try {
-    const payload: UpdatePackagingComponentRequest = {
-      name: form.value.name.trim(),
-      description: form.value.description.trim() || undefined,
-      unit: form.value.unit,
-      pricePerUnit: Number(form.value.pricePerUnit),
-      supplierId: form.value.supplierId || undefined,
-      isActive: editTarget.value.isActive,
+    const payload: CreatePackagingComponentPriceRequest = {
+      pricePerUnit: Number(priceForm.value.pricePerUnit),
+      supplierId: priceForm.value.supplierId || undefined,
+      validFrom: priceForm.value.validFrom,
     }
-    await packagingComponentsApi.update(editTarget.value.id, payload)
-    toast.success('Компонент обновлён')
-    editDialogOpen.value = false
+    await packagingComponentsApi.createPrice(priceTarget.value.id, payload)
+    toast.success('Новая цена добавлена')
+    priceDialogOpen.value = false
     await loadData()
   } catch {
-    toast.error('Не удалось обновить компонент')
+    toast.error('Не удалось добавить цену')
   } finally {
     isSaving.value = false
   }
@@ -223,15 +244,7 @@ const handleRestore = async (): Promise<void> => {
   if (!restoreTarget.value) return
   isSaving.value = true
   try {
-    const payload: UpdatePackagingComponentRequest = {
-      name: restoreTarget.value.name,
-      description: restoreTarget.value.description || undefined,
-      unit: restoreTarget.value.unit,
-      pricePerUnit: restoreTarget.value.pricePerUnit,
-      supplierId: restoreTarget.value.supplierId || undefined,
-      isActive: true,
-    }
-    await packagingComponentsApi.update(restoreTarget.value.id, payload)
+    await packagingComponentsApi.restore(restoreTarget.value.id)
     toast.success('Компонент восстановлен')
     restoreDialogOpen.value = false
     await loadData()
@@ -245,6 +258,7 @@ const handleRestore = async (): Promise<void> => {
 const dialogContentClass = 'bg-popover text-popover-foreground fixed top-[50%] left-[50%] max-h-[90vh] w-[90vw] max-w-[520px] translate-x-[-50%] translate-y-[-50%] rounded-lg border shadow-lg p-6 focus:outline-none z-[100] overflow-y-auto'
 const inputClass = 'mt-1'
 const fieldClass = 'flex flex-col gap-1'
+const selectClass = 'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 mt-1'
 </script>
 
 <template>
@@ -292,6 +306,7 @@ const fieldClass = 'flex flex-col gap-1'
             <TableHead>Единица</TableHead>
             <TableHead class="text-right">Цена/ед.</TableHead>
             <TableHead>Поставщик</TableHead>
+            <TableHead>Действует с</TableHead>
             <TableHead>Статус</TableHead>
             <TableHead>Добавлен</TableHead>
             <TableHead v-if="canWrite" class="w-24 text-right">Действия</TableHead>
@@ -308,9 +323,12 @@ const fieldClass = 'flex flex-col gap-1'
               <p v-if="item.description" class="text-xs text-muted-foreground mt-0.5 font-normal">{{ item.description }}</p>
             </TableCell>
             <TableCell class="text-sm">{{ unitLabel(item.unit) }}</TableCell>
-            <TableCell class="text-right tabular-nums">{{ formatPrice(item.pricePerUnit) }}</TableCell>
+            <TableCell class="text-right tabular-nums">{{ item.activePrice ? formatPrice(item.activePrice.pricePerUnit) : '—' }}</TableCell>
             <TableCell class="text-sm">
-              {{ suppliers.find(s => s.id === item.supplierId)?.name || '—' }}
+              {{ item.activePrice?.supplierName || '—' }}
+            </TableCell>
+            <TableCell class="text-sm text-muted-foreground tabular-nums">
+              {{ item.activePrice ? formatDate(item.activePrice.validFrom) : '—' }}
             </TableCell>
             <TableCell>
               <Badge :variant="item.isActive ? 'success' : 'secondary'">
@@ -320,8 +338,8 @@ const fieldClass = 'flex flex-col gap-1'
             <TableCell class="text-sm text-muted-foreground tabular-nums">{{ formatDate(item.createdAt) }}</TableCell>
             <TableCell v-if="canWrite" class="text-right">
               <div class="flex items-center justify-end gap-1">
-                <Button variant="ghost" size="icon-sm" @click="openEdit(item)">
-                  <Pencil class="size-4" />
+                <Button v-if="item.isActive" variant="ghost" size="icon-sm" @click="openNewPrice(item)" title="Новая цена">
+                  <Tag class="size-4" />
                 </Button>
                 <Button v-if="item.isActive" variant="ghost" size="icon-sm" @click="openDelete(item)">
                   <Trash2 class="size-4 text-destructive" />
@@ -345,7 +363,7 @@ const fieldClass = 'flex flex-col gap-1'
             <div>
               <DialogTitle class="text-lg font-semibold">Добавить компонент упаковки</DialogTitle>
               <DialogDescription class="text-sm text-muted-foreground mt-1">
-                Укажите название и параметры компонента
+                Укажите название и параметры компонента и его первую цену
               </DialogDescription>
             </div>
             <DialogClose as-child>
@@ -382,7 +400,7 @@ const fieldClass = 'flex flex-col gap-1'
                 <select
                   id="create-unit"
                   v-model.number="form.unit"
-                  class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 mt-1"
+                  :class="selectClass"
                 >
                   <option v-for="opt in unitOptions" :key="opt.value" :value="opt.value">
                     {{ opt.label }}
@@ -404,18 +422,30 @@ const fieldClass = 'flex flex-col gap-1'
               </div>
             </div>
 
-            <div :class="fieldClass">
-              <Label for="create-supplier">Поставщик</Label>
-              <select
-                id="create-supplier"
-                v-model="form.supplierId"
-                class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 mt-1"
-              >
-                <option value="">Не выбран</option>
-                <option v-for="s in activeSuppliers()" :key="s.id" :value="s.id">
-                  {{ s.name }}
-                </option>
-              </select>
+            <div class="grid grid-cols-2 gap-4">
+              <div :class="fieldClass">
+                <Label for="create-supplier">Поставщик</Label>
+                <select
+                  id="create-supplier"
+                  v-model="form.supplierId"
+                  :class="selectClass"
+                >
+                  <option value="">Не выбран</option>
+                  <option v-for="s in activeSuppliers()" :key="s.id" :value="s.id">
+                    {{ s.name }}
+                  </option>
+                </select>
+              </div>
+
+              <div :class="fieldClass">
+                <Label for="create-valid-from">Цена действует с *</Label>
+                <Input
+                  id="create-valid-from"
+                  v-model="form.validFrom"
+                  type="date"
+                  :class="inputClass"
+                />
+              </div>
             </div>
           </div>
 
@@ -432,16 +462,16 @@ const fieldClass = 'flex flex-col gap-1'
       </DialogPortal>
     </DialogRoot>
 
-    <!-- Edit Dialog -->
-    <DialogRoot v-model:open="editDialogOpen">
+    <!-- New Price Dialog -->
+    <DialogRoot v-model:open="priceDialogOpen">
       <DialogPortal>
         <DialogOverlay class="bg-background/80 backdrop-blur-sm fixed inset-0 z-50" />
         <DialogContent :class="dialogContentClass">
           <div class="flex items-start justify-between mb-4">
             <div>
-              <DialogTitle class="text-lg font-semibold">Редактировать компонент</DialogTitle>
+              <DialogTitle class="text-lg font-semibold">Новая цена</DialogTitle>
               <DialogDescription class="text-sm text-muted-foreground mt-1">
-                Измените параметры компонента
+                Компонент «{{ priceTarget?.name }}»: текущая активная цена будет закрыта, создастся новая версия
               </DialogDescription>
             </div>
             <DialogClose as-child>
@@ -453,59 +483,24 @@ const fieldClass = 'flex flex-col gap-1'
 
           <div class="flex flex-col gap-4">
             <div :class="fieldClass">
-              <Label for="edit-name">Название *</Label>
+              <Label for="price-value">Цена за единицу *</Label>
               <Input
-                id="edit-name"
-                v-model="form.name"
-                placeholder=""
+                id="price-value"
+                v-model.number="priceForm.pricePerUnit"
+                type="number"
+                step="0.01"
+                min="0"
+                placeholder="0.00"
                 :class="inputClass"
               />
             </div>
 
             <div :class="fieldClass">
-              <Label for="edit-description">Описание</Label>
-              <Input
-                id="edit-description"
-                v-model="form.description"
-                placeholder=""
-                :class="inputClass"
-              />
-            </div>
-
-            <div class="grid grid-cols-2 gap-4">
-              <div :class="fieldClass">
-                <Label for="edit-unit">Единица измерения *</Label>
-                <select
-                  id="edit-unit"
-                  v-model.number="form.unit"
-                  class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 mt-1"
-                >
-                  <option v-for="opt in unitOptions" :key="opt.value" :value="opt.value">
-                    {{ opt.label }}
-                  </option>
-                </select>
-              </div>
-
-              <div :class="fieldClass">
-                <Label for="edit-price">Цена за единицу *</Label>
-                <Input
-                  id="edit-price"
-                  v-model.number="form.pricePerUnit"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  placeholder="0.00"
-                  :class="inputClass"
-                />
-              </div>
-            </div>
-
-            <div :class="fieldClass">
-              <Label for="edit-supplier">Поставщик</Label>
+              <Label for="price-supplier">Поставщик</Label>
               <select
-                id="edit-supplier"
-                v-model="form.supplierId"
-                class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 mt-1"
+                id="price-supplier"
+                v-model="priceForm.supplierId"
+                :class="selectClass"
               >
                 <option value="">Не выбран</option>
                 <option v-for="s in activeSuppliers()" :key="s.id" :value="s.id">
@@ -513,13 +508,26 @@ const fieldClass = 'flex flex-col gap-1'
                 </option>
               </select>
             </div>
+
+            <div :class="fieldClass">
+              <Label for="price-valid-from">Действует с *</Label>
+              <Input
+                id="price-valid-from"
+                v-model="priceForm.validFrom"
+                type="date"
+                :class="inputClass"
+              />
+              <p v-if="isPriceDateInPast" class="text-xs text-amber-600 mt-1">
+                Дата в прошлом изменит стоимость компонента в прошлых расчётах
+              </p>
+            </div>
           </div>
 
           <div class="flex justify-end gap-2 mt-6">
             <DialogClose as-child>
               <Button variant="outline">Отмена</Button>
             </DialogClose>
-            <Button @click="handleEdit" :disabled="isSaving" class="gap-2">
+            <Button @click="handleCreatePrice" :disabled="isSaving" class="gap-2">
               <Spinner v-if="isSaving" class="size-4" />
               Сохранить
             </Button>
@@ -559,14 +567,14 @@ const fieldClass = 'flex flex-col gap-1'
         <AlertDialogContent class="bg-popover text-popover-foreground fixed top-[50%] left-[50%] max-h-[90vh] w-[90vw] max-w-[420px] translate-x-[-50%] translate-y-[-50%] rounded-lg border shadow-lg p-6 focus:outline-none z-[100]">
           <AlertDialogTitle class="text-lg font-semibold">Восстановить компонент?</AlertDialogTitle>
           <AlertDialogDescription class="text-sm text-muted-foreground mt-2">
-            Компонент "{{ restoreTarget?.name }}" будет активирован и появится в основном списке.
+            Компонент "{{ restoreTarget?.name }}" снова станет активным вместе с его последней ценой.
           </AlertDialogDescription>
           <div class="flex justify-end gap-2 mt-6">
             <AlertDialogCancel as-child>
               <Button variant="outline">Отмена</Button>
             </AlertDialogCancel>
             <AlertDialogAction as-child>
-              <Button @click="handleRestore" :disabled="isSaving" class="gap-2 bg-green-600 hover:bg-green-700">
+              <Button @click="handleRestore" :disabled="isSaving" class="gap-2">
                 <Spinner v-if="isSaving" class="size-4" />
                 Восстановить
               </Button>

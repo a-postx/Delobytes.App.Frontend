@@ -52,14 +52,20 @@ export interface UpdateSupplierRequest {
 
 // ---------- Packaging Components ----------
 
+export interface PackagingComponentPriceDto {
+  id: string
+  pricePerUnit: number
+  supplierId?: string
+  supplierName?: string
+  validFrom: string // YYYY-MM-DD
+}
+
 export interface PackagingComponentItem {
   id: string
   name: string
   description?: string
   unit: Unit
-  pricePerUnit: number
-  supplierId?: string
-  supplierName?: string
+  activePrice: PackagingComponentPriceDto | null
   isActive: boolean
   createdAt: string
 }
@@ -74,15 +80,19 @@ export interface CreatePackagingComponentRequest {
   unit: Unit
   pricePerUnit: number
   supplierId?: string
+  validFrom: string // YYYY-MM-DD
 }
 
 export interface UpdatePackagingComponentRequest {
   name: string
   description?: string
   unit: Unit
+}
+
+export interface CreatePackagingComponentPriceRequest {
   pricePerUnit: number
   supplierId?: string
-  isActive: boolean
+  validFrom: string // YYYY-MM-DD
 }
 
 // ---------- Tariff Grids ----------
