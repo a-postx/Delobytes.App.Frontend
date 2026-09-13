@@ -41,8 +41,8 @@ import { toast } from 'vue-sonner'
 import { componentsApi, suppliersApi, Unit } from '@/services/api'
 import type {
   ComponentItem,
-  CreateComponentRequest,
-  CreateComponentPriceRequest,
+  CreatePackagingComponentRequest,
+  CreatePackagingComponentPriceRequest,
   SupplierItem,
 } from '@/services/api'
 import { useCurrentUser } from '@/composables/useCurrentUser'
@@ -128,7 +128,7 @@ const loadData = async (): Promise<void> => {
   isLoading.value = true
   try {
     const [componentsResp, suppliersResp] = await Promise.all([
-      componentsApi.getAll(),
+      packagingComponentsApi.getAll(),
       suppliersApi.getAll(),
     ])
     items.value = componentsResp.items
@@ -177,7 +177,7 @@ const handleCreate = async (): Promise<void> => {
   if (!form.value.validFrom) { toast.error('Укажите дату начала действия цены'); return }
   isSaving.value = true
   try {
-    const payload: CreateComponentRequest = {
+    const payload: CreatePackagingComponentRequest = {
       name: form.value.name.trim(),
       description: form.value.description.trim() || undefined,
       unit: form.value.unit,
@@ -185,7 +185,7 @@ const handleCreate = async (): Promise<void> => {
       supplierId: form.value.supplierId || undefined,
       validFrom: form.value.validFrom,
     }
-    await componentsApi.create(payload)
+    await packagingComponentsApi.create(payload)
     toast.success('Компонент добавлен')
     createDialogOpen.value = false
     await loadData()
@@ -208,12 +208,12 @@ const handleCreatePrice = async (): Promise<void> => {
   }
   isSaving.value = true
   try {
-    const payload: CreateComponentPriceRequest = {
+    const payload: CreatePackagingComponentPriceRequest = {
       pricePerUnit: Number(priceForm.value.pricePerUnit),
       supplierId: priceForm.value.supplierId || undefined,
       validFrom: priceForm.value.validFrom,
     }
-    await componentsApi.createPrice(priceTarget.value.id, payload)
+    await packagingComponentsApi.createPrice(priceTarget.value.id, payload)
     toast.success('Новая цена добавлена')
     priceDialogOpen.value = false
     await loadData()
@@ -228,7 +228,7 @@ const handleDelete = async (): Promise<void> => {
   if (!deleteTarget.value) return
   isDeleting.value = true
   try {
-    await componentsApi.delete(deleteTarget.value.id)
+    await packagingComponentsApi.delete(deleteTarget.value.id)
     toast.success('Компонент деактивирован')
     deleteDialogOpen.value = false
     await loadData()
@@ -243,7 +243,7 @@ const handleRestore = async (): Promise<void> => {
   if (!restoreTarget.value) return
   isSaving.value = true
   try {
-    await componentsApi.restore(restoreTarget.value.id)
+    await packagingComponentsApi.restore(restoreTarget.value.id)
     toast.success('Компонент восстановлен')
     restoreDialogOpen.value = false
     await loadData()
@@ -257,111 +257,94 @@ const handleRestore = async (): Promise<void> => {
 const dialogContentClass = 'bg-popover text-popover-foreground fixed top-[50%] left-[50%] max-h-[90vh] w-[90vw] max-w-[520px] translate-x-[-50%] translate-y-[-50%] rounded-lg border shadow-lg p-6 focus:outline-none z-[100] overflow-y-auto'
 const inputClass = 'mt-1'
 const fieldClass = 'flex flex-col gap-1'
-const selectClass = 'flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50'
+const selectClass = 'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 mt-1'
 </script>
 
 <template>
-  <div class="flex flex-col gap-4 p-4">
+  <div class="flex flex-col gap-6 p-6">
     <div class="flex items-center justify-between">
-      <h1 class="text-2xl font-semibold">
-        Компоненты
-      </h1>
-      <Button
-        v-if="canWrite"
-        @click="openCreate"
-      >
-        <Plus class="mr-2 h-4 w-4" />
+      <div class="flex flex-col gap-1">
+        <h1 class="text-xl font-bold flex items-center gap-2">
+          <PackageOpen class="size-5 text-primary" />
+          Компоненты
+        </h1>
+        <p class="text-sm text-muted-foreground">Справочник материалов и компонентов</p>
+      </div>
+      <Button v-if="canWrite" @click="openCreate" class="gap-2">
+        <Plus class="size-4" />
         Добавить
       </Button>
     </div>
 
-    <StatusFilter
-      v-model="statusFilter"
-      :options="filterOptions"
-    />
+    <StatusFilter v-model="statusFilter" :options="filterOptions" />
 
-    <div v-if="isLoading" class="flex flex-col gap-2">
-      <Skeleton class="h-12 w-full" />
-      <Skeleton class="h-12 w-full" />
-      <Skeleton class="h-12 w-full" />
+    <div v-if="isLoading" class="rounded-xl border border-border bg-card overflow-hidden">
+      <div class="p-4 flex flex-col gap-3">
+        <Skeleton v-for="n in 5" :key="n" class="h-10 w-full rounded-lg" />
+      </div>
     </div>
 
-    <div v-else-if="filteredItems.length === 0" class="flex flex-col items-center justify-center gap-2 py-12">
-      <PackageOpen class="h-12 w-12 text-muted-foreground" />
+    <div
+      v-else-if="filteredItems.length === 0"
+      class="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-card py-16 text-center"
+    >
+      <PackageOpen class="size-10 text-muted-foreground/40" />
       <p class="text-sm text-muted-foreground">
-        Компоненты не найдены
+        {{ statusFilter === 'inactive' ? 'Нет неактивных компонентов' : 'Компоненты не добавлены' }}
       </p>
+      <Button v-if="canWrite && statusFilter !== 'inactive'" variant="outline" size="sm" @click="openCreate" class="gap-2">
+        <Plus class="size-4" /> Добавить первый
+      </Button>
     </div>
 
-    <div v-else class="rounded-md border">
+    <div v-else class="rounded-xl border border-border bg-card overflow-hidden">
       <Table>
         <TableHeader>
-          <TableRow>
+          <TableRow class="border-b border-border">
             <TableHead>Название</TableHead>
-            <TableHead>Описание</TableHead>
-            <TableHead>Ед. изм.</TableHead>
-            <TableHead>Цена</TableHead>
+            <TableHead>Единица</TableHead>
+            <TableHead class="text-right">Цена/ед.</TableHead>
             <TableHead>Поставщик</TableHead>
             <TableHead>Действует с</TableHead>
             <TableHead>Статус</TableHead>
-            <TableHead v-if="canWrite" class="w-[100px]">
-              Действия
-            </TableHead>
+            <TableHead>Добавлен</TableHead>
+            <TableHead v-if="canWrite" class="w-24 text-right">Действия</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          <TableRow v-for="item in filteredItems" :key="item.id">
+          <TableRow
+            v-for="item in filteredItems"
+            :key="item.id"
+            class="hover:bg-muted/40 transition-colors"
+          >
             <TableCell class="font-medium">
               {{ item.name }}
+              <p v-if="item.description" class="text-xs text-muted-foreground mt-0.5 font-normal">{{ item.description }}</p>
             </TableCell>
-            <TableCell>
-              {{ item.description || '—' }}
-            </TableCell>
-            <TableCell>
-              {{ unitLabel(item.unit) }}
-            </TableCell>
-            <TableCell>
-              {{ item.activePrice ? formatPrice(item.activePrice.pricePerUnit) : '—' }}
-            </TableCell>
-            <TableCell>
+            <TableCell class="text-sm">{{ unitLabel(item.unit) }}</TableCell>
+            <TableCell class="text-right tabular-nums">{{ item.activePrice ? formatPrice(item.activePrice.pricePerUnit) : '—' }}</TableCell>
+            <TableCell class="text-sm">
               {{ item.activePrice?.supplierName || '—' }}
             </TableCell>
-            <TableCell>
+            <TableCell class="text-sm text-muted-foreground tabular-nums">
               {{ item.activePrice ? formatDate(item.activePrice.validFrom) : '—' }}
             </TableCell>
             <TableCell>
-              <Badge :variant="item.isActive ? 'default' : 'secondary'">
+              <Badge :variant="item.isActive ? 'success' : 'secondary'">
                 {{ item.isActive ? 'Активен' : 'Неактивен' }}
               </Badge>
             </TableCell>
-            <TableCell v-if="canWrite">
-              <div class="flex items-center gap-1">
-                <Button
-                  v-if="item.isActive"
-                  variant="ghost"
-                  size="icon"
-                  @click="openNewPrice(item)"
-                  title="Добавить цену"
-                >
-                  <Tag class="h-4 w-4" />
+            <TableCell class="text-sm text-muted-foreground tabular-nums">{{ formatDate(item.createdAt) }}</TableCell>
+            <TableCell v-if="canWrite" class="text-right">
+              <div class="flex items-center justify-end gap-1">
+                <Button v-if="item.isActive" variant="ghost" size="icon-sm" @click="openNewPrice(item)" title="Новая цена">
+                  <Tag class="size-4" />
                 </Button>
-                <Button
-                  v-if="item.isActive"
-                  variant="ghost"
-                  size="icon"
-                  @click="openDelete(item)"
-                  title="Деактивировать"
-                >
-                  <Trash2 class="h-4 w-4" />
+                <Button v-if="item.isActive" variant="ghost" size="icon-sm" @click="openDelete(item)">
+                  <Trash2 class="size-4 text-destructive" />
                 </Button>
-                <Button
-                  v-else
-                  variant="ghost"
-                  size="icon"
-                  @click="openRestore(item)"
-                  title="Восстановить"
-                >
-                  <Undo2 class="h-4 w-4" />
+                <Button v-else variant="ghost" size="icon-sm" @click="openRestore(item)" title="Восстановить">
+                  <Undo2 class="size-4 text-green-600" />
                 </Button>
               </div>
             </TableCell>
@@ -373,94 +356,104 @@ const selectClass = 'flex h-10 w-full items-center justify-between rounded-md bo
     <!-- Create Dialog -->
     <DialogRoot v-model:open="createDialogOpen">
       <DialogPortal>
-        <DialogOverlay class="fixed inset-0 z-50 bg-black/80" />
+        <DialogOverlay class="bg-background/80 backdrop-blur-sm fixed inset-0 z-50" />
         <DialogContent :class="dialogContentClass">
-          <DialogTitle>Новый компонент</DialogTitle>
-          <DialogDescription>
-            Добавление нового компонента в справочник
-          </DialogDescription>
+          <div class="flex items-start justify-between mb-4">
+            <div>
+              <DialogTitle class="text-lg font-semibold">Добавить компонент</DialogTitle>
+              <DialogDescription class="text-sm text-muted-foreground mt-1">
+                Укажите название и параметры компонента и его первую цену
+              </DialogDescription>
+            </div>
+            <DialogClose as-child>
+              <Button variant="ghost" size="icon-sm">
+                <X class="size-4" />
+              </Button>
+            </DialogClose>
+          </div>
 
-          <div class="flex flex-col gap-4 py-4">
+          <div class="flex flex-col gap-4">
             <div :class="fieldClass">
-              <Label for="name">Название</Label>
+              <Label for="create-name">Название *</Label>
               <Input
-                id="name"
+                id="create-name"
                 v-model="form.name"
+                placeholder=""
                 :class="inputClass"
-                placeholder="Введите название"
               />
             </div>
 
             <div :class="fieldClass">
-              <Label for="description">Описание</Label>
+              <Label for="create-description">Описание</Label>
               <Input
-                id="description"
+                id="create-description"
                 v-model="form.description"
-                :class="inputClass"
-                placeholder="Введите описание (необязательно)"
-              />
-            </div>
-
-            <div :class="fieldClass">
-              <Label for="unit">Единица измерения</Label>
-              <select
-                id="unit"
-                v-model="form.unit"
-                :class="selectClass"
-              >
-                <option v-for="opt in unitOptions" :key="opt.value" :value="opt.value">
-                  {{ opt.label }}
-                </option>
-              </select>
-            </div>
-
-            <div :class="fieldClass">
-              <Label for="pricePerUnit">Цена за единицу</Label>
-              <Input
-                id="pricePerUnit"
-                v-model.number="form.pricePerUnit"
-                type="number"
-                step="0.01"
-                :class="inputClass"
-                placeholder="0.00"
-              />
-            </div>
-
-            <div :class="fieldClass">
-              <Label for="supplier">Поставщик (необязательно)</Label>
-              <select
-                id="supplier"
-                v-model="form.supplierId"
-                :class="selectClass"
-              >
-                <option value="">
-                  Не выбран
-                </option>
-                <option v-for="s in activeSuppliers()" :key="s.id" :value="s.id">
-                  {{ s.name }}
-                </option>
-              </select>
-            </div>
-
-            <div :class="fieldClass">
-              <Label for="validFrom">Дата начала действия цены</Label>
-              <Input
-                id="validFrom"
-                v-model="form.validFrom"
-                type="date"
+                placeholder=""
                 :class="inputClass"
               />
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+              <div :class="fieldClass">
+                <Label for="create-unit">Единица измерения *</Label>
+                <select
+                  id="create-unit"
+                  v-model.number="form.unit"
+                  :class="selectClass"
+                >
+                  <option v-for="opt in unitOptions" :key="opt.value" :value="opt.value">
+                    {{ opt.label }}
+                  </option>
+                </select>
+              </div>
+
+              <div :class="fieldClass">
+                <Label for="create-price">Цена за единицу *</Label>
+                <Input
+                  id="create-price"
+                  v-model.number="form.pricePerUnit"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  placeholder="0.00"
+                  :class="inputClass"
+                />
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+              <div :class="fieldClass">
+                <Label for="create-supplier">Поставщик</Label>
+                <select
+                  id="create-supplier"
+                  v-model="form.supplierId"
+                  :class="selectClass"
+                >
+                  <option value="">Не выбран</option>
+                  <option v-for="s in activeSuppliers()" :key="s.id" :value="s.id">
+                    {{ s.name }}
+                  </option>
+                </select>
+              </div>
+
+              <div :class="fieldClass">
+                <Label for="create-valid-from">Цена действует с *</Label>
+                <Input
+                  id="create-valid-from"
+                  v-model="form.validFrom"
+                  type="date"
+                  :class="inputClass"
+                />
+              </div>
             </div>
           </div>
 
-          <div class="flex justify-end gap-2">
+          <div class="flex justify-end gap-2 mt-6">
             <DialogClose as-child>
-              <Button variant="outline" :disabled="isSaving">
-                Отмена
-              </Button>
+              <Button variant="outline">Отмена</Button>
             </DialogClose>
-            <Button @click="handleCreate" :disabled="isSaving">
-              <Spinner v-if="isSaving" class="mr-2 h-4 w-4" />
+            <Button @click="handleCreate" :disabled="isSaving" class="gap-2">
+              <Spinner v-if="isSaving" class="size-4" />
               Создать
             </Button>
           </div>
@@ -468,39 +461,47 @@ const selectClass = 'flex h-10 w-full items-center justify-between rounded-md bo
       </DialogPortal>
     </DialogRoot>
 
-    <!-- Price Dialog -->
+    <!-- New Price Dialog -->
     <DialogRoot v-model:open="priceDialogOpen">
       <DialogPortal>
-        <DialogOverlay class="fixed inset-0 z-50 bg-black/80" />
+        <DialogOverlay class="bg-background/80 backdrop-blur-sm fixed inset-0 z-50" />
         <DialogContent :class="dialogContentClass">
-          <DialogTitle>Новая цена</DialogTitle>
-          <DialogDescription>
-            Добавление новой цены для: {{ priceTarget?.name }}
-          </DialogDescription>
+          <div class="flex items-start justify-between mb-4">
+            <div>
+              <DialogTitle class="text-lg font-semibold">Новая цена</DialogTitle>
+              <DialogDescription class="text-sm text-muted-foreground mt-1">
+                Компонент «{{ priceTarget?.name }}»: текущая активная цена будет закрыта, создастся новая версия
+              </DialogDescription>
+            </div>
+            <DialogClose as-child>
+              <Button variant="ghost" size="icon-sm">
+                <X class="size-4" />
+              </Button>
+            </DialogClose>
+          </div>
 
-          <div class="flex flex-col gap-4 py-4">
+          <div class="flex flex-col gap-4">
             <div :class="fieldClass">
-              <Label for="newPricePerUnit">Цена за единицу</Label>
+              <Label for="price-value">Цена за единицу *</Label>
               <Input
-                id="newPricePerUnit"
+                id="price-value"
                 v-model.number="priceForm.pricePerUnit"
                 type="number"
                 step="0.01"
-                :class="inputClass"
+                min="0"
                 placeholder="0.00"
+                :class="inputClass"
               />
             </div>
 
             <div :class="fieldClass">
-              <Label for="newSupplier">Поставщик (необязательно)</Label>
+              <Label for="price-supplier">Поставщик</Label>
               <select
-                id="newSupplier"
+                id="price-supplier"
                 v-model="priceForm.supplierId"
                 :class="selectClass"
               >
-                <option value="">
-                  Не выбран
-                </option>
+                <option value="">Не выбран</option>
                 <option v-for="s in activeSuppliers()" :key="s.id" :value="s.id">
                   {{ s.name }}
                 </option>
@@ -508,52 +509,48 @@ const selectClass = 'flex h-10 w-full items-center justify-between rounded-md bo
             </div>
 
             <div :class="fieldClass">
-              <Label for="newValidFrom">Дата начала действия</Label>
+              <Label for="price-valid-from">Действует с *</Label>
               <Input
-                id="newValidFrom"
+                id="price-valid-from"
                 v-model="priceForm.validFrom"
                 type="date"
                 :class="inputClass"
               />
-              <p v-if="isPriceDateInPast" class="text-xs text-yellow-600">
-                Дата в прошлом — цена вступит в силу немедленно
+              <p v-if="isPriceDateInPast" class="text-xs text-amber-600 mt-1">
+                Дата в прошлом изменит стоимость компонента в прошлых расчётах
               </p>
             </div>
           </div>
 
-          <div class="flex justify-end gap-2">
+          <div class="flex justify-end gap-2 mt-6">
             <DialogClose as-child>
-              <Button variant="outline" :disabled="isSaving">
-                Отмена
-              </Button>
+              <Button variant="outline">Отмена</Button>
             </DialogClose>
-            <Button @click="handleCreatePrice" :disabled="isSaving">
-              <Spinner v-if="isSaving" class="mr-2 h-4 w-4" />
-              Добавить
+            <Button @click="handleCreatePrice" :disabled="isSaving" class="gap-2">
+              <Spinner v-if="isSaving" class="size-4" />
+              Сохранить
             </Button>
           </div>
         </DialogContent>
       </DialogPortal>
     </DialogRoot>
 
-    <!-- Delete Confirmation -->
+    <!-- Delete Confirm -->
     <AlertDialogRoot v-model:open="deleteDialogOpen">
       <AlertDialogPortal>
-        <AlertDialogOverlay class="fixed inset-0 z-50 bg-black/80" />
-        <AlertDialogContent :class="dialogContentClass">
-          <AlertDialogTitle>Деактивировать компонент?</AlertDialogTitle>
-          <AlertDialogDescription>
-            Компонент "{{ deleteTarget?.name }}" будет деактивирован. Его можно будет восстановить позже.
+        <AlertDialogOverlay class="bg-background/80 backdrop-blur-sm fixed inset-0 z-50" />
+        <AlertDialogContent class="bg-popover text-popover-foreground fixed top-[50%] left-[50%] max-h-[90vh] w-[90vw] max-w-[420px] translate-x-[-50%] translate-y-[-50%] rounded-lg border shadow-lg p-6 focus:outline-none z-[100]">
+          <AlertDialogTitle class="text-lg font-semibold">Деактивировать компонент?</AlertDialogTitle>
+          <AlertDialogDescription class="text-sm text-muted-foreground mt-2">
+            Компонент "{{ deleteTarget?.name }}" будет деактивирован и скрыт из основного списка. Вы сможете восстановить его позже.
           </AlertDialogDescription>
-          <div class="flex justify-end gap-2 pt-4">
+          <div class="flex justify-end gap-2 mt-6">
             <AlertDialogCancel as-child>
-              <Button variant="outline" :disabled="isDeleting">
-                Отмена
-              </Button>
+              <Button variant="outline">Отмена</Button>
             </AlertDialogCancel>
             <AlertDialogAction as-child>
-              <Button variant="destructive" @click="handleDelete" :disabled="isDeleting">
-                <Spinner v-if="isDeleting" class="mr-2 h-4 w-4" />
+              <Button @click="handleDelete" :disabled="isDeleting" variant="destructive" class="gap-2">
+                <Spinner v-if="isDeleting" class="size-4" />
                 Деактивировать
               </Button>
             </AlertDialogAction>
@@ -562,24 +559,22 @@ const selectClass = 'flex h-10 w-full items-center justify-between rounded-md bo
       </AlertDialogPortal>
     </AlertDialogRoot>
 
-    <!-- Restore Confirmation -->
+    <!-- Restore Confirm -->
     <AlertDialogRoot v-model:open="restoreDialogOpen">
       <AlertDialogPortal>
-        <AlertDialogOverlay class="fixed inset-0 z-50 bg-black/80" />
-        <AlertDialogContent :class="dialogContentClass">
-          <AlertDialogTitle>Восстановить компонент?</AlertDialogTitle>
-          <AlertDialogDescription>
-            Компонент "{{ restoreTarget?.name }}" будет активирован снова.
+        <AlertDialogOverlay class="bg-background/80 backdrop-blur-sm fixed inset-0 z-50" />
+        <AlertDialogContent class="bg-popover text-popover-foreground fixed top-[50%] left-[50%] max-h-[90vh] w-[90vw] max-w-[420px] translate-x-[-50%] translate-y-[-50%] rounded-lg border shadow-lg p-6 focus:outline-none z-[100]">
+          <AlertDialogTitle class="text-lg font-semibold">Восстановить компонент?</AlertDialogTitle>
+          <AlertDialogDescription class="text-sm text-muted-foreground mt-2">
+            Компонент "{{ restoreTarget?.name }}" снова станет активным вместе с его последней ценой.
           </AlertDialogDescription>
-          <div class="flex justify-end gap-2 pt-4">
+          <div class="flex justify-end gap-2 mt-6">
             <AlertDialogCancel as-child>
-              <Button variant="outline" :disabled="isSaving">
-                Отмена
-              </Button>
+              <Button variant="outline">Отмена</Button>
             </AlertDialogCancel>
             <AlertDialogAction as-child>
-              <Button @click="handleRestore" :disabled="isSaving">
-                <Spinner v-if="isSaving" class="mr-2 h-4 w-4" />
+              <Button @click="handleRestore" :disabled="isSaving" class="gap-2">
+                <Spinner v-if="isSaving" class="size-4" />
                 Восстановить
               </Button>
             </AlertDialogAction>
