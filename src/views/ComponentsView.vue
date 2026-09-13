@@ -41,8 +41,8 @@ import { toast } from 'vue-sonner'
 import { componentsApi, suppliersApi, Unit } from '@/services/api'
 import type {
   ComponentItem,
-  CreatePackagingComponentRequest,
-  CreatePackagingComponentPriceRequest,
+  CreateComponentRequest,
+  CreateComponentPriceRequest,
   SupplierItem,
 } from '@/services/api'
 import { useCurrentUser } from '@/composables/useCurrentUser'
@@ -128,7 +128,7 @@ const loadData = async (): Promise<void> => {
   isLoading.value = true
   try {
     const [componentsResp, suppliersResp] = await Promise.all([
-      packagingComponentsApi.getAll(),
+      componentsApi.getAll(),
       suppliersApi.getAll(),
     ])
     items.value = componentsResp.items
@@ -177,7 +177,7 @@ const handleCreate = async (): Promise<void> => {
   if (!form.value.validFrom) { toast.error('Укажите дату начала действия цены'); return }
   isSaving.value = true
   try {
-    const payload: CreatePackagingComponentRequest = {
+    const payload: CreateComponentRequest = {
       name: form.value.name.trim(),
       description: form.value.description.trim() || undefined,
       unit: form.value.unit,
@@ -185,7 +185,7 @@ const handleCreate = async (): Promise<void> => {
       supplierId: form.value.supplierId || undefined,
       validFrom: form.value.validFrom,
     }
-    await packagingComponentsApi.create(payload)
+    await componentsApi.create(payload)
     toast.success('Компонент добавлен')
     createDialogOpen.value = false
     await loadData()
@@ -208,12 +208,12 @@ const handleCreatePrice = async (): Promise<void> => {
   }
   isSaving.value = true
   try {
-    const payload: CreatePackagingComponentPriceRequest = {
+    const payload: CreateComponentPriceRequest = {
       pricePerUnit: Number(priceForm.value.pricePerUnit),
       supplierId: priceForm.value.supplierId || undefined,
       validFrom: priceForm.value.validFrom,
     }
-    await packagingComponentsApi.createPrice(priceTarget.value.id, payload)
+    await componentsApi.createPrice(priceTarget.value.id, payload)
     toast.success('Новая цена добавлена')
     priceDialogOpen.value = false
     await loadData()
@@ -228,7 +228,7 @@ const handleDelete = async (): Promise<void> => {
   if (!deleteTarget.value) return
   isDeleting.value = true
   try {
-    await packagingComponentsApi.delete(deleteTarget.value.id)
+    await componentsApi.delete(deleteTarget.value.id)
     toast.success('Компонент деактивирован')
     deleteDialogOpen.value = false
     await loadData()
@@ -243,7 +243,7 @@ const handleRestore = async (): Promise<void> => {
   if (!restoreTarget.value) return
   isSaving.value = true
   try {
-    await packagingComponentsApi.restore(restoreTarget.value.id)
+    await componentsApi.restore(restoreTarget.value.id)
     toast.success('Компонент восстановлен')
     restoreDialogOpen.value = false
     await loadData()
