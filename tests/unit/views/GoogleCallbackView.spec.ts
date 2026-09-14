@@ -201,7 +201,7 @@ describe('GoogleCallbackView', () => {
 
   it('stores userId and navigates to /setup-tenant when tenant setup is required', async () => {
     const postMock = vi.fn().mockResolvedValue({
-      accessToken: null,
+      accessToken: 'temporary_token_google',
       userId: 'user-new-g',
       tenantId: 'tenant-g1',
       requiresTenantSetup: true,
@@ -215,7 +215,7 @@ describe('GoogleCallbackView', () => {
     await flushPromises()
 
     expect(localStorage.getItem('userId')).toBe('user-new-g')
-    expect(localStorage.getItem('accessToken')).toBeNull()
+    expect(localStorage.getItem('accessToken')).toBe('temporary_token_google')
     expect(router.currentRoute.value.path).toBe('/setup-tenant')
   })
 

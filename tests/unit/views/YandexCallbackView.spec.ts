@@ -192,7 +192,7 @@ describe('YandexCallbackView', () => {
 
   it('stores userId and navigates to /setup-tenant when tenant setup is required', async () => {
     const postMock = vi.fn().mockResolvedValue({
-      accessToken: null,
+      accessToken: 'temporary_token_yandex',
       userId: 'user-new',
       tenantId: 'tenant-1',
       requiresTenantSetup: true,
@@ -206,7 +206,7 @@ describe('YandexCallbackView', () => {
     await flushPromises()
 
     expect(localStorage.getItem('userId')).toBe('user-new')
-    expect(localStorage.getItem('accessToken')).toBeNull()
+    expect(localStorage.getItem('accessToken')).toBe('temporary_token_yandex')
     expect(router.currentRoute.value.path).toBe('/setup-tenant')
   })
 
