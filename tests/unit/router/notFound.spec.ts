@@ -134,14 +134,14 @@ describe('NotFoundView', () => {
     expect(wrapper.text()).toContain('/unknown-route-xyz')
   })
 
-  it('оставляет единственное действие — переход на главную', async () => {
+  it('предлагает две точки выхода — на главную и назад', async () => {
     const wrapper = await mountView('test-token', '/tenant')
     await nextTick()
 
-    expect(wrapper.text()).toContain('Главная')
+    expect(wrapper.text()).toContain('На главную')
+    expect(wrapper.text()).toContain('Назад')
     expect(wrapper.text()).not.toContain('Контрагенты')
     expect(wrapper.text()).not.toContain('Компоненты')
-    expect(wrapper.text()).not.toContain('Назад')
   })
 
   it('не показывает неработающий поиск по разделам', async () => {
@@ -157,8 +157,8 @@ describe('NotFoundView', () => {
     await nextTick()
 
     // Действие одно: для неавторизованного гард сам уводит на вход.
-    expect(authed.text()).toContain('Главная')
-    expect(anon.text()).toContain('Главная')
+    expect(authed.text()).toContain('На главную')
+    expect(anon.text()).toContain('На главную')
     expect(anon.text()).not.toContain('На страницу входа')
   })
 
