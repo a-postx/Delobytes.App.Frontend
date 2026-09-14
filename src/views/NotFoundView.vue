@@ -48,7 +48,7 @@ function goBack(): void {
       <div class="flex flex-col items-center">
         <p
           aria-hidden="true"
-          class="select-none bg-gradient-to-b from-foreground/90 via-foreground/40 to-transparent bg-clip-text font-mono text-7xl font-bold leading-none tracking-tighter text-transparent sm:text-8xl"
+          class="select-none bg-gradient-to-b from-foreground/90 via-foreground/70 to-foreground/50 bg-clip-text font-mono text-7xl font-bold leading-none tracking-tighter text-transparent sm:text-8xl"
         >
           404
         </p>
@@ -64,7 +64,7 @@ function goBack(): void {
       </div>
 
       <p class="mt-6 max-w-md text-pretty text-sm leading-relaxed text-muted-foreground">
-        Возможно, адрес устарел или в ссылке опечатка. Данные в системе сохранены — ничего не потеряно.
+        Возможно, адрес устарел или в ссылке опечатка.
       </p>
 
       <!-- Две точки выхода вместо одной: часть пользователей пришла по ссылке (им нужна главная),

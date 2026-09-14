@@ -69,7 +69,7 @@ const isPage: ComputedRef<boolean> = computed<boolean>(() => props.variant === '
         <p
           aria-hidden="true"
           :class="cn(
-            'select-none bg-gradient-to-b from-foreground/90 via-foreground/40 to-transparent bg-clip-text font-mono font-bold leading-none tracking-tighter text-transparent',
+            'select-none bg-gradient-to-b from-foreground/90 via-foreground/70 to-foreground/50 bg-clip-text font-mono font-bold leading-none tracking-tighter text-transparent',
             isPage ? 'text-6xl sm:text-7xl' : 'text-4xl sm:text-5xl',
           )"
         >
