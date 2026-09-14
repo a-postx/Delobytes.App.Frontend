@@ -19,9 +19,14 @@ const attemptedPath: Ref<string> = ref<string>(route.fullPath)
       aria-hidden="true"
       class="pointer-events-none absolute left-1/2 top-1/2 -z-10 size-[34rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/10 blur-3xl"
     />
+    <!--
+      Радиусы маски заданы явно (60% / 45%). Без них браузер строит эллипс
+      до дальнего угла, и затухание обнуляется ровно на кромке бокса — внизу
+      получается резкий обрыв. С явными процентами оно заканчивается до края.
+    -->
     <div
       aria-hidden="true"
-      class="pointer-events-none absolute inset-0 -z-10 opacity-70 [background-image:radial-gradient(hsl(var(--border))_1px,transparent_1px)] [background-size:22px_22px] [mask-image:radial-gradient(ellipse_at_center,black,transparent_70%)]"
+      class="pointer-events-none absolute inset-0 -z-10 opacity-70 [background-image:radial-gradient(hsl(var(--border))_1px,transparent_1px)] [background-size:22px_22px] [mask-image:radial-gradient(ellipse_60%_45%_at_center,black,transparent_70%)]"
     />
 
     <div class="flex w-full max-w-xl flex-col items-center text-center">

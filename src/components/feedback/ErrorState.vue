@@ -49,9 +49,11 @@ const isPage: ComputedRef<boolean> = computed<boolean>(() => props.variant === '
       aria-hidden="true"
       class="pointer-events-none absolute left-1/2 top-1/3 -z-10 size-[32rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/10 blur-3xl motion-safe:animate-pulse"
     />
+    <!-- Радиусы маски заданы явно: иначе эллипс считается до дальнего угла
+         и затухание обнуляется ровно на кромке — снизу виден резкий обрыв. -->
     <div
       aria-hidden="true"
-      class="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(hsl(var(--border))_1px,transparent_1px)] [background-size:22px_22px] opacity-60 [mask-image:radial-gradient(ellipse_at_center,black,transparent_72%)]"
+      class="pointer-events-none absolute inset-0 -z-10 [background-image:radial-gradient(hsl(var(--border))_1px,transparent_1px)] [background-size:22px_22px] opacity-60 [mask-image:radial-gradient(ellipse_60%_45%_at_center,black,transparent_70%)]"
     />
 
     <div class="flex w-full max-w-xl flex-col items-center gap-5">
