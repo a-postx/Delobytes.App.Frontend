@@ -1,19 +1,28 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import type { Ref } from 'vue'
-import { useRoute } from 'vue-router'
-import { Home } from 'lucide-vue-next'
+import { useRoute, useRouter } from 'vue-router'
+import { Home, ArrowLeft } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 
 const route = useRoute()
+const router = useRouter()
 
 /** Путь, по которому пришёл пользователь. Показываем как есть — это то, что нужно поддержке. */
 const attemptedPath: Ref<string> = ref<string>(route.fullPath)
+
+function goBack(): void {
+  if (window.history.length > 1) {
+    router.back()
+    return
+  }
+  router.push('/')
+}
 </script>
 
 <template>
   <div
-    class="relative isolate flex min-h-[70svh] w-full flex-1 flex-col items-center justify-center overflow-hidden px-6 py-14"
+    class="relative isolate flex min-h-svh w-full flex-1 flex-col items-center justify-center overflow-hidden px-6 py-14"
   >
     <div
       aria-hidden="true"
@@ -33,7 +42,8 @@ const attemptedPath: Ref<string> = ref<string>(route.fullPath)
       <!--
         Код состояния и его название — одна группа. Монотипный шрифт у обоих,
         короткий шаг и разделитель между ними читаются как «код → расшифровка»,
-        а не как два независимых блока.
+        а не как два независимых блока. Этот паттерн переносится на 403/500/503
+        без изменений — меняется только код, заголовок и текст.
       -->
       <div class="flex flex-col items-center">
         <p
@@ -54,19 +64,26 @@ const attemptedPath: Ref<string> = ref<string>(route.fullPath)
       </div>
 
       <p class="mt-6 max-w-md text-pretty text-sm leading-relaxed text-muted-foreground">
-        Возможно, адрес устарел или в ссылке опечатка. Данные в системе сохранены.
+        Возможно, адрес устарел или в ссылке опечатка. Данные в системе сохранены — ничего не потеряно.
       </p>
 
-      <!-- Единственное действие. Для неавторизованного гард сам уведёт на вход. -->
-      <Button
-        as-child
-        class="mt-8"
-      >
-        <RouterLink to="/">
-          <Home />
-          Главная
-        </RouterLink>
-      </Button>
+      <!-- Две точки выхода вместо одной: часть пользователей пришла по ссылке (им нужна главная),
+           часть — кликнула что-то внутри приложения (им проще вернуться назад). -->
+      <div class="mt-8 flex flex-wrap items-center justify-center gap-3">
+        <Button as-child>
+          <RouterLink to="/">
+            <Home />
+            На главную
+          </RouterLink>
+        </Button>
+        <Button
+          variant="outline"
+          @click="goBack"
+        >
+          <ArrowLeft />
+          Назад
+        </Button>
+      </div>
 
       <p class="mt-8 w-full truncate font-mono text-xs text-muted-foreground/80">
         Запрошенный путь: {{ attemptedPath }}

@@ -57,12 +57,29 @@ const isPage: ComputedRef<boolean> = computed<boolean>(() => props.variant === '
     />
 
     <div class="flex w-full max-w-xl flex-col items-center gap-5">
-      <span
+      <!--
+        Тот же паттерн, что и на странице 404: крупный моно-код с градиентом
+        и тонкий разделитель перед заголовком. Один визуальный язык для всех
+        кодов ошибок (403/404/500/503) — читается как «код → расшифровка».
+      -->
+      <div
         v-if="code"
-        class="rounded-full border border-border/60 bg-background/70 px-3 py-1 font-mono text-xs tracking-widest text-muted-foreground backdrop-blur"
+        class="flex flex-col items-center"
       >
-        {{ code }}
-      </span>
+        <p
+          aria-hidden="true"
+          :class="cn(
+            'select-none bg-gradient-to-b from-foreground/90 via-foreground/40 to-transparent bg-clip-text font-mono font-bold leading-none tracking-tighter text-transparent',
+            isPage ? 'text-6xl sm:text-7xl' : 'text-4xl sm:text-5xl',
+          )"
+        >
+          {{ code }}
+        </p>
+        <span
+          aria-hidden="true"
+          class="mt-4 h-px w-16 bg-gradient-to-r from-transparent via-border to-transparent"
+        />
+      </div>
 
       <slot name="visual" />
 

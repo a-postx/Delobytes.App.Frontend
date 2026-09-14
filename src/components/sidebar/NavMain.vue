@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ChevronRight, BookOpen, Settings, PackageOpen, Grid3x3, Hammer, Layers, Truck, Gauge, Palette } from 'lucide-vue-next'
+import { ChevronRight, BookOpen, Settings, PackageOpen, Grid3x3, Hammer, Layers, Truck, Gauge } from 'lucide-vue-next'
 import { RouterLink } from 'vue-router'
 import {
   Collapsible,
@@ -127,23 +127,6 @@ const catalogItems = [
           </CollapsibleContent>
         </SidebarMenuItem>
       </Collapsible>
-    </SidebarMenu>
-  </SidebarGroup>
-
-  <SidebarGroup>
-    <SidebarGroupLabel>Дизайн-система</SidebarGroupLabel>
-    <SidebarMenu>
-      <SidebarMenuItem>
-        <SidebarMenuButton
-          as-child
-          :tooltip="'Страницы ошибок'"
-        >
-          <RouterLink to="/design/errors">
-            <Palette />
-            <span>Страницы ошибок</span>
-          </RouterLink>
-        </SidebarMenuButton>
-      </SidebarMenuItem>
     </SidebarMenu>
   </SidebarGroup>
 </template>
