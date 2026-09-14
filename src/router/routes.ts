@@ -1,0 +1,195 @@
+import type { RouteRecordRaw } from 'vue-router'
+import AppLayout from '@/layouts/AppLayout.vue'
+import HomeView from '@/views/HomeView.vue'
+import ApiConnectionTestView from '@/views/ApiConnectionTestView.vue'
+import LoginView from '@/views/LoginView.vue'
+import RegisterView from '@/views/RegisterView.vue'
+import SetupTenantView from '@/views/SetupTenantView.vue'
+import SettingsView from '@/views/SettingsView.vue'
+import TenantSettingsView from '@/views/TenantSettingsView.vue'
+import IntegrationsView from '@/views/IntegrationsView.vue'
+import YandexCallbackView from '@/views/YandexCallbackView.vue'
+import GoogleCallbackView from '@/views/GoogleCallbackView.vue'
+import AcceptInvitationView from '@/views/AcceptInvitationView.vue'
+import ComponentsView from '@/views/ComponentsView.vue'
+import SuppliersView from '@/views/SuppliersView.vue'
+import TariffGridsView from '@/views/TariffGridsView.vue'
+import WorkRatesView from '@/views/WorkRatesView.vue'
+import ProductWorkRatesView from '@/views/ProductWorkRatesView.vue'
+import StepperDemoView from '@/views/StepperDemoView.vue'
+import NotFoundView from '@/views/NotFoundView.vue'
+/**
+ * Конфигурация маршрутов вынесена отдельно от создания роутера,
+ * чтобы её можно было проверять в тестах на memory history.
+ */
+export const routes: RouteRecordRaw[] = [
+  {
+    path: '/',
+    component: AppLayout,
+    meta: {
+      requiresAuth: true,
+    },
+    children: [
+      {
+        path: '',
+        name: 'home',
+        component: HomeView,
+        meta: {
+          title: 'Главная',
+          requiresAuth: true,
+        },
+      },
+      {
+        path: 'apitest',
+        name: 'api-connection-test',
+        component: ApiConnectionTestView,
+        meta: {
+          title: 'API Connection Test',
+          requiresAuth: true,
+        },
+      },
+      {
+        path: 'settings',
+        name: 'settings',
+        component: SettingsView,
+        meta: {
+          title: 'Настройки',
+          requiresAuth: true,
+        },
+      },
+      {
+        path: 'tenant-settings',
+        name: 'tenant-settings',
+        component: TenantSettingsView,
+        meta: {
+          title: 'Настройки пространства',
+          requiresAuth: true,
+        },
+      },
+      {
+        path: 'integrations',
+        name: 'integrations',
+        component: IntegrationsView,
+        meta: {
+          title: 'Интеграции',
+          requiresAuth: true,
+        },
+      },
+      {
+        path: 'catalogs/components',
+        name: 'components',
+        component: ComponentsView,
+        meta: {
+          title: 'Компоненты',
+          requiresAuth: true,
+        },
+      },
+      {
+        path: 'catalogs/suppliers',
+        name: 'suppliers',
+        component: SuppliersView,
+        meta: {
+          title: 'Поставщики',
+          requiresAuth: true,
+        },
+      },
+      {
+        path: 'catalogs/tariff-grids',
+        name: 'tariff-grids',
+        component: TariffGridsView,
+        meta: {
+          title: 'Тарифные сетки',
+          requiresAuth: true,
+        },
+      },
+      {
+        path: 'catalogs/work-rates',
+        name: 'work-rates',
+        component: WorkRatesView,
+        meta: {
+          title: 'Ставки работ',
+          requiresAuth: true,
+        },
+      },
+      {
+        path: 'catalogs/product-work-rates',
+        name: 'product-work-rates',
+        component: ProductWorkRatesView,
+        meta: {
+          title: 'Нормы выработки',
+          requiresAuth: true,
+        },
+      },
+      {
+        path: 'stepper-demo',
+        name: 'stepper-demo',
+        component: StepperDemoView,
+        meta: {
+          title: 'Stepper Demo',
+          requiresAuth: true,
+        },
+      },
+    ],
+  },
+  {
+    path: '/login',
+    name: 'login',
+    component: LoginView,
+    meta: {
+      title: 'Вход',
+    },
+  },
+  {
+    path: '/register',
+    name: 'register',
+    component: RegisterView,
+    meta: {
+      title: 'Регистрация',
+    },
+  },
+  {
+    path: '/setup-tenant',
+    name: 'setup-tenant',
+    component: SetupTenantView,
+    meta: {
+      title: 'Создание пространства',
+    },
+  },
+  {
+    path: '/auth/yandex/callback',
+    name: 'yandex-callback',
+    component: YandexCallbackView,
+    meta: {
+      title: 'Вход через Яндекс',
+    },
+  },
+  {
+    path: '/auth/google/callback',
+    name: 'google-callback',
+    component: GoogleCallbackView,
+    meta: {
+      title: 'Вход через Google',
+    },
+  },
+  {
+    path: '/invite',
+    name: 'accept-invitation',
+    component: AcceptInvitationView,
+    meta: {
+      title: 'Принятие приглашения',
+    },
+  },
+  {
+    // Единственный catch-all: любое несовпадение отдаёт страницу «не найдено».
+    // Без токена каркас приложения недоступен, поэтому страница автономна —
+    // сайдбар с недоступными разделами только сбивал бы с толку.
+    path: '/:pathMatch(.*)*',
+    name: 'not-found',
+    component: NotFoundView,
+    meta: {
+      title: 'Страница не найдена',
+    },
+  },
+]
+
+export default routes

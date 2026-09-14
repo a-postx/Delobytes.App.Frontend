@@ -6,6 +6,7 @@ import {
   SidebarProvider,
 } from '@/components/ui/sidebar'
 import { RouterView } from 'vue-router'
+import AppErrorBoundary from '@/components/feedback/AppErrorBoundary.vue'
 </script>
 
 <template>
@@ -14,7 +15,10 @@ import { RouterView } from 'vue-router'
     <SidebarInset>
       <AppNavBar />
       <main class="flex flex-1 flex-col gap-4 p-4 pt-0">
-        <RouterView />
+        <!-- Отдельная граница для содержимого: ошибка страницы не сносит сайдбар и навигацию. -->
+        <AppErrorBoundary>
+          <RouterView />
+        </AppErrorBoundary>
       </main>
     </SidebarInset>
   </SidebarProvider>
