@@ -1,4 +1,5 @@
 import type { NavigationGuardNext, RouteLocationNormalized } from 'vue-router'
+import { REDIRECT_QUERY_KEY, rememberRedirect } from '@/utils/redirect'
 
 const APP_TITLE = 'Delobytes'
 
@@ -27,10 +28,17 @@ export function navigationGuard(
   const token: string | null = localStorage.getItem('accessToken')
 
   if (to.meta.requiresAuth === true && !token) {
-    next('/login')
+    // Запоминаем, куда пользователь шёл: после входа вернём его туда,
+    // а не на главную. Дублируем в sessionStorage — query не переживает
+    // редирект через OAuth-провайдера.
+    rememberRedirect(to.fullPath)
+
+    next({
+      path: '/login',
+      query: { [REDIRECT_QUERY_KEY]: to.fullPath },
+    })
     return
   }
-
   if ((to.name === 'login' || to.name === 'register') && token) {
     next('/')
     return

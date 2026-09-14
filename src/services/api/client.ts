@@ -1,4 +1,5 @@
 import axios, { type AxiosInstance, type AxiosError } from 'axios'
+import { REDIRECT_QUERY_KEY, rememberRedirect, isSafeRedirect } from '@/utils/redirect'
 
 class ApiClient {
   private client: AxiosInstance
@@ -31,6 +32,20 @@ class ApiClient {
     }
     
     return 'https://a-postx-delobytes-app-backend-47aa.twc1.net'
+  }
+
+  /**
+   * Адрес текущей страницы, чтобы вернуть пользователя после повторного входа.
+   * Пусто, если мы уже на странице входа или адрес небезопасен.
+   */
+  private currentLocationAsRedirect(): string | null {
+    const path: string = `${window.location.pathname}${window.location.search}`
+
+    if (!isSafeRedirect(path)) {
+      return null
+    }
+
+    return path
   }
 
   private setupInterceptors(): void {
@@ -66,7 +81,16 @@ class ApiClient {
             localStorage.removeItem('accessToken')
             localStorage.removeItem('userId')
             localStorage.removeItem('tenantId')
-            window.location.href = '/login'
+
+            // Перезагрузка через location.href стирает контекст, поэтому адрес
+            // текущей страницы сохраняем: после входа вернёмся на него.
+            const target: string | null = this.currentLocationAsRedirect()
+            if (target) {
+              rememberRedirect(target)
+              window.location.href = `/login?${REDIRECT_QUERY_KEY}=${encodeURIComponent(target)}`
+            } else {
+              window.location.href = '/login'
+            }
           }
         } else if (error.request) {
           console.error('Network Error: No response received')

@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useApi } from '@/composables/useApi'
 import { useCurrentUser } from '@/composables/useCurrentUser'
+import { resolveRedirectTarget, rememberRedirect } from '@/utils/redirect'
 import LoginForm from '@/components/auth/LoginForm.vue'
 
+const route = useRoute()
 const router = useRouter()
 const { post } = useApi()
 const { fetchCurrentUser } = useCurrentUser()
@@ -13,6 +15,14 @@ const email = ref('')
 const password = ref('')
 const loading = ref(false)
 const error = ref('')
+
+/**
+ * Переход после успешного входа. `replace` вместо `push`, чтобы кнопка «назад»
+ * не возвращала на форму входа, которую пользователь уже прошёл.
+ */
+const goAfterLogin = (target: string): void => {
+  router.replace(target)
+}
 
 const handleLogin = async () => {
   loading.value = true
@@ -37,10 +47,11 @@ const handleLogin = async () => {
 
       const pendingToken: string | null = sessionStorage.getItem('pendingInvitationToken')
       if (pendingToken) {
+        // Приглашение важнее исходного адреса: пользователя ждут в пространстве.
         sessionStorage.removeItem('pendingInvitationToken')
         router.push(`/invite?token=${pendingToken}`)
       } else {
-        router.push('/')
+        goAfterLogin(resolveRedirectTarget(route.query.redirect))
       }
     }
   } catch (err: unknown) {
@@ -66,6 +77,10 @@ const handleYandex = () => {
 
   const state = crypto.randomUUID()
   sessionStorage.setItem('yandex_oauth_state', state)
+
+  // OAuth уводит на сторонний домен и возвращает на callback, теряя query:
+  // адрес возврата сохраняем отдельно, callback его прочитает.
+  rememberRedirect(route.query.redirect)
 
   const redirectUri = `${window.location.origin}/auth/yandex/callback`
 
@@ -95,6 +110,8 @@ const handleGoogle = () => {
 
   const state = crypto.randomUUID()
   sessionStorage.setItem('google_oauth_state', state)
+
+  rememberRedirect(route.query.redirect)
 
   const redirectUri = `${window.location.origin}/auth/google/callback`
 

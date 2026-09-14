@@ -2,6 +2,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useApi, extractErrorMessage } from '@/composables/useApi'
+import { resolveRedirectTarget, DEFAULT_REDIRECT } from '@/utils/redirect'
 import CreateTenantForm from '@/components/auth/CreateTenantForm.vue'
 
 const router = useRouter()
@@ -10,6 +11,12 @@ const { post } = useApi()
 const tenantName = ref('')
 const loading = ref(false)
 const error = ref('')
+
+/**
+ * Куда вернуть пользователя после создания пространства. Читаем сразу, пока
+ * значение не перетёрлось: гард сохранил его, когда отправлял на вход.
+ */
+const returnTarget: string = resolveRedirectTarget(null, DEFAULT_REDIRECT)
 
 onMounted(() => {
   const token = localStorage.getItem('accessToken')
@@ -32,7 +39,7 @@ const handleSetup = async () => {
     localStorage.setItem('accessToken', response.accessToken)
     localStorage.setItem('tenantId', response.tenantId)
 
-    router.push('/')
+    router.replace(returnTarget)
   } catch (err: unknown) {
     error.value = extractErrorMessage(err, 'Ошибка создания рабочего пространства. Попробуйте ещё раз.')
   } finally {

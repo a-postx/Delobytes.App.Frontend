@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useApi, extractErrorMessage } from '@/composables/useApi'
+import { resolveRedirectTarget } from '@/utils/redirect'
 import SignupForm from '@/components/auth/SignupForm.vue'
 
+const route = useRoute()
 const router = useRouter()
 const { post } = useApi()
 
@@ -43,10 +45,12 @@ const handleRegister = async () => {
 
       const pendingToken: string | null = sessionStorage.getItem('pendingInvitationToken')
       if (pendingToken) {
+        // Приглашение важнее исходного адреса.
         sessionStorage.removeItem('pendingInvitationToken')
         router.push(`/invite?token=${pendingToken}`)
       } else {
-        router.push('/')
+        // `replace`: кнопка «назад» не должна возвращать на форму регистрации.
+        router.replace(resolveRedirectTarget(route.query.redirect))
       }
     }
   } catch (err: unknown) {

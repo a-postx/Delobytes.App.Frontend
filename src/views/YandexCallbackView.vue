@@ -3,6 +3,7 @@ import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useApi } from '@/composables/useApi'
 import { useCurrentUser } from '@/composables/useCurrentUser'
+import { consumeRedirect } from '@/utils/redirect'
 import { Spinner } from '@/components/ui/spinner'
 
 const router = useRouter()
@@ -39,6 +40,10 @@ onMounted(async () => {
     return
   }
 
+  // Адрес возврата, сохранённый перед уходом на сторонний домен провайдера.
+  // Читаем до запроса: при ошибке он всё равно больше не нужен.
+  const returnTarget: string = consumeRedirect() ?? '/'
+
   try {
     const redirectUri = `${window.location.origin}/auth/yandex/callback`
 
@@ -58,7 +63,7 @@ onMounted(async () => {
 
       await fetchCurrentUser()
 
-      router.push('/')
+      router.replace(returnTarget)
     }
   } catch (err: unknown) {
     const apiError = err as { response?: { data?: { message?: string } } }
