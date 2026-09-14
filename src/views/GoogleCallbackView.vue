@@ -45,12 +45,13 @@ onMounted(async () => {
       redirectUri,
     })
 
+    // Always save the access token, even for tenant setup flow
+    localStorage.setItem('accessToken', response.accessToken)
+    localStorage.setItem('userId', response.userId)
+
     if (response.requiresTenantSetup) {
-      localStorage.setItem('userId', response.userId)
       router.push('/setup-tenant')
     } else {
-      localStorage.setItem('accessToken', response.accessToken)
-      localStorage.setItem('userId', response.userId)
       localStorage.setItem('tenantId', response.tenantId)
 
       await fetchCurrentUser()
