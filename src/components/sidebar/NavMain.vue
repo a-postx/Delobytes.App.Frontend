@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ChevronRight, BookOpen, Settings, PackageOpen, Grid3x3, Hammer, Layers, Truck, Gauge } from 'lucide-vue-next'
+import { ChevronRight, BookOpen, Settings, PackageOpen, Grid3x3, Hammer, Layers, Truck, Gauge, Palette } from 'lucide-vue-next'
 import { RouterLink } from 'vue-router'
 import {
   Collapsible,
@@ -74,10 +74,19 @@ const catalogItems = [
           </CollapsibleTrigger>
           <CollapsibleContent>
             <SidebarMenuSub>
-              <SidebarMenuSubItem v-for="item in catalogItems" :key="item.to">
+              <SidebarMenuSubItem
+                v-for="item in catalogItems"
+                :key="item.to"
+              >
                 <SidebarMenuSubButton as-child>
-                  <RouterLink :to="item.to" class="flex items-center gap-2">
-                    <component :is="item.icon" class="size-3.5 shrink-0" />
+                  <RouterLink
+                    :to="item.to"
+                    class="flex items-center gap-2"
+                  >
+                    <component
+                      :is="item.icon"
+                      class="size-3.5 shrink-0"
+                    />
                     <span>{{ item.label }}</span>
                   </RouterLink>
                 </SidebarMenuSubButton>
@@ -118,6 +127,23 @@ const catalogItems = [
           </CollapsibleContent>
         </SidebarMenuItem>
       </Collapsible>
+    </SidebarMenu>
+  </SidebarGroup>
+
+  <SidebarGroup>
+    <SidebarGroupLabel>Дизайн-система</SidebarGroupLabel>
+    <SidebarMenu>
+      <SidebarMenuItem>
+        <SidebarMenuButton
+          as-child
+          :tooltip="'Страницы ошибок'"
+        >
+          <RouterLink to="/design/errors">
+            <Palette />
+            <span>Страницы ошибок</span>
+          </RouterLink>
+        </SidebarMenuButton>
+      </SidebarMenuItem>
     </SidebarMenu>
   </SidebarGroup>
 </template>

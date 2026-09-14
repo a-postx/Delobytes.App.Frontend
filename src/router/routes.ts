@@ -18,6 +18,12 @@ import WorkRatesView from '@/views/WorkRatesView.vue'
 import ProductWorkRatesView from '@/views/ProductWorkRatesView.vue'
 import StepperDemoView from '@/views/StepperDemoView.vue'
 import NotFoundView from '@/views/NotFoundView.vue'
+import ErrorPagesGalleryView from '@/views/errors/ErrorPagesGalleryView.vue'
+import Error404MinimalView from '@/views/errors/Error404MinimalView.vue'
+import Error404HubView from '@/views/errors/Error404HubView.vue'
+import Error404ConsoleView from '@/views/errors/Error404ConsoleView.vue'
+import Error404SplitView from '@/views/errors/Error404SplitView.vue'
+import Error404SpotlightView from '@/views/errors/Error404SpotlightView.vue'
 /**
  * Конфигурация маршрутов вынесена отдельно от создания роутера,
  * чтобы её можно было проверять в тестах на memory history.
@@ -177,6 +183,59 @@ export const routes: RouteRecordRaw[] = [
     component: AcceptInvitationView,
     meta: {
       title: 'Принятие приглашения',
+    },
+  },
+  /**
+   * Витрина дизайн-системы страниц ошибок: пять самостоятельных вариантов 404
+   * для отбора лучшего дизайна плюс галерея-каталог. Страницы автономны
+   * (без сайдбара), как и production-страница 404, поэтому доступны без токена.
+   */
+  {
+    path: '/design/errors',
+    name: 'error-pages-gallery',
+    component: ErrorPagesGalleryView,
+    meta: {
+      title: 'Дизайн-система ошибок',
+    },
+  },
+  {
+    path: '/design/errors/404/minimal',
+    name: 'error-404-minimal',
+    component: Error404MinimalView,
+    meta: {
+      title: '404 · Минимализм',
+    },
+  },
+  {
+    path: '/design/errors/404/hub',
+    name: 'error-404-hub',
+    component: Error404HubView,
+    meta: {
+      title: '404 · Полезный хаб',
+    },
+  },
+  {
+    path: '/design/errors/404/console',
+    name: 'error-404-console',
+    component: Error404ConsoleView,
+    meta: {
+      title: '404 · Консоль разработчика',
+    },
+  },
+  {
+    path: '/design/errors/404/split',
+    name: 'error-404-split',
+    component: Error404SplitView,
+    meta: {
+      title: '404 · Разделённый экран',
+    },
+  },
+  {
+    path: '/design/errors/404/spotlight',
+    name: 'error-404-spotlight',
+    component: Error404SpotlightView,
+    meta: {
+      title: '404 · Споттлайт',
     },
   },
   {
