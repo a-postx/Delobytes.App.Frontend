@@ -114,13 +114,6 @@ const catalogItems = [
                   </RouterLink>
                 </SidebarMenuSubButton>
               </SidebarMenuSubItem>
-              <SidebarMenuSubItem>
-                <SidebarMenuSubButton as-child>
-                  <RouterLink to="/tenant-settings">
-                    <span>Настройки пространства</span>
-                  </RouterLink>
-                </SidebarMenuSubButton>
-              </SidebarMenuSubItem>
             </SidebarMenuSub>
           </CollapsibleContent>
         </SidebarMenuItem>
