@@ -121,11 +121,11 @@ describe('NotFoundView', () => {
     })
   }
 
-  it('показывает код 404 и понятное объяснение', async () => {
+  it('показывает код 404 и его расшифровку', async () => {
     const wrapper = await mountView('test-token', '/tenant')
 
     expect(wrapper.text()).toContain('404')
-    expect(wrapper.text()).toContain('Такой страницы здесь нет')
+    expect(wrapper.text()).toContain('Страница не найдена')
   })
 
   it('выводит запрошенный путь — его можно передать в поддержку', async () => {
@@ -134,60 +134,40 @@ describe('NotFoundView', () => {
     expect(wrapper.text()).toContain('/unknown-route-xyz')
   })
 
-  it('авторизованному предлагает рабочие разделы вместо тупика', async () => {
+  it('оставляет единственное действие — переход на главную', async () => {
     const wrapper = await mountView('test-token', '/tenant')
     await nextTick()
 
     expect(wrapper.text()).toContain('Главная')
-    expect(wrapper.text()).toContain('Контрагенты')
-    expect(wrapper.text()).toContain('Компоненты')
+    expect(wrapper.text()).not.toContain('Контрагенты')
+    expect(wrapper.text()).not.toContain('Компоненты')
+    expect(wrapper.text()).not.toContain('Назад')
   })
 
-  it('неавторизованного ведёт на страницу входа, без недоступных разделов', async () => {
-    const wrapper = await mountView(null, '/tenant')
+  it('не показывает неработающий поиск по разделам', async () => {
+    const wrapper = await mountView('test-token', '/tenant')
+
+    expect(wrapper.find('input').exists()).toBe(false)
+    expect(wrapper.find('form').exists()).toBe(false)
+  })
+
+  it('кнопка на главную одинакова для авторизованного и нет', async () => {
+    const authed = await mountView('test-token', '/tenant')
+    const anon = await mountView(null, '/tenant')
     await nextTick()
 
-    expect(wrapper.text()).toContain('На страницу входа')
-    expect(wrapper.text()).not.toContain('Контрагенты')
+    // Действие одно: для неавторизованного гард сам уводит на вход.
+    expect(authed.text()).toContain('Главная')
+    expect(anon.text()).toContain('Главная')
+    expect(anon.text()).not.toContain('На страницу входа')
   })
 
-  it('даёт вернуться назад, когда история браузера это позволяет', async () => {
-    const originalHistory: History = window.history
-    Object.defineProperty(window, 'history', {
-      value: { length: 3, back: vi.fn() },
-      writable: true,
-    })
+  it('ведёт на главную, а не на произвольный раздел', async () => {
+    const wrapper = await mountView('test-token', '/tenant')
+    await nextTick()
 
-    try {
-      const wrapper = await mountView('test-token', '/tenant')
-      await nextTick()
-
-      expect(wrapper.text()).toContain('Назад')
-    } finally {
-      Object.defineProperty(window, 'history', {
-        value: originalHistory,
-        writable: true,
-      })
-    }
-  })
-
-  it('не показывает «Назад», если возвращаться некуда', async () => {
-    const originalHistory: History = window.history
-    Object.defineProperty(window, 'history', {
-      value: { length: 1, back: vi.fn() },
-      writable: true,
-    })
-
-    try {
-      const wrapper = await mountView('test-token', '/tenant')
-      await nextTick()
-
-      expect(wrapper.text()).not.toContain('Назад')
-    } finally {
-      Object.defineProperty(window, 'history', {
-        value: originalHistory,
-        writable: true,
-      })
-    }
+    const link = wrapper.find('a')
+    expect(link.exists()).toBe(true)
+    expect(link.attributes('href')).toBe('/')
   })
 })
