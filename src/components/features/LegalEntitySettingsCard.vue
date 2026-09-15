@@ -26,20 +26,20 @@ import { toast } from 'vue-sonner'
 
 const { canEditTenantSettings } = usePermissions()
 
-/** Прочерк вместо пустого значения: показывает, что ставка ещё не задана пользователем. */
+/** Прочерк вместо пустого значения: показывает, что режим ещё не задан пользователем. */
 const EMPTY_VALUE_PLACEHOLDER = '—'
 
-const TAX_TYPE_OPTIONS: { value: string; label: string }[] = [
-  { value: String(TaxType.Usn), label: 'УСН' },
-  { value: String(TaxType.Osno), label: 'ОСНО' },
-  { value: String(TaxType.Npd), label: 'НПД' },
+const TAX_TYPE_OPTIONS: { value: TaxType; label: string }[] = [
+  { value: TaxType.Usn, label: 'УСН' },
+  { value: TaxType.Osno, label: 'ОСНО' },
+  { value: TaxType.Npd, label: 'НПД' },
 ]
 
-const VAT_TYPE_OPTIONS: { value: string; label: string }[] = [
-  { value: String(VatType.None), label: 'Без НДС' },
-  { value: String(VatType.Five), label: '5%' },
-  { value: String(VatType.Seven), label: '7%' },
-  { value: String(VatType.TwentyTwo), label: '22%' },
+const VAT_TYPE_OPTIONS: { value: VatType; label: string }[] = [
+  { value: VatType.None, label: 'Без НДС' },
+  { value: VatType.Five, label: '5%' },
+  { value: VatType.Seven, label: '7%' },
+  { value: VatType.TwentyTwo, label: '22%' },
 ]
 
 const isLoading = ref<boolean>(true)
@@ -47,7 +47,7 @@ const isSaving = ref<boolean>(false)
 
 const legalName = ref<string>('')
 const inn = ref<string>('')
-// Пустая строка означает «значение не задано». Система не подставляет ставки и режимы
+// Пустая строка означает «значение не задано». Система не подставляет режимы и ставки
 // автоматически — до явного выбора пользователем расчёт показателей по каналам недоступен.
 const taxType = ref<string>('')
 // Поле ставки — <input type="number">, поэтому Vue приводит v-model к number,
@@ -94,14 +94,10 @@ onMounted(async () => {
     const data = await tenantLegalEntityApi.get()
     legalName.value = data.legalName ?? ''
     inn.value = data.inn ?? ''
-    // Значение вне enum означает «пользователь ещё не выбирал режим» — показываем прочерк.
-    taxType.value = isKnownOption(TAX_TYPE_OPTIONS, String(data.taxType))
-      ? String(data.taxType)
-      : ''
+    // Значение вне списка означает «пользователь ещё не выбирал режим» — показываем прочерк.
+    taxType.value = isKnownOption(TAX_TYPE_OPTIONS, data.taxType) ? data.taxType : ''
     taxRatePercent.value = data.taxRatePercent > 0 ? data.taxRatePercent : ''
-    vatType.value = isKnownOption(VAT_TYPE_OPTIONS, String(data.vatType))
-      ? String(data.vatType)
-      : ''
+    vatType.value = isKnownOption(VAT_TYPE_OPTIONS, data.vatType) ? data.vatType : ''
   } catch {
     // данные не загружены — оставляем пустые значения, ничего не подставляем
   } finally {
@@ -114,19 +110,17 @@ const handleSave = async (): Promise<void> => {
     return
   }
 
-  const parsedTaxType: number = Number.parseInt(taxType.value, 10)
-  const parsedVatType: number = Number.parseInt(vatType.value, 10)
-  const parsedRate: number | null = parseRatePercent(taxRatePercent.value)
-
-  if (Number.isNaN(parsedTaxType)) {
+  if (!isKnownOption(TAX_TYPE_OPTIONS, taxType.value)) {
     toast.error('Выберите систему налогообложения')
     return
   }
 
-  if (Number.isNaN(parsedVatType)) {
+  if (!isKnownOption(VAT_TYPE_OPTIONS, vatType.value)) {
     toast.error('Выберите режим НДС')
     return
   }
+
+  const parsedRate: number | null = parseRatePercent(taxRatePercent.value)
 
   if (parsedRate === null) {
     toast.error('Укажите ставку налога')
@@ -139,9 +133,9 @@ const handleSave = async (): Promise<void> => {
     await tenantLegalEntityApi.update({
       legalName: normalizeOptionalText(legalName.value),
       inn: normalizeOptionalText(inn.value),
-      taxType: parsedTaxType as (typeof TaxType)[keyof typeof TaxType],
+      taxType: taxType.value as TaxType,
       taxRatePercent: parsedRate,
-      vatType: parsedVatType as (typeof VatType)[keyof typeof VatType],
+      vatType: vatType.value as VatType,
     })
     toast.success('Настройки юридического лица сохранены')
   } catch (error: unknown) {

@@ -1,16 +1,21 @@
+/**
+ * Значения соответствуют именам членов Backend-перечислений TaxType/VatType.
+ * API сериализует enum'ы строками (JsonStringEnumConverter), поэтому здесь именно
+ * строки, а не числа: иначе сравнение со значением из ответа всегда даёт несовпадение.
+ */
 export const TaxType = {
-  Usn: 1,
-  Osno: 2,
-  Npd: 3,
+  Usn: 'Usn',
+  Osno: 'Osno',
+  Npd: 'Npd',
 } as const
 
 export type TaxType = typeof TaxType[keyof typeof TaxType]
 
 export const VatType = {
-  None: 1,
-  Five: 2,
-  Seven: 3,
-  TwentyTwo: 4,
+  None: 'None',
+  Five: 'Five',
+  Seven: 'Seven',
+  TwentyTwo: 'TwentyTwo',
 } as const
 
 export type VatType = typeof VatType[keyof typeof VatType]
