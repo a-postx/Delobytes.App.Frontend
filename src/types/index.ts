@@ -1,3 +1,20 @@
+export const TaxType = {
+  Usn: 1,
+  Osno: 2,
+  Npd: 3,
+} as const
+
+export type TaxType = typeof TaxType[keyof typeof TaxType]
+
+export const VatType = {
+  None: 1,
+  Five: 2,
+  Seven: 3,
+  TwentyTwo: 4,
+} as const
+
+export type VatType = typeof VatType[keyof typeof VatType]
+
 export interface ApiResponse<T> {
   data: T
   success: boolean

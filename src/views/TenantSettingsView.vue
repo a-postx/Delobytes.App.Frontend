@@ -12,6 +12,7 @@ import { Label } from '@/components/ui/label'
 import { Spinner } from '@/components/ui/spinner'
 import { CopyButton } from '@/components/ui/copy-button'
 import CreateTenantDialog from '@/components/features/CreateTenantDialog.vue'
+import LegalEntitySettingsCard from '@/components/features/LegalEntitySettingsCard.vue'
 import TenantMemberAccessDialog from '@/components/features/TenantMemberAccessDialog.vue'
 import TenantMembersTable from '@/components/features/TenantMembersTable.vue'
 import { useCurrentUser } from '@/composables/useCurrentUser'
@@ -128,7 +129,7 @@ const handleMembersRefresh = (): void => {
             </div>
           </div>
           <p v-if="!canEditTenantSettings" class="text-xs text-muted-foreground">
-            Только администраторы могут изменять имя пространства
+            Только администраторы могут изменять имя
           </p>
         </div>
         <div class="space-y-2">
@@ -148,6 +149,8 @@ const handleMembersRefresh = (): void => {
         </div>
       </CardContent>
     </Card>
+
+    <LegalEntitySettingsCard />
 
     <Card v-if="canManageMembers">
       <CardHeader>

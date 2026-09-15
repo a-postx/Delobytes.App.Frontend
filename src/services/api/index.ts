@@ -4,6 +4,12 @@ export { integrationsApi } from './endpoints/integrations'
 export { meApi } from './endpoints/me'
 export { productsApi } from './endpoints/products'
 export { tenantApi } from './endpoints/tenant'
+export { tenantLegalEntityApi } from './endpoints/tenantLegalEntity'
+export type {
+  GetTenantLegalEntityResponse,
+  UpdateTenantLegalEntityRequest,
+  UpdateTenantLegalEntityResponse,
+} from './endpoints/tenantLegalEntity'
 export {
   suppliersApi,
   componentsApi,
