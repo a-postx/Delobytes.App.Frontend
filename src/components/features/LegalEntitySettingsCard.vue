@@ -50,7 +50,9 @@ const inn = ref<string>('')
 // Пустая строка означает «значение не задано». Система не подставляет ставки и режимы
 // автоматически — до явного выбора пользователем расчёт показателей по каналам недоступен.
 const taxType = ref<string>('')
-const taxRatePercent = ref<string>('')
+// Поле ставки — <input type="number">, поэтому Vue приводит v-model к number,
+// а у пустого поля значением остаётся ''. Тип честно допускает оба варианта.
+const taxRatePercent = ref<string | number>('')
 const vatType = ref<string>('')
 
 const isKnownOption = (
@@ -58,21 +60,50 @@ const isKnownOption = (
   value: string,
 ): boolean => options.some((option) => option.value === value)
 
+/**
+ * Приводит значение поля ставки к числу: null означает «значение не задано».
+ */
+const parseRatePercent = (value: string | number): number | null => {
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? value : null
+  }
+
+  const normalized: string = value.trim()
+
+  if (normalized === '') {
+    return null
+  }
+
+  const parsed: number = Number.parseFloat(normalized)
+
+  return Number.isNaN(parsed) ? null : parsed
+}
+
+/**
+ * Приводит необязательное текстовое поле к виду, пригодному для отправки:
+ * пустая или пробельная строка становится null, иначе — обрезанное значение.
+ */
+const normalizeOptionalText = (value: string): string | null => {
+  const normalized: string = value.trim()
+
+  return normalized === '' ? null : normalized
+}
+
 onMounted(async () => {
   try {
     const data = await tenantLegalEntityApi.get()
     legalName.value = data.legalName ?? ''
     inn.value = data.inn ?? ''
-    // Не 0 и не прочерк: значение вне enum означает «пользователь ещё не выбирал режим».
+    // Значение вне enum означает «пользователь ещё не выбирал режим» — показываем прочерк.
     taxType.value = isKnownOption(TAX_TYPE_OPTIONS, String(data.taxType))
       ? String(data.taxType)
       : ''
-    taxRatePercent.value = data.taxRatePercent > 0 ? String(data.taxRatePercent) : ''
+    taxRatePercent.value = data.taxRatePercent > 0 ? data.taxRatePercent : ''
     vatType.value = isKnownOption(VAT_TYPE_OPTIONS, String(data.vatType))
       ? String(data.vatType)
       : ''
   } catch {
-    // данные не загружены — оставляем пустые значения
+    // данные не загружены — оставляем пустые значения, ничего не подставляем
   } finally {
     isLoading.value = false
   }
@@ -85,7 +116,7 @@ const handleSave = async (): Promise<void> => {
 
   const parsedTaxType: number = Number.parseInt(taxType.value, 10)
   const parsedVatType: number = Number.parseInt(vatType.value, 10)
-  const parsedRate: number = Number.parseFloat(taxRatePercent.value)
+  const parsedRate: number | null = parseRatePercent(taxRatePercent.value)
 
   if (Number.isNaN(parsedTaxType)) {
     toast.error('Выберите систему налогообложения')
@@ -97,7 +128,7 @@ const handleSave = async (): Promise<void> => {
     return
   }
 
-  if (taxRatePercent.value.trim() === '' || Number.isNaN(parsedRate)) {
+  if (parsedRate === null) {
     toast.error('Укажите ставку налога')
     return
   }
@@ -106,16 +137,17 @@ const handleSave = async (): Promise<void> => {
 
   try {
     await tenantLegalEntityApi.update({
-      legalName: legalName.value.trim() || null,
-      inn: inn.value.trim() || null,
-      taxType: parsedTaxType as typeof TaxType[keyof typeof TaxType],
+      legalName: normalizeOptionalText(legalName.value),
+      inn: normalizeOptionalText(inn.value),
+      taxType: parsedTaxType as (typeof TaxType)[keyof typeof TaxType],
       taxRatePercent: parsedRate,
-      vatType: parsedVatType as typeof VatType[keyof typeof VatType],
+      vatType: parsedVatType as (typeof VatType)[keyof typeof VatType],
     })
     toast.success('Настройки юридического лица сохранены')
   } catch (error: unknown) {
     const apiError = error as { response?: { data?: { message?: string } } }
-    const message: string = apiError.response?.data?.message ?? 'Не удалось сохранить настройки'
+    const message: string =
+      apiError.response?.data?.message ?? 'Не удалось сохранить настройки'
     toast.error(message)
   } finally {
     isSaving.value = false
