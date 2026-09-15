@@ -11,7 +11,13 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { usePermissions } from '@/composables/usePermissions'
 import { tenantLegalEntityApi } from '@/services/api/endpoints/tenantLegalEntity'
 import { TaxType, VatType } from '@/types'
@@ -19,25 +25,51 @@ import { toast } from 'vue-sonner'
 
 const { canEditTenantSettings } = usePermissions()
 
+/** Прочерк вместо пустого значения: показывает, что ставка ещё не задана пользователем. */
+const EMPTY_VALUE_PLACEHOLDER = '—'
+
+const TAX_TYPE_OPTIONS: { value: string; label: string }[] = [
+  { value: String(TaxType.Usn), label: 'УСН' },
+  { value: String(TaxType.Osno), label: 'ОСНО' },
+  { value: String(TaxType.Npd), label: 'НПД' },
+]
+
+const VAT_TYPE_OPTIONS: { value: string; label: string }[] = [
+  { value: String(VatType.None), label: 'Без НДС' },
+  { value: String(VatType.Five), label: '5%' },
+  { value: String(VatType.Seven), label: '7%' },
+  { value: String(VatType.TwentyTwo), label: '22%' },
+]
+
 const isLoading = ref<boolean>(true)
 const isSaving = ref<boolean>(false)
 
 const legalName = ref<string>('')
 const inn = ref<string>('')
-// Явно без значения по умолчанию: пока пользователь не укажет ставку/режим,
-// поле остаётся незаполненным — система не должна подставлять их сама.
+// Пустая строка означает «значение не задано». Система не подставляет ставки и режимы
+// автоматически — до явного выбора пользователем расчёт показателей по каналам недоступен.
 const taxType = ref<string>('')
 const taxRatePercent = ref<string>('')
 const vatType = ref<string>('')
+
+const isKnownOption = (
+  options: { value: string; label: string }[],
+  value: string,
+): boolean => options.some((option) => option.value === value)
 
 onMounted(async () => {
   try {
     const data = await tenantLegalEntityApi.get()
     legalName.value = data.legalName ?? ''
     inn.value = data.inn ?? ''
-    taxType.value = String(data.taxType)
+    // Не 0 и не прочерк: значение вне enum означает «пользователь ещё не выбирал режим».
+    taxType.value = isKnownOption(TAX_TYPE_OPTIONS, String(data.taxType))
+      ? String(data.taxType)
+      : ''
     taxRatePercent.value = data.taxRatePercent > 0 ? String(data.taxRatePercent) : ''
-    vatType.value = String(data.vatType)
+    vatType.value = isKnownOption(VAT_TYPE_OPTIONS, String(data.vatType))
+      ? String(data.vatType)
+      : ''
   } catch {
     // данные не загружены — оставляем пустые значения
   } finally {
@@ -50,16 +82,21 @@ const handleSave = async (): Promise<void> => {
     return
   }
 
-  const parsedTaxType: number = parseInt(taxType.value, 10)
-  const parsedVatType: number = parseInt(vatType.value, 10)
-  const parsedRate: number = parseFloat(taxRatePercent.value)
+  const parsedTaxType: number = Number.parseInt(taxType.value, 10)
+  const parsedVatType: number = Number.parseInt(vatType.value, 10)
+  const parsedRate: number = Number.parseFloat(taxRatePercent.value)
 
-  if (isNaN(parsedTaxType) || isNaN(parsedVatType)) {
-    toast.error('Выберите систему налогообложения и режим НДС')
+  if (Number.isNaN(parsedTaxType)) {
+    toast.error('Выберите систему налогообложения')
     return
   }
 
-  if (isNaN(parsedRate) || taxRatePercent.value.trim() === '') {
+  if (Number.isNaN(parsedVatType)) {
+    toast.error('Выберите режим НДС')
+    return
+  }
+
+  if (taxRatePercent.value.trim() === '' || Number.isNaN(parsedRate)) {
     toast.error('Укажите ставку налога')
     return
   }
@@ -88,157 +125,114 @@ const handleSave = async (): Promise<void> => {
 <template>
   <Card>
     <CardHeader>
-      <CardTitle class="text-lg">Юридические данные</CardTitle>
-      <CardDescription>
-        Реквизиты и налоговые ставки.
-      </CardDescription>
+      <div class="flex flex-wrap items-start justify-between gap-3">
+        <div class="space-y-1">
+          <CardTitle class="text-lg">Настройки юридического лица</CardTitle>
+          <CardDescription>Реквизиты и налоговые ставки.</CardDescription>
+        </div>
+        <Button
+          v-if="canEditTenantSettings"
+          :disabled="isSaving || isLoading"
+          @click="handleSave"
+        >
+          <Spinner v-if="isSaving" size="sm" class="mr-2" />
+          Сохранить
+        </Button>
+      </div>
     </CardHeader>
-    <CardContent>
+    <CardContent class="space-y-4">
       <div v-if="isLoading" class="flex justify-center py-6">
         <Spinner size="md" />
       </div>
 
-      <div v-else class="space-y-5">
-        <!-- Юридическое наименование -->
-        <div class="space-y-2">
-          <Label for="legal-name">Юридическое наименование</Label>
-          <Input
-            id="legal-name"
-            v-model="legalName"
-            placeholder=""
-            :disabled="!canEditTenantSettings"
-            :readonly="!canEditTenantSettings"
-            :class="{ 'cursor-not-allowed opacity-60': !canEditTenantSettings }"
-          />
+      <template v-else>
+        <div class="grid gap-x-4 gap-y-3 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+          <!-- ИНН короткий, поэтому делит строку с юридическим наименованием -->
+          <div class="space-y-1.5">
+            <Label for="legal-name">Юридическое наименование</Label>
+            <Input
+              id="legal-name"
+              v-model="legalName"
+              :disabled="!canEditTenantSettings"
+              :readonly="!canEditTenantSettings"
+              :class="{ 'cursor-not-allowed opacity-60': !canEditTenantSettings }"
+            />
+          </div>
+
+          <div class="space-y-1.5">
+            <Label for="inn">ИНН</Label>
+            <Input
+              id="inn"
+              v-model="inn"
+              inputmode="numeric"
+              maxlength="12"
+              :disabled="!canEditTenantSettings"
+              :readonly="!canEditTenantSettings"
+              :class="{ 'cursor-not-allowed opacity-60': !canEditTenantSettings }"
+            />
+          </div>
+
+          <div class="space-y-1.5">
+            <Label for="tax-type">Система налогообложения</Label>
+            <Select v-model="taxType" :disabled="!canEditTenantSettings">
+              <SelectTrigger id="tax-type" class="w-full">
+                <SelectValue :placeholder="EMPTY_VALUE_PLACEHOLDER" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem
+                  v-for="option in TAX_TYPE_OPTIONS"
+                  :key="option.value"
+                  :value="option.value"
+                >
+                  {{ option.label }}
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div class="space-y-1.5">
+            <Label for="vat-type">Режим НДС</Label>
+            <Select v-model="vatType" :disabled="!canEditTenantSettings">
+              <SelectTrigger id="vat-type" class="w-full">
+                <SelectValue :placeholder="EMPTY_VALUE_PLACEHOLDER" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem
+                  v-for="option in VAT_TYPE_OPTIONS"
+                  :key="option.value"
+                  :value="option.value"
+                >
+                  {{ option.label }}
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div class="space-y-1.5">
+            <Label for="tax-rate">Ставка налога, %</Label>
+            <Input
+              id="tax-rate"
+              v-model="taxRatePercent"
+              type="number"
+              inputmode="decimal"
+              min="0"
+              max="100"
+              step="0.01"
+              :disabled="!canEditTenantSettings"
+              :readonly="!canEditTenantSettings"
+              :class="{ 'cursor-not-allowed opacity-60': !canEditTenantSettings }"
+            />
+          </div>
         </div>
 
-        <!-- ИНН -->
-        <div class="space-y-2">
-          <Label for="inn">ИНН</Label>
-          <Input
-            id="inn"
-            v-model="inn"
-            placeholder=""
-            :disabled="!canEditTenantSettings"
-            :readonly="!canEditTenantSettings"
-            :class="{ 'cursor-not-allowed opacity-60': !canEditTenantSettings }"
-          />
-        </div>
-
-        <!-- Система налогообложения -->
-        <div class="space-y-2">
-          <Label>Система налогообложения</Label>
-          <RadioGroup
-            v-model="taxType"
-            :disabled="!canEditTenantSettings"
-            class="flex flex-row flex-wrap gap-4"
-          >
-            <div class="flex items-center gap-2">
-              <RadioGroupItem
-                id="tax-usn"
-                :value="String(TaxType.Usn)"
-                :disabled="!canEditTenantSettings"
-              />
-              <Label for="tax-usn" :class="{ 'cursor-not-allowed opacity-60': !canEditTenantSettings }">УСН</Label>
-            </div>
-            <div class="flex items-center gap-2">
-              <RadioGroupItem
-                id="tax-osno"
-                :value="String(TaxType.Osno)"
-                :disabled="!canEditTenantSettings"
-              />
-              <Label for="tax-osno" :class="{ 'cursor-not-allowed opacity-60': !canEditTenantSettings }">ОСНО</Label>
-            </div>
-            <div class="flex items-center gap-2">
-              <RadioGroupItem
-                id="tax-npd"
-                :value="String(TaxType.Npd)"
-                :disabled="!canEditTenantSettings"
-              />
-              <Label for="tax-npd" :class="{ 'cursor-not-allowed opacity-60': !canEditTenantSettings }">НПД</Label>
-            </div>
-          </RadioGroup>
-        </div>
-
-        <!-- Ставка налога -->
-        <div class="space-y-2">
-          <Label for="tax-rate">Ставка налога, %</Label>
-          <Input
-            id="tax-rate"
-            v-model="taxRatePercent"
-            type="number"
-            min="0"
-            max="100"
-            step="0.01"
-            placeholder=""
-            :disabled="!canEditTenantSettings"
-            :readonly="!canEditTenantSettings"
-            :class="{ 'cursor-not-allowed opacity-60': !canEditTenantSettings }"
-          />
-          <p class="text-xs text-muted-foreground">
-            Обязательно для расчёта показателей по каналам продаж
-          </p>
-        </div>
-
-        <!-- Режим НДС -->
-        <div class="space-y-2">
-          <Label>Режим НДС</Label>
-          <RadioGroup
-            v-model="vatType"
-            :disabled="!canEditTenantSettings"
-            class="flex flex-row flex-wrap gap-4"
-          >
-            <div class="flex items-center gap-2">
-              <RadioGroupItem
-                id="vat-none"
-                :value="String(VatType.None)"
-                :disabled="!canEditTenantSettings"
-              />
-              <Label for="vat-none" :class="{ 'cursor-not-allowed opacity-60': !canEditTenantSettings }">Без НДС</Label>
-            </div>
-            <div class="flex items-center gap-2">
-              <RadioGroupItem
-                id="vat-five"
-                :value="String(VatType.Five)"
-                :disabled="!canEditTenantSettings"
-              />
-              <Label for="vat-five" :class="{ 'cursor-not-allowed opacity-60': !canEditTenantSettings }">5%</Label>
-            </div>
-            <div class="flex items-center gap-2">
-              <RadioGroupItem
-                id="vat-seven"
-                :value="String(VatType.Seven)"
-                :disabled="!canEditTenantSettings"
-              />
-              <Label for="vat-seven" :class="{ 'cursor-not-allowed opacity-60': !canEditTenantSettings }">7%</Label>
-            </div>
-            <div class="flex items-center gap-2">
-              <RadioGroupItem
-                id="vat-twenty-two"
-                :value="String(VatType.TwentyTwo)"
-                :disabled="!canEditTenantSettings"
-              />
-              <Label for="vat-twenty-two" :class="{ 'cursor-not-allowed opacity-60': !canEditTenantSettings }">22%</Label>
-            </div>
-          </RadioGroup>
-        </div>
-
-        <!-- Подсказка для не-администраторов -->
-        <p v-if="!canEditTenantSettings" class="text-xs text-muted-foreground">
-          Только администраторы могут изменять настройки юридического лица
+        <p class="text-xs text-muted-foreground">
+          Ставки задаются вручную и обязательны для расчёта показателей по каналам продаж.
         </p>
 
-        <!-- Кнопка сохранения -->
-        <div v-if="canEditTenantSettings" class="flex justify-end pt-1">
-          <Button
-            :disabled="isSaving"
-            @click="handleSave"
-          >
-            <Spinner v-if="isSaving" size="sm" class="mr-2" />
-            Сохранить
-          </Button>
-        </div>
-      </div>
+        <p v-if="!canEditTenantSettings" class="text-xs text-muted-foreground">
+          Только администраторы могут изменять настройки юридического лица.
+        </p>
+      </template>
     </CardContent>
   </Card>
 </template>
