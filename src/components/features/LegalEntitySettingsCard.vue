@@ -125,20 +125,8 @@ const handleSave = async (): Promise<void> => {
 <template>
   <Card>
     <CardHeader>
-      <div class="flex flex-wrap items-start justify-between gap-3">
-        <div class="space-y-1">
-          <CardTitle class="text-lg">Настройки юридического лица</CardTitle>
-          <CardDescription>Реквизиты и налоговые ставки.</CardDescription>
-        </div>
-        <Button
-          v-if="canEditTenantSettings"
-          :disabled="isSaving || isLoading"
-          @click="handleSave"
-        >
-          <Spinner v-if="isSaving" size="sm" class="mr-2" />
-          Сохранить
-        </Button>
-      </div>
+      <CardTitle class="text-lg">Настройки юридического лица</CardTitle>
+      <CardDescription>Реквизиты и налоговые ставки.</CardDescription>
     </CardHeader>
     <CardContent class="space-y-4">
       <div v-if="isLoading" class="flex justify-center py-6">
@@ -146,92 +134,100 @@ const handleSave = async (): Promise<void> => {
       </div>
 
       <template v-else>
-        <div class="grid gap-x-4 gap-y-3 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
-          <!-- ИНН короткий, поэтому делит строку с юридическим наименованием -->
-          <div class="space-y-1.5">
-            <Label for="legal-name">Юридическое наименование</Label>
-            <Input
-              id="legal-name"
-              v-model="legalName"
-              :disabled="!canEditTenantSettings"
-              :readonly="!canEditTenantSettings"
-              :class="{ 'cursor-not-allowed opacity-60': !canEditTenantSettings }"
-            />
+        <div class="space-y-3">
+          <!-- Строка 1: ИНН (короткий), юридическое наименование (широкое) -->
+          <div class="grid gap-x-4 gap-y-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
+            <div class="space-y-1.5">
+              <Label for="inn">ИНН</Label>
+              <Input
+                id="inn"
+                v-model="inn"
+                inputmode="numeric"
+                maxlength="12"
+                :disabled="!canEditTenantSettings"
+                :readonly="!canEditTenantSettings"
+                :class="{ 'cursor-not-allowed opacity-60': !canEditTenantSettings }"
+              />
+            </div>
+
+            <div class="space-y-1.5">
+              <Label for="legal-name">Юридическое наименование</Label>
+              <Input
+                id="legal-name"
+                v-model="legalName"
+                :disabled="!canEditTenantSettings"
+                :readonly="!canEditTenantSettings"
+                :class="{ 'cursor-not-allowed opacity-60': !canEditTenantSettings }"
+              />
+            </div>
           </div>
 
-          <div class="space-y-1.5">
-            <Label for="inn">ИНН</Label>
-            <Input
-              id="inn"
-              v-model="inn"
-              inputmode="numeric"
-              maxlength="12"
-              :disabled="!canEditTenantSettings"
-              :readonly="!canEditTenantSettings"
-              :class="{ 'cursor-not-allowed opacity-60': !canEditTenantSettings }"
-            />
+          <!-- Строка 2: система налогообложения, ставка налога, режим НДС -->
+          <div class="grid gap-x-4 gap-y-3 sm:grid-cols-3">
+            <div class="space-y-1.5">
+              <Label for="tax-type">Система налогообложения</Label>
+              <Select v-model="taxType" :disabled="!canEditTenantSettings">
+                <SelectTrigger id="tax-type" class="w-full">
+                  <SelectValue :placeholder="EMPTY_VALUE_PLACEHOLDER" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem
+                    v-for="option in TAX_TYPE_OPTIONS"
+                    :key="option.value"
+                    :value="option.value"
+                  >
+                    {{ option.label }}
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div class="space-y-1.5">
+              <Label for="tax-rate">Ставка налога, %</Label>
+              <Input
+                id="tax-rate"
+                v-model="taxRatePercent"
+                type="number"
+                inputmode="decimal"
+                min="0"
+                max="100"
+                step="0.01"
+                :disabled="!canEditTenantSettings"
+                :readonly="!canEditTenantSettings"
+                :class="{ 'cursor-not-allowed opacity-60': !canEditTenantSettings }"
+              />
+            </div>
+
+            <div class="space-y-1.5">
+              <Label for="vat-type">Режим НДС</Label>
+              <Select v-model="vatType" :disabled="!canEditTenantSettings">
+                <SelectTrigger id="vat-type" class="w-full">
+                  <SelectValue :placeholder="EMPTY_VALUE_PLACEHOLDER" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem
+                    v-for="option in VAT_TYPE_OPTIONS"
+                    :key="option.value"
+                    :value="option.value"
+                  >
+                    {{ option.label }}
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
-          <div class="space-y-1.5">
-            <Label for="tax-type">Система налогообложения</Label>
-            <Select v-model="taxType" :disabled="!canEditTenantSettings">
-              <SelectTrigger id="tax-type" class="w-full">
-                <SelectValue :placeholder="EMPTY_VALUE_PLACEHOLDER" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem
-                  v-for="option in TAX_TYPE_OPTIONS"
-                  :key="option.value"
-                  :value="option.value"
-                >
-                  {{ option.label }}
-                </SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div class="space-y-1.5">
-            <Label for="vat-type">Режим НДС</Label>
-            <Select v-model="vatType" :disabled="!canEditTenantSettings">
-              <SelectTrigger id="vat-type" class="w-full">
-                <SelectValue :placeholder="EMPTY_VALUE_PLACEHOLDER" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem
-                  v-for="option in VAT_TYPE_OPTIONS"
-                  :key="option.value"
-                  :value="option.value"
-                >
-                  {{ option.label }}
-                </SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div class="space-y-1.5">
-            <Label for="tax-rate">Ставка налога, %</Label>
-            <Input
-              id="tax-rate"
-              v-model="taxRatePercent"
-              type="number"
-              inputmode="decimal"
-              min="0"
-              max="100"
-              step="0.01"
-              :disabled="!canEditTenantSettings"
-              :readonly="!canEditTenantSettings"
-              :class="{ 'cursor-not-allowed opacity-60': !canEditTenantSettings }"
-            />
+          <!-- Строка 3: подсказка для не-администраторов / кнопка Сохранить справа снизу -->
+          <div class="flex justify-end">
+            <p v-if="!canEditTenantSettings" class="mr-auto text-xs text-muted-foreground self-center">
+              Только администраторы могут изменять настройки юридического лица.
+            </p>
+            <Button v-if="canEditTenantSettings" :disabled="isSaving" @click="handleSave">
+              <Spinner v-if="isSaving" size="sm" class="mr-2" />
+              Сохранить
+            </Button>
           </div>
         </div>
-
-        <p class="text-xs text-muted-foreground">
-          Ставки задаются вручную и обязательны для расчёта показателей по каналам продаж.
-        </p>
-
-        <p v-if="!canEditTenantSettings" class="text-xs text-muted-foreground">
-          Только администраторы могут изменять настройки юридического лица.
-        </p>
       </template>
     </CardContent>
   </Card>
