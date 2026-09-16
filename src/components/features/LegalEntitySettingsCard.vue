@@ -152,7 +152,7 @@ const handleSave = async (): Promise<void> => {
 <template>
   <Card>
     <CardHeader>
-      <CardTitle class="text-lg">Настройки юридического лица</CardTitle>
+      <CardTitle class="text-lg">Юрлицо</CardTitle>
       <CardDescription>Реквизиты и налоговые ставки.</CardDescription>
     </CardHeader>
     <CardContent class="space-y-4">
