@@ -13,7 +13,8 @@ export type {
 export {
   suppliersApi,
   componentsApi,
-  tariffGridsApi,
+  costTypesApi,
+  productChannelCostsApi,
   workRatesApi,
   productWorkRatesApi,
 } from './endpoints/catalogs'
@@ -28,12 +29,14 @@ export type {
   CreateComponentRequest,
   UpdateComponentRequest,
   CreateComponentPriceRequest,
-  TariffGridItem,
-  TariffGridDetail,
-  TariffGridEntry,
-  GetTariffGridsResponse,
-  CreateTariffGridRequest,
-  UpdateTariffGridRequest,
+  CostTypeItem,
+  GetCostTypesResponse,
+  CreateCostTypeRequest,
+  UpdateCostTypeRequest,
+  ProductChannelCostItem,
+  GetProductChannelCostsResponse,
+  CreateProductChannelCostRequest,
+  UpdateProductChannelCostRequest,
   WorkRateItem,
   GetWorkRatesResponse,
   CreateWorkRateRequest,
@@ -42,4 +45,4 @@ export type {
   GetProductWorkRatesResponse,
   CreateProductWorkRateRequest,
 } from './endpoints/catalogs'
-export { Unit, TariffType } from './endpoints/catalogs'
+export { Unit } from './endpoints/catalogs'

@@ -13,11 +13,13 @@ import GoogleCallbackView from '@/views/GoogleCallbackView.vue'
 import AcceptInvitationView from '@/views/AcceptInvitationView.vue'
 import ComponentsView from '@/views/ComponentsView.vue'
 import SuppliersView from '@/views/SuppliersView.vue'
-import TariffGridsView from '@/views/TariffGridsView.vue'
+import CostTypesView from '@/views/CostTypesView.vue'
+import ProductChannelCostsView from '@/views/ProductChannelCostsView.vue'
 import WorkRatesView from '@/views/WorkRatesView.vue'
 import ProductWorkRatesView from '@/views/ProductWorkRatesView.vue'
 import StepperDemoView from '@/views/StepperDemoView.vue'
 import NotFoundView from '@/views/NotFoundView.vue'
+
 /**
  * Конфигурация маршрутов вынесена отдельно от создания роутера,
  * чтобы её можно было проверять в тестах на memory history.
@@ -94,11 +96,11 @@ export const routes: RouteRecordRaw[] = [
         },
       },
       {
-        path: 'catalogs/tariff-grids',
-        name: 'tariff-grids',
-        component: TariffGridsView,
+        path: 'catalogs/cost-types',
+        name: 'cost-types',
+        component: CostTypesView,
         meta: {
-          title: 'Тарифные сетки',
+          title: 'Типы расходов',
           requiresAuth: true,
         },
       },

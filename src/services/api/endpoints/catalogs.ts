@@ -11,11 +11,6 @@ export enum Unit {
   Gram = 'Gram',
 }
 
-export enum TariffType {
-  WbLogistics = 0,
-  FulfillmentCenter = 1,
-}
-
 // ---------- Suppliers ----------
 
 export interface SupplierItem {
@@ -95,43 +90,57 @@ export interface CreateComponentPriceRequest {
   validFrom: string // YYYY-MM-DD
 }
 
-// ---------- Tariff Grids ----------
+// ---------- Cost Types ----------
 
-export interface TariffGridEntry {
-  regionOrCity: string
-  volumeThresholdLiters?: number
-  rate: number
-}
-
-export interface TariffGridItem {
+export interface CostTypeItem {
   id: string
   name: string
-  tariffType: TariffType
-  validFrom: string
-  channelId?: string
+  description?: string
   isActive: boolean
   createdAt: string
 }
 
-export interface TariffGridDetail extends TariffGridItem {
-  entries: TariffGridEntry[]
+export interface GetCostTypesResponse {
+  items: CostTypeItem[]
 }
 
-export interface GetTariffGridsResponse {
-  items: TariffGridItem[]
-}
-
-export interface CreateTariffGridRequest {
+export interface CreateCostTypeRequest {
   name: string
-  tariffType: TariffType
-  validFrom: string
-  channelId?: string
-  entries: TariffGridEntry[]
+  description?: string
 }
 
-export interface UpdateTariffGridRequest {
+export interface UpdateCostTypeRequest {
   name: string
+  description?: string
   isActive: boolean
+}
+
+// ---------- Product Channel Costs ----------
+
+export interface ProductChannelCostItem {
+  id: string
+  productId: string
+  channelId: string
+  costTypeId: string
+  costTypeName: string
+  amount: number
+  createdAt: string
+  updatedAt?: string
+}
+
+export interface GetProductChannelCostsResponse {
+  items: ProductChannelCostItem[]
+}
+
+export interface CreateProductChannelCostRequest {
+  productId: string
+  channelId: string
+  costTypeId: string
+  amount: number
+}
+
+export interface UpdateProductChannelCostRequest {
+  amount: number
 }
 
 // ---------- Work Rates ----------
@@ -204,17 +213,12 @@ export const suppliersApi = {
 
 export const componentsApi = {
   getAll: async (): Promise<GetComponentsResponse> => {
-    const response = await axiosInstance.get<GetComponentsResponse>(
-      '/api/catalogs/components',
-    )
+    const response = await axiosInstance.get<GetComponentsResponse>('/api/catalogs/components')
     return response.data
   },
 
   create: async (data: CreateComponentRequest): Promise<ComponentItem> => {
-    const response = await axiosInstance.post<ComponentItem>(
-      '/api/catalogs/components',
-      data,
-    )
+    const response = await axiosInstance.post<ComponentItem>('/api/catalogs/components', data)
     return response.data
   },
 
@@ -235,31 +239,51 @@ export const componentsApi = {
   },
 }
 
-export const tariffGridsApi = {
-  getAll: async (tariffType?: TariffType): Promise<GetTariffGridsResponse> => {
-    const params = tariffType !== undefined ? { tariffType } : {}
-    const response = await axiosInstance.get<GetTariffGridsResponse>('/api/catalogs/tariff-grids', {
-      params,
-    })
+export const costTypesApi = {
+  getAll: async (): Promise<GetCostTypesResponse> => {
+    const response = await axiosInstance.get<GetCostTypesResponse>('/api/catalogs/cost-types')
     return response.data
   },
 
-  getById: async (id: string): Promise<TariffGridDetail> => {
-    const response = await axiosInstance.get<TariffGridDetail>(`/api/catalogs/tariff-grids/${id}`)
+  create: async (data: CreateCostTypeRequest): Promise<CostTypeItem> => {
+    const response = await axiosInstance.post<CostTypeItem>('/api/catalogs/cost-types', data)
     return response.data
   },
 
-  create: async (data: CreateTariffGridRequest): Promise<TariffGridItem> => {
-    const response = await axiosInstance.post<TariffGridItem>('/api/catalogs/tariff-grids', data)
-    return response.data
-  },
-
-  update: async (id: string, data: UpdateTariffGridRequest): Promise<void> => {
-    await axiosInstance.put(`/api/catalogs/tariff-grids/${id}`, data)
+  update: async (id: string, data: UpdateCostTypeRequest): Promise<void> => {
+    await axiosInstance.put(`/api/catalogs/cost-types/${id}`, data)
   },
 
   delete: async (id: string): Promise<void> => {
-    await axiosInstance.delete(`/api/catalogs/tariff-grids/${id}`)
+    await axiosInstance.delete(`/api/catalogs/cost-types/${id}`)
+  },
+}
+
+export const productChannelCostsApi = {
+  getByProduct: async (productId: string, channelId?: string): Promise<GetProductChannelCostsResponse> => {
+    const params: Record<string, string> = { productId }
+    if (channelId) { params.channelId = channelId }
+    const response = await axiosInstance.get<GetProductChannelCostsResponse>(
+      '/api/catalogs/product-channel-costs',
+      { params },
+    )
+    return response.data
+  },
+
+  create: async (data: CreateProductChannelCostRequest): Promise<ProductChannelCostItem> => {
+    const response = await axiosInstance.post<ProductChannelCostItem>(
+      '/api/catalogs/product-channel-costs',
+      data,
+    )
+    return response.data
+  },
+
+  update: async (id: string, data: UpdateProductChannelCostRequest): Promise<void> => {
+    await axiosInstance.put(`/api/catalogs/product-channel-costs/${id}`, data)
+  },
+
+  delete: async (id: string): Promise<void> => {
+    await axiosInstance.delete(`/api/catalogs/product-channel-costs/${id}`)
   },
 }
 
