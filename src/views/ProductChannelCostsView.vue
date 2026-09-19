@@ -70,18 +70,8 @@ const editForm = ref({ amount: '' })
 
 const activeCostTypes = computed(() => costTypes.value.filter(ct => ct.isActive))
 
-const channelsForProduct = computed((): { id: string; name: string }[] => {
-  const product = products.value.find(p => p.id === form.value.productId)
-  if (!product) return []
-  // channels come from the product's channel links — use filtered items for unique list
-  return []
-})
-
 const productName = (id: string): string =>
   products.value.find(p => p.id === id)?.name ?? id.slice(0, 8) + '...'
-
-const costTypeName = (id: string): string =>
-  costTypes.value.find(ct => ct.id === id)?.name ?? id.slice(0, 8) + '...'
 
 const formatAmount = (amount: number): string =>
   new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB', minimumFractionDigits: 2 }).format(amount)

@@ -105,6 +105,15 @@ export const routes: RouteRecordRaw[] = [
         },
       },
       {
+        path: 'catalogs/product-channel-costs',
+        name: 'product-channel-costs',
+        component: ProductChannelCostsView,
+        meta: {
+          title: 'Расходы по каналам',
+          requiresAuth: true,
+        },
+      },
+      {
         path: 'catalogs/work-rates',
         name: 'work-rates',
         component: WorkRatesView,
