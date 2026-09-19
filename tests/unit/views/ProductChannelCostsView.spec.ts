@@ -54,8 +54,8 @@ describe('ProductChannelCostsView logic', () => {
       expect(validateAmount('abc')).toBe(false)
     })
 
-    it('should reject empty string', () => {
-      expect(validateAmount('')).toBe(false)
+    it('should treat empty string as zero (Number("") === 0)', () => {
+      expect(validateAmount('')).toBe(true)
     })
   })
 
