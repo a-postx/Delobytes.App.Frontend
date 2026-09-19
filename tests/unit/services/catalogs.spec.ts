@@ -2,15 +2,15 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { 
   suppliersApi, 
   componentsApi, 
-  tariffGridsApi, 
+  costTypesApi,
+  productChannelCostsApi,
   workRatesApi,
   productWorkRatesApi,
   Unit,
-  TariffType,
   type SupplierItem,
   type ComponentItem,
-  type TariffGridItem,
-  type TariffGridDetail,
+  type CostTypeItem,
+  type ProductChannelCostItem,
   type WorkRateItem,
   type ProductWorkRateItem
 } from '@/services/api'
@@ -247,16 +247,14 @@ describe('Catalogs API - Stage 7 & 8', () => {
     })
   })
 
-  describe('tariffGridsApi', () => {
-    it('should get all tariff grids', async () => {
+  describe('costTypesApi', () => {
+    it('should get all cost types', async () => {
       const mockResponse = {
         items: [
           {
             id: '1',
-            name: 'WB Tariffs 2024',
-            tariffType: TariffType.WbLogistics,
-            validFrom: '2024-01-01',
-            channelId: undefined,
+            name: 'Логистика до покупателя',
+            description: 'Доставка от склада до покупателя',
             isActive: true,
             createdAt: '2024-01-01T00:00:00Z'
           }
@@ -265,117 +263,127 @@ describe('Catalogs API - Stage 7 & 8', () => {
 
       vi.mocked(axiosInstance.get).mockResolvedValue({ data: mockResponse })
 
-      const result = await tariffGridsApi.getAll()
+      const result = await costTypesApi.getAll()
 
-      expect(axiosInstance.get).toHaveBeenCalledWith('/api/catalogs/tariff-grids', { params: {} })
+      expect(axiosInstance.get).toHaveBeenCalledWith('/api/catalogs/cost-types')
       expect(result).toEqual(mockResponse)
-      expect(result.items[0].tariffType).toBe(TariffType.WbLogistics)
+      expect(result.items[0].name).toBe('Логистика до покупателя')
     })
 
-    it('should get tariff grids filtered by type', async () => {
-      const mockResponse = {
-        items: [
-          {
-            id: '2',
-            name: 'FF Tariffs 2024',
-            tariffType: TariffType.FulfillmentCenter,
-            validFrom: '2024-01-01',
-            channelId: undefined,
-            isActive: true,
-            createdAt: '2024-01-01T00:00:00Z'
-          }
-        ]
-      }
-
-      vi.mocked(axiosInstance.get).mockResolvedValue({ data: mockResponse })
-
-      const result = await tariffGridsApi.getAll(TariffType.FulfillmentCenter)
-
-      expect(axiosInstance.get).toHaveBeenCalledWith('/api/catalogs/tariff-grids', {
-        params: { tariffType: TariffType.FulfillmentCenter }
-      })
-      expect(result.items[0].tariffType).toBe(TariffType.FulfillmentCenter)
-    })
-
-    it('should get tariff grid by id with entries', async () => {
-      const mockDetail: TariffGridDetail = {
-        id: '1',
-        name: 'WB Tariffs 2024',
-        tariffType: TariffType.WbLogistics,
-        validFrom: '2024-01-01',
-        channelId: undefined,
+    it('should create a cost type', async () => {
+      const newCostType: CostTypeItem = {
+        id: '2',
+        name: 'Фулфилмент',
+        description: 'Комиссия фулфилмент-центра',
         isActive: true,
-        createdAt: '2024-01-01T00:00:00Z',
-        entries: [
-          { regionOrCity: 'Москва', volumeThresholdLiters: 1, rate: 50 },
-          { regionOrCity: 'Санкт-Петербург', volumeThresholdLiters: 1, rate: 45 }
-        ]
+        createdAt: '2024-01-02T00:00:00Z'
       }
 
-      vi.mocked(axiosInstance.get).mockResolvedValue({ data: mockDetail })
-
-      const result = await tariffGridsApi.getById('1')
-
-      expect(axiosInstance.get).toHaveBeenCalledWith('/api/catalogs/tariff-grids/1')
-      expect(result).toEqual(mockDetail)
-      expect(result.entries).toHaveLength(2)
-      expect(result.entries[0].rate).toBe(50)
-    })
-
-    it('should create a tariff grid with entries', async () => {
-      const newGrid: TariffGridItem = {
-        id: '3',
-        name: 'New Tariffs',
-        tariffType: TariffType.WbLogistics,
-        validFrom: '2024-03-01',
-        channelId: undefined,
-        isActive: true,
-        createdAt: '2024-03-01T00:00:00Z'
-      }
-
-      vi.mocked(axiosInstance.post).mockResolvedValue({ data: newGrid })
+      vi.mocked(axiosInstance.post).mockResolvedValue({ data: newCostType })
 
       const payload = {
-        name: 'New Tariffs',
-        tariffType: TariffType.WbLogistics,
-        validFrom: '2024-03-01',
-        channelId: undefined,
-        entries: [
-          { regionOrCity: 'Казань', volumeThresholdLiters: 1, rate: 40 }
-        ]
+        name: 'Фулфилмент',
+        description: 'Комиссия фулфилмент-центра'
       }
 
-      const result = await tariffGridsApi.create(payload)
+      const result = await costTypesApi.create(payload)
 
-      expect(axiosInstance.post).toHaveBeenCalledWith('/api/catalogs/tariff-grids', payload)
-      expect(result).toEqual(newGrid)
+      expect(axiosInstance.post).toHaveBeenCalledWith('/api/catalogs/cost-types', payload)
+      expect(result).toEqual(newCostType)
+      expect(result.name).toBe('Фулфилмент')
     })
 
-    it('should update a tariff grid', async () => {
-      const gridId = '1'
+    it('should update a cost type', async () => {
+      const costTypeId = '1'
       const updatePayload = {
-        name: 'Updated Tariffs',
+        name: 'Логистика (обновлено)',
+        description: 'Обновлённое описание',
         isActive: false
       }
 
       vi.mocked(axiosInstance.put).mockResolvedValue({ data: undefined })
 
-      await tariffGridsApi.update(gridId, updatePayload)
+      await costTypesApi.update(costTypeId, updatePayload)
 
       expect(axiosInstance.put).toHaveBeenCalledWith(
-        `/api/catalogs/tariff-grids/${gridId}`,
+        `/api/catalogs/cost-types/${costTypeId}`,
         updatePayload
       )
     })
+  })
 
-    it('should delete a tariff grid', async () => {
-      const gridId = '1'
+  describe('productChannelCostsApi', () => {
+    it('should get costs by product', async () => {
+      const productId = 'prod-1'
+      const mockResponse = {
+        items: [
+          {
+            id: '1',
+            productId,
+            channelId: 'chan-1',
+            costTypeId: 'ct-1',
+            costTypeName: 'Логистика',
+            amount: 150,
+            createdAt: '2024-01-01T00:00:00Z'
+          }
+        ]
+      }
+
+      vi.mocked(axiosInstance.get).mockResolvedValue({ data: mockResponse })
+
+      const result = await productChannelCostsApi.getByProduct(productId)
+
+      expect(axiosInstance.get).toHaveBeenCalledWith(
+        '/api/catalogs/product-channel-costs',
+        { params: { productId } }
+      )
+      expect(result).toEqual(mockResponse)
+      expect(result.items[0].amount).toBe(150)
+    })
+
+    it('should get costs by product and channel', async () => {
+      const productId = 'prod-1'
+      const channelId = 'chan-1'
+      const mockResponse = { items: [] }
+
+      vi.mocked(axiosInstance.get).mockResolvedValue({ data: mockResponse })
+
+      await productChannelCostsApi.getByProduct(productId, channelId)
+
+      expect(axiosInstance.get).toHaveBeenCalledWith(
+        '/api/catalogs/product-channel-costs',
+        { params: { productId, channelId } }
+      )
+    })
+
+    it('should upsert a product channel cost', async () => {
+      const payload = {
+        productId: 'prod-1',
+        channelId: 'chan-1',
+        costTypeId: 'ct-1',
+        amount: 200
+      }
+
+      vi.mocked(axiosInstance.put).mockResolvedValue({ data: undefined })
+
+      await productChannelCostsApi.upsert(payload)
+
+      expect(axiosInstance.put).toHaveBeenCalledWith(
+        '/api/catalogs/product-channel-costs',
+        payload
+      )
+    })
+
+    it('should delete a product channel cost', async () => {
+      const costId = '1'
 
       vi.mocked(axiosInstance.delete).mockResolvedValue({ data: undefined })
 
-      await tariffGridsApi.delete(gridId)
+      await productChannelCostsApi.delete(costId)
 
-      expect(axiosInstance.delete).toHaveBeenCalledWith(`/api/catalogs/tariff-grids/${gridId}`)
+      expect(axiosInstance.delete).toHaveBeenCalledWith(
+        `/api/catalogs/product-channel-costs/${costId}`
+      )
     })
   })
 
