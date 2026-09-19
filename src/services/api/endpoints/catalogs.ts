@@ -143,6 +143,13 @@ export interface UpdateProductChannelCostRequest {
   amount: number
 }
 
+export interface UpsertProductChannelCostRequest {
+  productId: string
+  channelId: string
+  costTypeId: string
+  amount: number
+}
+
 // ---------- Work Rates ----------
 
 export interface WorkRateItem {
@@ -270,16 +277,8 @@ export const productChannelCostsApi = {
     return response.data
   },
 
-  create: async (data: CreateProductChannelCostRequest): Promise<ProductChannelCostItem> => {
-    const response = await axiosInstance.post<ProductChannelCostItem>(
-      '/api/catalogs/product-channel-costs',
-      data,
-    )
-    return response.data
-  },
-
-  update: async (id: string, data: UpdateProductChannelCostRequest): Promise<void> => {
-    await axiosInstance.put(`/api/catalogs/product-channel-costs/${id}`, data)
+  upsert: async (data: UpsertProductChannelCostRequest): Promise<void> => {
+    await axiosInstance.put('/api/catalogs/product-channel-costs', data)
   },
 
   delete: async (id: string): Promise<void> => {

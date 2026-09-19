@@ -39,7 +39,7 @@ import { toast } from 'vue-sonner'
 import { productChannelCostsApi, costTypesApi } from '@/services/api'
 import type {
   ProductChannelCostItem,
-  CreateProductChannelCostRequest,
+  UpsertProductChannelCostRequest,
   CostTypeItem,
 } from '@/services/api'
 import { productsApi } from '@/services/api'
@@ -139,13 +139,13 @@ const handleCreate = async (): Promise<void> => {
 
   isSaving.value = true
   try {
-    const payload: CreateProductChannelCostRequest = {
+    const payload: UpsertProductChannelCostRequest = {
       productId: form.value.productId,
       channelId: form.value.channelId.trim(),
       costTypeId: form.value.costTypeId,
       amount,
     }
-    await productChannelCostsApi.create(payload)
+    await productChannelCostsApi.upsert(payload)
     toast.success('Расход добавлен')
     createDialogOpen.value = false
     await loadData()
@@ -162,7 +162,12 @@ const handleEdit = async (): Promise<void> => {
   if (isNaN(amount) || amount < 0) { toast.error('Укажите корректную сумму'); return }
   isSaving.value = true
   try {
-    await productChannelCostsApi.update(editTarget.value.id, { amount })
+    await productChannelCostsApi.upsert({
+      productId: editTarget.value.productId,
+      channelId: editTarget.value.channelId,
+      costTypeId: editTarget.value.costTypeId,
+      amount,
+    })
     toast.success('Сумма обновлена')
     editDialogOpen.value = false
     await loadData()
