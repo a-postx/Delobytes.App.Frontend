@@ -149,7 +149,7 @@ describe('LegalEntitySettingsCard', () => {
     it('renders the card title and description', async () => {
       const wrapper = await mountCard()
 
-      expect(wrapper.text()).toContain('Настройки юридического лица')
+      expect(wrapper.text()).toContain('Юрлицо')
       expect(wrapper.text()).toContain('Реквизиты и налоговые ставки.')
     })
 
