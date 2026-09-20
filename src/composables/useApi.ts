@@ -5,8 +5,25 @@ import { axiosInstance } from '@/services/api/client'
  * Extracts a user-facing error message from an axios error.
  * Priority: server response body "message" field → axios message → fallback.
  */
-export function extractErrorMessage(error: any, fallback = 'Произошла ошибка. Попробуйте еще раз.'): string {
+export function extractErrorMessage(error: any, fallback = 'Произошла ошибка. Попробуйте ещё раз.'): string {
   return error?.response?.data?.message || fallback
+}
+
+/**
+ * Extracts the machine-readable error code from an axios error.
+ * Use this to branch on specific error types without parsing message text.
+ * Returns null when the response does not follow the error envelope contract.
+ */
+export function extractErrorCode(error: any): string | null {
+  return error?.response?.data?.code ?? null
+}
+
+/**
+ * Extracts per-field validation errors from an axios error response.
+ * Only populated for 400/422 responses. Matches ASP.NET ValidationProblemDetails format.
+ */
+export function extractFieldErrors(error: any): Record<string, string[]> | null {
+  return error?.response?.data?.errors ?? null
 }
 
 export function useApi<T = any>() {

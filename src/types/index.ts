@@ -27,7 +27,10 @@ export interface ApiResponse<T> {
 }
 
 export interface ApiError {
+  // Машиночитаемый код формата {module}.{resource}.{reason}. Используй для ветвления, не message.
+  code: string
   message: string
+  status: number
   errors?: Record<string, string[]>
 }
 
