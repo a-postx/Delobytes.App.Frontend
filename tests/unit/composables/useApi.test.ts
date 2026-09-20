@@ -42,6 +42,6 @@ describe('useApi composable', () => {
       // Expected to throw
     }
 
-    expect(error.value).toBe('Произошла ошибка. Попробуйте еще раз.')
+    expect(error.value).toBe('Произошла ошибка. Попробуйте ещё раз.')
   })
 })

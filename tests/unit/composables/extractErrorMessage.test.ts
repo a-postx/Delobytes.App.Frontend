@@ -24,14 +24,14 @@ describe('extractErrorMessage', () => {
 
   it('returns default fallback when no fallback argument is provided', () => {
     const error = { response: { data: {} } }
-    expect(extractErrorMessage(error)).toBe('Произошла ошибка. Попробуйте еще раз.')
+    expect(extractErrorMessage(error)).toBe('Произошла ошибка. Попробуйте ещё раз.')
   })
 
   it('returns default fallback for null error', () => {
-    expect(extractErrorMessage(null)).toBe('Произошла ошибка. Попробуйте еще раз.')
+    expect(extractErrorMessage(null)).toBe('Произошла ошибка. Попробуйте ещё раз.')
   })
 
   it('returns default fallback for undefined error', () => {
-    expect(extractErrorMessage(undefined)).toBe('Произошла ошибка. Попробуйте еще раз.')
+    expect(extractErrorMessage(undefined)).toBe('Произошла ошибка. Попробуйте ещё раз.')
   })
 })
