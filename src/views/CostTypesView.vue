@@ -40,12 +40,12 @@ import { toast } from 'vue-sonner'
 import { costTypesApi } from '@/services/api'
 import type { CostTypeItem, CreateCostTypeRequest, UpdateCostTypeRequest } from '@/services/api'
 import { useCurrentUser } from '@/composables/useCurrentUser'
+import { useApiCall } from '@/composables/useApiCall'
 import { X } from 'lucide-vue-next'
 
 const { canWrite } = useCurrentUser()
 
 const items = ref<CostTypeItem[]>([])
-const isLoading = ref<boolean>(true)
 
 const createDialogOpen = ref<boolean>(false)
 const editDialogOpen = ref<boolean>(false)
@@ -59,15 +59,26 @@ const isDeleting = ref<boolean>(false)
 const form = ref({ name: '', description: '' })
 const editForm = ref({ name: '', description: '', isActive: true })
 
+const { loading: isLoading, execute: fetchCostTypes } = useApiCall<{ items: CostTypeItem[] }>({
+  fallbackMessage: 'Не удалось загрузить типы расходов',
+})
+
+const { execute: createCostType } = useApiCall({
+  fallbackMessage: 'Не удалось создать тип расхода',
+})
+
+const { execute: updateCostType } = useApiCall({
+  fallbackMessage: 'Не удалось обновить тип расхода',
+})
+
+const { execute: deleteCostType } = useApiCall({
+  fallbackMessage: 'Не удалось удалить тип расхода',
+})
+
 const loadItems = async (): Promise<void> => {
-  isLoading.value = true
-  try {
-    const resp = await costTypesApi.getAll()
-    items.value = resp.items
-  } catch {
-    toast.error('Не удалось загрузить типы расходов')
-  } finally {
-    isLoading.value = false
+  const result = await fetchCostTypes(() => costTypesApi.getAll())
+  if (result) {
+    items.value = result.items
   }
 }
 
@@ -97,12 +108,12 @@ const handleCreate = async (): Promise<void> => {
       name: form.value.name.trim(),
       description: form.value.description.trim() || undefined,
     }
-    await costTypesApi.create(payload)
+    await createCostType(() => costTypesApi.create(payload))
     toast.success('Тип расхода добавлен')
     createDialogOpen.value = false
     await loadItems()
   } catch {
-    toast.error('Не удалось создать тип расхода')
+    // Ошибка уже обработана в useApiCall
   } finally {
     isSaving.value = false
   }
@@ -117,12 +128,12 @@ const handleEdit = async (): Promise<void> => {
       description: editForm.value.description.trim() || undefined,
       isActive: editForm.value.isActive,
     }
-    await costTypesApi.update(editTarget.value.id, payload)
+    await updateCostType(() => costTypesApi.update(editTarget.value!.id, payload))
     toast.success('Тип расхода обновлён')
     editDialogOpen.value = false
     await loadItems()
   } catch {
-    toast.error('Не удалось обновить тип расхода')
+    // Ошибка уже обработана в useApiCall
   } finally {
     isSaving.value = false
   }
@@ -132,12 +143,12 @@ const handleDelete = async (): Promise<void> => {
   if (!deleteTarget.value) return
   isDeleting.value = true
   try {
-    await costTypesApi.delete(deleteTarget.value.id)
+    await deleteCostType(() => costTypesApi.delete(deleteTarget.value!.id))
     toast.success('Тип расхода удалён')
     deleteDialogOpen.value = false
     await loadItems()
   } catch {
-    toast.error('Не удалось удалить тип расхода')
+    // Ошибка уже обработана в useApiCall
   } finally {
     isDeleting.value = false
   }

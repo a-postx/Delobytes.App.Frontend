@@ -41,13 +41,12 @@ import { toast } from 'vue-sonner'
 import { workRatesApi } from '@/services/api'
 import type { WorkRateItem, CreateWorkRateRequest, UpdateWorkRateRequest } from '@/services/api'
 import { useCurrentUser } from '@/composables/useCurrentUser'
+import { useApiCall } from '@/composables/useApiCall'
 import { X } from 'lucide-vue-next'
 
 const { canWrite } = useCurrentUser()
 
 const items = ref<WorkRateItem[]>([])
-const isLoading = ref<boolean>(true)
-
 const createDialogOpen = ref<boolean>(false)
 const deleteDialogOpen = ref<boolean>(false)
 const restoreDialogOpen = ref<boolean>(false)
@@ -83,15 +82,26 @@ const formatDate = (d: string): string =>
 const formatCurrency = (v: number): string =>
   v.toLocaleString('ru-RU', { style: 'currency', currency: 'RUB', maximumFractionDigits: 2 })
 
+const { loading: isLoading, execute: fetchWorkRates } = useApiCall<{ items: WorkRateItem[] }>({
+  fallbackMessage: 'Не удалось загрузить ставки работ',
+})
+
+const { execute: createWorkRate } = useApiCall({
+  fallbackMessage: 'Не удалось создать ставку работ',
+})
+
+const { execute: deleteWorkRate } = useApiCall({
+  fallbackMessage: 'Не удалось деактивировать ставку работ',
+})
+
+const { execute: updateWorkRate } = useApiCall({
+  fallbackMessage: 'Не удалось восстановить ставку работ',
+})
+
 const loadItems = async (): Promise<void> => {
-  isLoading.value = true
-  try {
-    const resp = await workRatesApi.getAll()
-    items.value = resp.items
-  } catch {
-    toast.error('Не удалось загрузить ставки работ')
-  } finally {
-    isLoading.value = false
+  const result = await fetchWorkRates(() => workRatesApi.getAll())
+  if (result) {
+    items.value = result.items
   }
 }
 
@@ -122,12 +132,12 @@ const handleCreate = async (): Promise<void> => {
       dailyWage: Number(form.value.dailyWage),
       validFrom: form.value.validFrom,
     }
-    await workRatesApi.create(payload)
+    await createWorkRate(() => workRatesApi.create(payload))
     toast.success('Ставка работ добавлена')
     createDialogOpen.value = false
     await loadItems()
   } catch {
-    toast.error('Не удалось создать ставку работ')
+    // Ошибка уже обработана в useApiCall
   } finally {
     isSaving.value = false
   }
@@ -137,12 +147,12 @@ const handleDelete = async (): Promise<void> => {
   if (!deleteTarget.value) return
   isDeleting.value = true
   try {
-    await workRatesApi.delete(deleteTarget.value.id)
+    await deleteWorkRate(() => workRatesApi.delete(deleteTarget.value!.id))
     toast.success('Ставка работ деактивирована')
     deleteDialogOpen.value = false
     await loadItems()
   } catch {
-    toast.error('Не удалось деактивировать ставку работ')
+    // Ошибка уже обработана в useApiCall
   } finally {
     isDeleting.value = false
   }
@@ -155,12 +165,12 @@ const handleRestore = async (): Promise<void> => {
     const payload: UpdateWorkRateRequest = {
       isActive: true,
     }
-    await workRatesApi.update(restoreTarget.value.id, payload)
+    await updateWorkRate(() => workRatesApi.update(restoreTarget.value!.id, payload))
     toast.success('Ставка работ восстановлена')
     restoreDialogOpen.value = false
     await loadItems()
   } catch {
-    toast.error('Не удалось восстановить ставку работ')
+    // Ошибка уже обработана в useApiCall
   } finally {
     isSaving.value = false
   }

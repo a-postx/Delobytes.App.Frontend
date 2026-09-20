@@ -46,13 +46,13 @@ import type {
   SupplierItem,
 } from '@/services/api'
 import { useCurrentUser } from '@/composables/useCurrentUser'
+import { useApiCall } from '@/composables/useApiCall'
 import { X } from 'lucide-vue-next'
 
 const { canWrite } = useCurrentUser()
 
 const items = ref<ComponentItem[]>([])
 const suppliers = ref<SupplierItem[]>([])
-const isLoading = ref<boolean>(true)
 
 const createDialogOpen = ref<boolean>(false)
 const priceDialogOpen = ref<boolean>(false)
@@ -124,20 +124,36 @@ const isPriceDateInPast = computed<boolean>(() => {
   return priceForm.value.validFrom < today()
 })
 
+const { loading: isLoading, execute: fetchData } = useApiCall({
+  fallbackMessage: 'Не удалось загрузить данные',
+})
+
+const { execute: createComponent } = useApiCall({
+  fallbackMessage: 'Не удалось создать компонент',
+})
+
+const { execute: addComponentPrice } = useApiCall({
+  fallbackMessage: 'Не удалось добавить цену',
+})
+
+const { execute: deleteComponent } = useApiCall({
+  fallbackMessage: 'Не удалось деактивировать компонент',
+})
+
+const { execute: restoreComponent } = useApiCall({
+  fallbackMessage: 'Не удалось восстановить компонент',
+})
+
 const loadData = async (): Promise<void> => {
-  isLoading.value = true
-  try {
+  await fetchData(async () => {
     const [componentsResp, suppliersResp] = await Promise.all([
       componentsApi.getAll(),
       suppliersApi.getAll(),
     ])
     items.value = componentsResp.items
     suppliers.value = suppliersResp.items
-  } catch {
-    toast.error('Не удалось загрузить данные')
-  } finally {
-    isLoading.value = false
-  }
+    return { componentsResp, suppliersResp }
+  })
 }
 
 onMounted(loadData)
@@ -185,12 +201,12 @@ const handleCreate = async (): Promise<void> => {
       supplierId: form.value.supplierId || undefined,
       validFrom: form.value.validFrom,
     }
-    await componentsApi.create(payload)
+    await createComponent(() => componentsApi.create(payload))
     toast.success('Компонент добавлен')
     createDialogOpen.value = false
     await loadData()
   } catch {
-    toast.error('Не удалось создать компонент')
+    // Ошибка уже обработана в useApiCall
   } finally {
     isSaving.value = false
   }
@@ -213,12 +229,12 @@ const handleCreatePrice = async (): Promise<void> => {
       supplierId: priceForm.value.supplierId || undefined,
       validFrom: priceForm.value.validFrom,
     }
-    await componentsApi.createPrice(priceTarget.value.id, payload)
+    await addComponentPrice(() => componentsApi.createPrice(priceTarget.value!.id, payload))
     toast.success('Новая цена добавлена')
     priceDialogOpen.value = false
     await loadData()
   } catch {
-    toast.error('Не удалось добавить цену')
+    // Ошибка уже обработана в useApiCall
   } finally {
     isSaving.value = false
   }
@@ -228,12 +244,12 @@ const handleDelete = async (): Promise<void> => {
   if (!deleteTarget.value) return
   isDeleting.value = true
   try {
-    await componentsApi.delete(deleteTarget.value.id)
+    await deleteComponent(() => componentsApi.delete(deleteTarget.value!.id))
     toast.success('Компонент деактивирован')
     deleteDialogOpen.value = false
     await loadData()
   } catch {
-    toast.error('Не удалось деактивировать компонент')
+    // Ошибка уже обработана в useApiCall
   } finally {
     isDeleting.value = false
   }
@@ -243,12 +259,12 @@ const handleRestore = async (): Promise<void> => {
   if (!restoreTarget.value) return
   isSaving.value = true
   try {
-    await componentsApi.restore(restoreTarget.value.id)
+    await restoreComponent(() => componentsApi.restore(restoreTarget.value!.id))
     toast.success('Компонент восстановлен')
     restoreDialogOpen.value = false
     await loadData()
   } catch {
-    toast.error('Не удалось восстановить компонент')
+    // Ошибка уже обработана в useApiCall
   } finally {
     isSaving.value = false
   }

@@ -70,7 +70,17 @@ class ApiClient {
       (response) => response,
       (error: AxiosError) => {
         if (error.response) {
-          console.error('API Error:', error.response.status, error.response.data)
+          const errorData = error.response.data as any
+          const correlationId = error.response.headers['x-correlation-id']
+          
+          // Расширенное логирование с correlation ID и машиночитаемым кодом
+          console.error('API Error:', {
+            status: error.response.status,
+            code: errorData?.code,
+            message: errorData?.message,
+            correlationId,
+            url: error.config?.url,
+          })
 
           // Redirect to login on 401 only for authenticated requests,
           // not for auth endpoints themselves (login, register, etc.)
