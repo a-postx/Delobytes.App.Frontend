@@ -3,11 +3,11 @@
  * Backend serializes enums as numbers, so we use numeric values here.
  */
 export enum ProductStatus {
-  Active = 1,
-  Archived = 2,
-  DeletionPending = 3,
-  Deleted = 4,
-  DeletionFailed = 5,
+  Active = 'Active',
+  Archived = 'Archived',
+  DeletionPending = 'DeletionPending',
+  Deleted = 'Deleted',
+  DeletionFailed = 'DeletionFailed',
 }
 
 export interface ProductItem {
