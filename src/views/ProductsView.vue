@@ -92,11 +92,8 @@ const formatDate = (dateStr: string): string =>
 const loadItems = async (): Promise<void> => {
   isLoading.value = true
   try {
-    const status = statusFilter.value === 'active' ? ProductStatus.Active 
-      : statusFilter.value === 'archived' ? ProductStatus.Archived 
-      : undefined
-    
-    const resp = await catalogProductsApi.getAll(status)
+    // Всегда загружаем ВСЕ продукты без фильтра, фильтрация — на фронтенде
+    const resp = await catalogProductsApi.getAll()
     items.value = resp.items
   } catch {
     toast.error('Не удалось загрузить продукты')
