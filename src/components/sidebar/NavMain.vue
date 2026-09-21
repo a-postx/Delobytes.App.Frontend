@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ChevronRight, BookOpen, Settings, PackageOpen, Hammer, Layers, Truck, Gauge, Tag, DollarSign } from 'lucide-vue-next'
+import { ChevronRight, BookOpen, Settings, PackageOpen, Hammer, Layers, Truck, Gauge, Tag, DollarSign, Package } from 'lucide-vue-next'
 import { RouterLink } from 'vue-router'
 import {
   Collapsible,
@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/sidebar'
 
 const catalogItems = [
+  { to: '/catalogs/products', label: 'Продукты', icon: Package },
   { to: '/catalogs/suppliers', label: 'Контрагенты', icon: Truck },
   { to: '/catalogs/components', label: 'Компоненты', icon: PackageOpen },
   { to: '/catalogs/work-rates', label: 'Ставки работ', icon: Hammer },

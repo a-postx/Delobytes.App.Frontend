@@ -2,7 +2,7 @@ export { apiClient, axiosInstance } from './client'
 export { healthApi } from './endpoints/health'
 export { integrationsApi } from './endpoints/integrations'
 export { meApi } from './endpoints/me'
-export { productsApi } from './endpoints/products'
+export { catalogProductsApi } from './endpoints/products'
 export { tenantApi } from './endpoints/tenant'
 export { tenantLegalEntityApi } from './endpoints/tenantLegalEntity'
 export type {

@@ -119,3 +119,6 @@ export interface CreateConnectionResult {
   connectionId: string
   channelId: string
 }
+
+export type { ProductItem, ProductStatus, GetProductsResponse, GetProductResponse, ProductDeletionStatusResponse } from './products'
+export { ProductStatus as ProductStatusEnum } from './products'

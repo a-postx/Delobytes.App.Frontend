@@ -14,6 +14,7 @@ import AcceptInvitationView from '@/views/AcceptInvitationView.vue'
 import ComponentsView from '@/views/ComponentsView.vue'
 import SuppliersView from '@/views/SuppliersView.vue'
 import CostTypesView from '@/views/CostTypesView.vue'
+import ProductsView from '@/views/ProductsView.vue'
 import ProductChannelCostsView from '@/views/ProductChannelCostsView.vue'
 import WorkRatesView from '@/views/WorkRatesView.vue'
 import ProductWorkRatesView from '@/views/ProductWorkRatesView.vue'
@@ -92,6 +93,15 @@ export const routes: RouteRecordRaw[] = [
         component: SuppliersView,
         meta: {
           title: 'Поставщики',
+          requiresAuth: true,
+        },
+      },
+      {
+        path: 'catalogs/products',
+        name: 'products',
+        component: ProductsView,
+        meta: {
+          title: 'Продукты',
           requiresAuth: true,
         },
       },
