@@ -36,16 +36,16 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { toast } from 'vue-sonner'
-import { productWorkRatesApi, productsApi } from '@/services/api'
+import { productWorkRatesApi, catalogProductsApi } from '@/services/api'
 import type { ProductWorkRateItem, CreateProductWorkRateRequest } from '@/services/api'
-import type { Product } from '@/types'
+import type { ProductItem } from '@/types/products'
 import { useCurrentUser } from '@/composables/useCurrentUser'
 import { X } from 'lucide-vue-next'
 
 const { canWrite } = useCurrentUser()
 
 const items = ref<ProductWorkRateItem[]>([])
-const products = ref<Product[]>([])
+const products = ref<ProductItem[]>([])
 const isLoading = ref<boolean>(true)
 
 const createDialogOpen = ref<boolean>(false)
@@ -64,12 +64,12 @@ const productName = (id: string): string => products.value.find(p => p.id === id
 const loadData = async (): Promise<void> => {
   isLoading.value = true
   try {
-    const [ratesResp, productsData] = await Promise.all([
+    const [ratesResp, productsResp] = await Promise.all([
       productWorkRatesApi.getAll(),
-      productsApi.getAll(),
+      catalogProductsApi.getAll(),
     ])
     items.value = ratesResp.items
-    products.value = productsData
+    products.value = productsResp.items
   } catch {
     toast.error('Не удалось загрузить данные')
   } finally {

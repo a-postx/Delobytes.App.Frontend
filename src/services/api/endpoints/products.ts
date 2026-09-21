@@ -1,6 +1,5 @@
 import { axiosInstance } from '../client'
 import type {
-  ProductItem,
   ProductStatus,
   GetProductsResponse,
   GetProductResponse,

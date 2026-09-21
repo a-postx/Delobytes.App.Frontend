@@ -36,21 +36,20 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { toast } from 'vue-sonner'
-import { productChannelCostsApi, costTypesApi } from '@/services/api'
+import { productChannelCostsApi, costTypesApi, catalogProductsApi } from '@/services/api'
 import type {
   ProductChannelCostItem,
   UpsertProductChannelCostRequest,
   CostTypeItem,
 } from '@/services/api'
-import { productsApi } from '@/services/api'
-import type { Product } from '@/types'
+import type { ProductItem } from '@/types/products'
 import { useCurrentUser } from '@/composables/useCurrentUser'
 import { X } from 'lucide-vue-next'
 
 const { canWrite } = useCurrentUser()
 
 const items = ref<ProductChannelCostItem[]>([])
-const products = ref<Product[]>([])
+const products = ref<ProductItem[]>([])
 const costTypes = ref<CostTypeItem[]>([])
 const isLoading = ref<boolean>(true)
 
@@ -84,11 +83,11 @@ const filteredItems = computed<ProductChannelCostItem[]>(() => {
 const loadData = async (): Promise<void> => {
   isLoading.value = true
   try {
-    const [productsData, costTypesResp] = await Promise.all([
-      productsApi.getAll(),
+    const [productsResp, costTypesResp] = await Promise.all([
+      catalogProductsApi.getAll(),
       costTypesApi.getAll(),
     ])
-    products.value = productsData
+    products.value = productsResp.items
     costTypes.value = costTypesResp.items
 
     if (filterProductId.value) {
