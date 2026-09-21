@@ -162,10 +162,6 @@ onUnmounted(() => {
   stopPolling()
 })
 
-watch(statusFilter, () => {
-  loadItems()
-})
-
 const openCreate = (): void => {
   form.value = emptyForm()
   createDialogOpen.value = true
