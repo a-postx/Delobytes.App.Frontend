@@ -4,6 +4,7 @@ import {
   BookOpen,
   Settings,
   Layers,
+  LayoutDashboard,
   PackageOpen,
   Hammer,
   Truck,
@@ -26,7 +27,6 @@ import {
   SidebarMenuSub,
   SidebarMenuSubButton,
   SidebarMenuSubItem,
-  SidebarSeparator,
 } from '@/components/ui/sidebar'
 
 const referenceItems = [
@@ -49,14 +49,13 @@ const referenceItems = [
           tooltip="Главная"
         >
           <RouterLink to="/">
+            <LayoutDashboard />
             <span>Главная</span>
           </RouterLink>
         </SidebarMenuButton>
       </SidebarMenuItem>
     </SidebarMenu>
   </SidebarGroup>
-
-  <SidebarSeparator />
 
   <SidebarGroup>
     <SidebarGroupLabel>Платформа</SidebarGroupLabel>

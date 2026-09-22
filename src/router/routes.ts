@@ -1,5 +1,6 @@
 import type { RouteRecordRaw } from 'vue-router'
 import AppLayout from '@/layouts/AppLayout.vue'
+import { NavGroup } from '@/router/navGroups'
 import HomeView from '@/views/HomeView.vue'
 import ApiConnectionTestView from '@/views/ApiConnectionTestView.vue'
 import LoginView from '@/views/LoginView.vue'
@@ -38,6 +39,7 @@ export const routes: RouteRecordRaw[] = [
         name: 'home',
         component: HomeView,
         meta: {
+          group: NavGroup.Panels,
           title: 'Главная',
           requiresAuth: true,
         },
@@ -56,6 +58,7 @@ export const routes: RouteRecordRaw[] = [
         name: 'settings',
         component: SettingsView,
         meta: {
+          group: NavGroup.System,
           title: 'Настройки',
           requiresAuth: true,
         },
@@ -74,6 +77,7 @@ export const routes: RouteRecordRaw[] = [
         name: 'integrations',
         component: IntegrationsView,
         meta: {
+          group: NavGroup.System,
           title: 'Интеграции',
           requiresAuth: true,
         },
@@ -83,6 +87,7 @@ export const routes: RouteRecordRaw[] = [
         name: 'components',
         component: ComponentsView,
         meta: {
+          group: NavGroup.Platform,
           title: 'Компоненты',
           requiresAuth: true,
         },
@@ -92,6 +97,7 @@ export const routes: RouteRecordRaw[] = [
         name: 'suppliers',
         component: SuppliersView,
         meta: {
+          group: NavGroup.Platform,
           title: 'Поставщики',
           requiresAuth: true,
         },
@@ -101,6 +107,7 @@ export const routes: RouteRecordRaw[] = [
         name: 'products',
         component: ProductsView,
         meta: {
+          group: NavGroup.Platform,
           title: 'Каталог',
           requiresAuth: true,
         },
@@ -110,6 +117,7 @@ export const routes: RouteRecordRaw[] = [
         name: 'cost-types',
         component: CostTypesView,
         meta: {
+          group: NavGroup.Platform,
           title: 'Типы расходов',
           requiresAuth: true,
         },
@@ -119,6 +127,7 @@ export const routes: RouteRecordRaw[] = [
         name: 'product-channel-costs',
         component: ProductChannelCostsView,
         meta: {
+          group: NavGroup.Platform,
           title: 'Расходы по каналам',
           requiresAuth: true,
         },
@@ -128,6 +137,7 @@ export const routes: RouteRecordRaw[] = [
         name: 'work-rates',
         component: WorkRatesView,
         meta: {
+          group: NavGroup.Platform,
           title: 'Ставки работ',
           requiresAuth: true,
         },
@@ -137,6 +147,7 @@ export const routes: RouteRecordRaw[] = [
         name: 'product-work-rates',
         component: ProductWorkRatesView,
         meta: {
+          group: NavGroup.Platform,
           title: 'Нормы выработки',
           requiresAuth: true,
         },

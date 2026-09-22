@@ -10,12 +10,17 @@ import {
 } from '@/components/ui/breadcrumb'
 import { Separator } from '@/components/ui/separator'
 import { SidebarTrigger } from '@/components/ui/sidebar'
+import { resolveNavGroupLabel } from '@/router/navGroups'
 
 const route = useRoute()
 
-const breadcrumbLabel = computed<string>(() => {
-  return (route.meta.title as string) ?? ''
-})
+/**
+ * Хлебные крошки = раздел меню + название страницы. Страницы, которых нет
+ * в меню, показывают только своё название, а не выдуманный раздел.
+ */
+const sectionLabel = computed<string | null>(() => resolveNavGroupLabel(route))
+
+const pageLabel = computed<string>(() => (route.meta.title as string) ?? '')
 </script>
 
 <template>
@@ -28,12 +33,21 @@ const breadcrumbLabel = computed<string>(() => {
       />
       <Breadcrumb>
         <BreadcrumbList>
-          <BreadcrumbItem class="hidden md:block">
-            <BreadcrumbPage>Платформа</BreadcrumbPage>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator class="hidden md:block" />
+          <template v-if="sectionLabel">
+            <BreadcrumbItem class="hidden md:block">
+              <BreadcrumbPage
+                data-crumb="section"
+                class="text-muted-foreground"
+              >
+                {{ sectionLabel }}
+              </BreadcrumbPage>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator class="hidden md:block" />
+          </template>
           <BreadcrumbItem>
-            <BreadcrumbPage>{{ breadcrumbLabel }}</BreadcrumbPage>
+            <BreadcrumbPage data-crumb="page">
+              {{ pageLabel }}
+            </BreadcrumbPage>
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
