@@ -82,6 +82,18 @@ class ApiClient {
             url: error.config?.url,
           })
 
+          // Обогащение серверных ошибок понятным сообщением, если бэкенд не вернул его
+          if (error.response.status >= 500) {
+            if (!errorData || !errorData.message) {
+              // Модифицируем response.data, чтобы добавить fallback сообщение
+              error.response.data = {
+                ...errorData,
+                message: errorData?.message || 'Внутренняя ошибка сервера. Попробуйте позже.',
+                code: errorData?.code || 'common.unexpected_error',
+              }
+            }
+          }
+
           // Redirect to login on 401 only for authenticated requests,
           // not for auth endpoints themselves (login, register, etc.)
           const url = error.config?.url ?? ''
