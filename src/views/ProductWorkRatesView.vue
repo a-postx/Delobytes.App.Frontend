@@ -144,7 +144,7 @@ const inputClass = 'mt-1'
           <Gauge class="size-5 text-primary" />
           Нормы выработки
         </h1>
-        <p class="text-sm text-muted-foreground">Количество единиц продукции в день на одного сотрудника по товару</p>
+        <p class="text-sm text-muted-foreground">Количество единиц товара в день на одного сотрудника по товару</p>
       </div>
       <Button v-if="canWrite" @click="openCreate" :disabled="products.length === 0" class="gap-2">
         <Plus class="size-4" />

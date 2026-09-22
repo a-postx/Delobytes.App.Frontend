@@ -205,7 +205,7 @@ const inputClass = 'mt-1'
           <DollarSign class="size-5 text-primary" />
           Расходы по каналам
         </h1>
-        <p class="text-sm text-muted-foreground">Расходы продукта в разрезе каналов продаж</p>
+        <p class="text-sm text-muted-foreground">Расходы товара в разрезе каналов продаж</p>
       </div>
       <div class="flex items-center gap-3">
         <select

@@ -92,11 +92,11 @@ const formatDate = (dateStr: string): string =>
 const loadItems = async (): Promise<void> => {
   isLoading.value = true
   try {
-    // Всегда загружаем ВСЕ продукты без фильтра, фильтрация — на фронтенде
+    // Всегда загружаем ВСЕ товары без фильтра, фильтрация — на фронтенде
     const resp = await catalogProductsApi.getAll()
     items.value = resp.items
   } catch {
-    toast.error('Не удалось загрузить продукты')
+    toast.error('Не удалось загрузить товары')
   } finally {
     isLoading.value = false
   }
@@ -116,14 +116,14 @@ const checkDeletionStatus = async (): Promise<void> => {
       if (status.status === ProductStatus.Deleted) {
         items.value = items.value.filter(p => p.id !== product.id)
         deletingProductIds.value.delete(product.id)
-        toast.success(`Продукт "${product.name}" успешно удалён`)
+        toast.success(`Товар "${product.name}" успешно удалён`)
       } else if (status.status === ProductStatus.DeletionFailed) {
         const index = items.value.findIndex(p => p.id === product.id)
         if (index !== -1) {
           items.value[index] = { ...items.value[index], status: ProductStatus.DeletionFailed }
         }
         deletingProductIds.value.delete(product.id)
-        toast.error(`Невозможно удалить продукт "${product.name}": есть история продаж`)
+        toast.error(`Невозможно удалить товар "${product.name}": есть история продаж`)
       }
     } catch (error) {
       console.error('Error checking deletion status:', error)
@@ -204,11 +204,11 @@ const handleCreate = async (): Promise<void> => {
       description: form.value.description.trim() || undefined,
     }
     await catalogProductsApi.create(payload)
-    toast.success('Продукт добавлен')
+    toast.success('Товар добавлен')
     createDialogOpen.value = false
     await loadItems()
   } catch {
-    toast.error('Не удалось создать продукт')
+    toast.error('Не удалось создать товар')
   } finally {
     isSaving.value = false
   }
@@ -225,11 +225,11 @@ const handleEdit = async (): Promise<void> => {
       description: form.value.description.trim() || undefined,
     }
     await catalogProductsApi.update(editTarget.value.id, payload)
-    toast.success('Продукт обновлён')
+    toast.success('Товар обновлён')
     editDialogOpen.value = false
     await loadItems()
   } catch {
-    toast.error('Не удалось обновить продукт')
+    toast.error('Не удалось обновить товар')
   } finally {
     isSaving.value = false
   }
@@ -254,7 +254,7 @@ const handleDelete = async (): Promise<void> => {
     toast.info('Запрос на удаление отправлен, проверяем историю продаж...')
     deleteDialogOpen.value = false
   } catch {
-    toast.error('Не удалось удалить продукт')
+    toast.error('Не удалось удалить товар')
   } finally {
     isDeleting.value = false
   }
@@ -265,11 +265,11 @@ const handleArchive = async (): Promise<void> => {
   isSaving.value = true
   try {
     await catalogProductsApi.archive(archiveTarget.value.id)
-    toast.success('Продукт перемещён в архив')
+    toast.success('Товар перемещён в архив')
     archiveDialogOpen.value = false
     await loadItems()
   } catch {
-    toast.error('Не удалось архивировать продукт')
+    toast.error('Не удалось архивировать товар')
   } finally {
     isSaving.value = false
   }
@@ -280,11 +280,11 @@ const handleRestore = async (): Promise<void> => {
   isSaving.value = true
   try {
     await catalogProductsApi.restore(restoreTarget.value.id)
-    toast.success('Продукт восстановлен')
+    toast.success('Товар восстановлен')
     restoreDialogOpen.value = false
     await loadItems()
   } catch {
-    toast.error('Не удалось восстановить продукт')
+    toast.error('Не удалось восстановить товар')
   } finally {
     isSaving.value = false
   }
@@ -301,7 +301,7 @@ const inputClass = 'mt-1'
       <div class="flex flex-col gap-1">
         <h1 class="text-xl font-bold flex items-center gap-2">
           <Package class="size-5 text-primary" />
-          Продукты
+          Товары
         </h1>
         <p class="text-sm text-muted-foreground">Справочник товаров и SKU</p>
       </div>
@@ -325,14 +325,14 @@ const inputClass = 'mt-1'
           <Package class="size-6 text-muted-foreground" />
         </div>
         <div>
-          <h3 class="font-semibold">Нет продуктов</h3>
+          <h3 class="font-semibold">Нет товаров</h3>
           <p class="text-sm text-muted-foreground">
-            {{ statusFilter === 'active' ? 'Добавьте первый продукт' : 'В этом разделе пока ничего нет' }}
+            {{ statusFilter === 'active' ? 'Добавьте первый товар' : 'В этом разделе пока ничего нет' }}
           </p>
         </div>
         <Button v-if="canWrite && statusFilter === 'active'" @click="openCreate" variant="outline" class="gap-2 mt-2">
           <Plus class="size-4" />
-          Добавить продукт
+          Добавить товар
         </Button>
       </div>
     </div>
@@ -429,9 +429,9 @@ const inputClass = 'mt-1'
         <DialogContent :class="dialogContentClass">
           <div class="flex items-start justify-between mb-4">
             <div>
-              <DialogTitle class="text-lg font-semibold">Добавить продукт</DialogTitle>
+              <DialogTitle class="text-lg font-semibold">Добавить товар</DialogTitle>
               <DialogDescription class="text-sm text-muted-foreground mt-1">
-                Создайте новый продукт в каталоге
+                Создайте новый товар в каталоге
               </DialogDescription>
             </div>
             <DialogClose as-child>
@@ -457,7 +457,7 @@ const inputClass = 'mt-1'
               <Input 
                 id="create-name" 
                 v-model="form.name" 
-                placeholder="Название продукта" 
+                placeholder="Название товара" 
                 :class="inputClass"
               />
             </div>
@@ -493,9 +493,9 @@ const inputClass = 'mt-1'
         <DialogContent :class="dialogContentClass">
           <div class="flex items-start justify-between mb-4">
             <div>
-              <DialogTitle class="text-lg font-semibold">Изменить продукт</DialogTitle>
+              <DialogTitle class="text-lg font-semibold">Изменить товар</DialogTitle>
               <DialogDescription class="text-sm text-muted-foreground mt-1">
-                Обновите информацию о продукте
+                Обновите информацию о товаре
               </DialogDescription>
             </div>
             <DialogClose as-child>
@@ -522,7 +522,7 @@ const inputClass = 'mt-1'
               <Input 
                 id="edit-name" 
                 v-model="form.name" 
-                placeholder="Название продукта" 
+                placeholder="Название товара" 
                 :class="inputClass"
               />
             </div>
@@ -556,9 +556,9 @@ const inputClass = 'mt-1'
       <AlertDialogPortal>
         <AlertDialogOverlay class="fixed inset-0 z-50 bg-black/50" />
         <AlertDialogContent class="fixed top-[50%] left-[50%] z-50 w-full max-w-lg translate-x-[-50%] translate-y-[-50%]">
-          <AlertDialogTitle>Удалить продукт?</AlertDialogTitle>
+          <AlertDialogTitle>Удалить товар?</AlertDialogTitle>
           <AlertDialogDescription>
-            Будет выполнена проверка наличия заказов с этим продуктом. Если заказы существуют, удаление будет отменено.
+            Будет выполнена проверка наличия заказов с этим товаром. Если заказы существуют, удаление будет отменено.
             Это действие может занять несколько секунд.
           </AlertDialogDescription>
           <div class="flex justify-end gap-3 mt-6">
@@ -583,7 +583,7 @@ const inputClass = 'mt-1'
         <AlertDialogContent class="fixed top-[50%] left-[50%] z-50 w-full max-w-lg translate-x-[-50%] translate-y-[-50%]">
           <AlertDialogTitle>Переместить в архив?</AlertDialogTitle>
           <AlertDialogDescription>
-            Продукт будет скрыт из активного списка, но все данные и история продаж сохранятся.
+            Товар будет скрыт из активного списка, но все данные и история продаж сохранятся.
             Вы сможете восстановить его в любое время.
           </AlertDialogDescription>
           <div class="flex justify-end gap-3 mt-6">
@@ -606,9 +606,9 @@ const inputClass = 'mt-1'
       <AlertDialogPortal>
         <AlertDialogOverlay class="fixed inset-0 z-50 bg-black/50" />
         <AlertDialogContent class="fixed top-[50%] left-[50%] z-50 w-full max-w-lg translate-x-[-50%] translate-y-[-50%]">
-          <AlertDialogTitle>Восстановить продукт?</AlertDialogTitle>
+          <AlertDialogTitle>Восстановить товар?</AlertDialogTitle>
           <AlertDialogDescription>
-            Продукт станет активным и снова появится в основном списке.
+            Товар станет активным и снова появится в основном списке.
           </AlertDialogDescription>
           <div class="flex justify-end gap-3 mt-6">
             <AlertDialogCancel as-child>

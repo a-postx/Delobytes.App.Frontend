@@ -1,5 +1,16 @@
 <script setup lang="ts">
-import { ChevronRight, BookOpen, Settings, PackageOpen, Hammer, Layers, Truck, Gauge, Tag, DollarSign, Package } from 'lucide-vue-next'
+import {
+  ChevronRight,
+  BookOpen,
+  Settings,
+  Layers,
+  PackageOpen,
+  Hammer,
+  Truck,
+  Gauge,
+  Tag,
+  DollarSign,
+} from 'lucide-vue-next'
 import { RouterLink } from 'vue-router'
 import {
   Collapsible,
@@ -15,10 +26,10 @@ import {
   SidebarMenuSub,
   SidebarMenuSubButton,
   SidebarMenuSubItem,
+  SidebarSeparator,
 } from '@/components/ui/sidebar'
 
-const catalogItems = [
-  { to: '/catalogs/products', label: 'Продукты', icon: Package },
+const referenceItems = [
   { to: '/catalogs/suppliers', label: 'Контрагенты', icon: Truck },
   { to: '/catalogs/components', label: 'Компоненты', icon: PackageOpen },
   { to: '/catalogs/work-rates', label: 'Ставки работ', icon: Hammer },
@@ -30,9 +41,27 @@ const catalogItems = [
 
 <template>
   <SidebarGroup>
+    <SidebarGroupLabel>Панели</SidebarGroupLabel>
+    <SidebarMenu>
+      <SidebarMenuItem>
+        <SidebarMenuButton
+          as-child
+          tooltip="Главная"
+        >
+          <RouterLink to="/">
+            <span>Главная</span>
+          </RouterLink>
+        </SidebarMenuButton>
+      </SidebarMenuItem>
+    </SidebarMenu>
+  </SidebarGroup>
+
+  <SidebarSeparator />
+
+  <SidebarGroup>
     <SidebarGroupLabel>Платформа</SidebarGroupLabel>
     <SidebarMenu>
-      <!-- Products -->
+      <!-- Товары -->
       <Collapsible
         as-child
         :default-open="true"
@@ -50,8 +79,8 @@ const catalogItems = [
             <SidebarMenuSub>
               <SidebarMenuSubItem>
                 <SidebarMenuSubButton as-child>
-                  <RouterLink to="/">
-                    <span>Список товаров</span>
+                  <RouterLink to="/catalogs/products">
+                    <span>Каталог</span>
                   </RouterLink>
                 </SidebarMenuSubButton>
               </SidebarMenuSubItem>
@@ -60,7 +89,7 @@ const catalogItems = [
         </SidebarMenuItem>
       </Collapsible>
 
-      <!-- Catalogs -->
+      <!-- Справочники -->
       <Collapsible
         as-child
         :default-open="true"
@@ -77,7 +106,7 @@ const catalogItems = [
           <CollapsibleContent>
             <SidebarMenuSub>
               <SidebarMenuSubItem
-                v-for="item in catalogItems"
+                v-for="item in referenceItems"
                 :key="item.to"
               >
                 <SidebarMenuSubButton as-child>

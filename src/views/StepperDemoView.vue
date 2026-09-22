@@ -28,7 +28,7 @@ interface Step {
 }
 
 const steps: Step[] = [
-  { step: 1, title: 'Основная информация', description: 'Заполните данные о продукте' },
+  { step: 1, title: 'Основная информация', description: 'Заполните данные о товаре' },
   { step: 2, title: 'Параметры', description: 'Настройте ценообразование' },
   { step: 3, title: 'Подтверждение', description: 'Проверьте и отправьте данные' },
 ]

@@ -101,7 +101,7 @@ export const routes: RouteRecordRaw[] = [
         name: 'products',
         component: ProductsView,
         meta: {
-          title: 'Продукты',
+          title: 'Каталог',
           requiresAuth: true,
         },
       },
