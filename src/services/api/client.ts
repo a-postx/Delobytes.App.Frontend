@@ -82,15 +82,25 @@ class ApiClient {
             url: error.config?.url,
           })
 
-          // Обогащение серверных ошибок понятным сообщением, если бэкенд не вернул его
-          if (error.response.status >= 500) {
-            if (!errorData || !errorData.message) {
-              // Модифицируем response.data, чтобы добавить fallback сообщение
-              error.response.data = {
-                ...errorData,
-                message: errorData?.message || 'Внутренняя ошибка сервера. Попробуйте позже.',
-                code: errorData?.code || 'common.unexpected_error',
-              }
+          // Обогащение ошибок понятным сообщением, если бэкенд не вернул его
+          // или вернул пустое тело (например, при проблемах с middleware)
+          if (error.response.status >= 400 && (!errorData || !errorData.message)) {
+            const defaultMessages: Record<number, string> = {
+              400: 'Неверный запрос. Проверьте введённые данные.',
+              401: 'Требуется авторизация.',
+              403: 'Недостаточно прав для выполнения операции.',
+              404: 'Запрошенный ресурс не найден.',
+              409: 'Конфликт данных. Возможно, ресурс уже существует.',
+              422: 'Проверьте корректность отправленных данных.',
+              500: 'Внутренняя ошибка сервера. Попробуйте позже.',
+              502: 'Сервис временно недоступен.',
+              503: 'Сервис на обслуживании. Попробуйте позже.',
+            }
+
+            error.response.data = {
+              ...errorData,
+              message: errorData?.message || defaultMessages[error.response.status] || 'Произошла ошибка. Попробуйте ещё раз.',
+              code: errorData?.code || 'common.unexpected_error',
             }
           }
 
