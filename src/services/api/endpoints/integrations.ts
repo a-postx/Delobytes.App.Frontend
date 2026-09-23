@@ -40,7 +40,7 @@ export const integrationsApi = {
     } catch (error: unknown) {
       const axiosError = error as AxiosError<ApiErrorResponse>
       const status = axiosError.response?.status
-      if (status === 400 || status === 409) {
+      if (status === 400 || status === 409 || status === 422) {
         const message = axiosError.response?.data?.message ?? 'Ошибка запроса'
         throw { message }
       }
