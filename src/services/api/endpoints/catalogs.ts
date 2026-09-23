@@ -121,8 +121,10 @@ export interface ChannelItem {
   id: string
   systemChannelTemplateId?: string
   name: string
+  isCustom: boolean
   isActive: boolean
   createdAt: string
+  updatedAt?: string
 }
 
 export interface GetChannelsResponse {
@@ -132,6 +134,11 @@ export interface GetChannelsResponse {
 export interface CreateChannelRequest {
   systemChannelTemplateId?: string
   name: string
+  customApiUrl?: string
+}
+
+export interface CreateChannelResponse {
+  id: string
 }
 
 // ---------- Product Channel Costs ----------
