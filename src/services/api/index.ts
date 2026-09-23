@@ -11,6 +11,7 @@ export type {
   UpdateTenantLegalEntityResponse,
 } from './endpoints/tenantLegalEntity'
 export {
+  channelsApi,
   suppliersApi,
   componentsApi,
   costTypesApi,
@@ -19,6 +20,10 @@ export {
   productWorkRatesApi,
 } from './endpoints/catalogs'
 export type {
+  ChannelItem,
+  GetChannelsResponse,
+  CreateChannelRequest,
+  CreateChannelResponse,
   SupplierItem,
   GetSuppliersResponse,
   CreateSupplierRequest,

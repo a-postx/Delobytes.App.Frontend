@@ -20,6 +20,7 @@ interface ApiErrorResponse {
 }
 
 export const integrationsApi = {
+  /** Каталог поддерживаемых системных шаблонов каналов (Wildberries, Ozon, ...). */
   getAvailableChannels: async (): Promise<AvailableChannel[]> => {
     const response = await axiosInstance.get<ChannelsResponse>('/api/integrations/channels')
     return response.data.items
@@ -30,6 +31,7 @@ export const integrationsApi = {
     return response.data.items
   },
 
+  /** channelId — идентификатор уже существующего Catalog.Channel, созданного заранее через catalogsApi/channelsApi. */
   createConnection: async (payload: CreateConnectionPayload): Promise<CreateConnectionResult> => {
     try {
       const response = await axiosInstance.post<CreateConnectionResult>(

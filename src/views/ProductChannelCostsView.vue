@@ -36,11 +36,12 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { toast } from 'vue-sonner'
-import { productChannelCostsApi, costTypesApi, catalogProductsApi } from '@/services/api'
+import { productChannelCostsApi, costTypesApi, catalogProductsApi, channelsApi } from '@/services/api'
 import type {
   ProductChannelCostItem,
   UpsertProductChannelCostRequest,
   CostTypeItem,
+  ChannelItem,
 } from '@/services/api'
 import type { ProductItem } from '@/types/products'
 import { useCurrentUser } from '@/composables/useCurrentUser'
@@ -50,6 +51,7 @@ const { canWrite } = useCurrentUser()
 
 const items = ref<ProductChannelCostItem[]>([])
 const products = ref<ProductItem[]>([])
+const channels = ref<ChannelItem[]>([])
 const costTypes = ref<CostTypeItem[]>([])
 const isLoading = ref<boolean>(true)
 
@@ -72,6 +74,9 @@ const activeCostTypes = computed(() => costTypes.value.filter(ct => ct.isActive)
 const productName = (id: string): string =>
   products.value.find(p => p.id === id)?.name ?? id.slice(0, 8) + '...'
 
+const channelName = (id: string): string =>
+  channels.value.find(c => c.id === id)?.name ?? id.slice(0, 8) + '...'
+
 const formatAmount = (amount: number): string =>
   new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB', minimumFractionDigits: 2 }).format(amount)
 
@@ -83,12 +88,14 @@ const filteredItems = computed<ProductChannelCostItem[]>(() => {
 const loadData = async (): Promise<void> => {
   isLoading.value = true
   try {
-    const [productsResp, costTypesResp] = await Promise.all([
+    const [productsResp, costTypesResp, channelsResp] = await Promise.all([
       catalogProductsApi.getAll(),
       costTypesApi.getAll(),
+      channelsApi.getAll(),
     ])
     products.value = productsResp.items
     costTypes.value = costTypesResp.items
+    channels.value = channelsResp.items
 
     if (filterProductId.value) {
       const resp = await productChannelCostsApi.getByProduct(filterProductId.value)
@@ -111,7 +118,7 @@ onMounted(loadData)
 const openCreate = (): void => {
   form.value = {
     productId: products.value[0]?.id ?? '',
-    channelId: '',
+    channelId: channels.value[0]?.id ?? '',
     costTypeId: activeCostTypes.value[0]?.id ?? '',
     amount: '',
   }
@@ -131,7 +138,7 @@ const openDelete = (item: ProductChannelCostItem): void => {
 
 const handleCreate = async (): Promise<void> => {
   if (!form.value.productId) { toast.error('Выберите товар'); return }
-  if (!form.value.channelId.trim()) { toast.error('Укажите ID канала'); return }
+  if (!form.value.channelId) { toast.error('Выберите канал продаж'); return }
   if (!form.value.costTypeId) { toast.error('Выберите тип расхода'); return }
   const amount = Number(form.value.amount)
   if (isNaN(amount) || amount < 0) { toast.error('Укажите корректную сумму'); return }
@@ -140,7 +147,7 @@ const handleCreate = async (): Promise<void> => {
   try {
     const payload: UpsertProductChannelCostRequest = {
       productId: form.value.productId,
-      channelId: form.value.channelId.trim(),
+      channelId: form.value.channelId,
       costTypeId: form.value.costTypeId,
       amount,
     }
@@ -216,7 +223,7 @@ const inputClass = 'mt-1'
           <option value="">Все товары</option>
           <option v-for="p in products" :key="p.id" :value="p.id">{{ p.name }}</option>
         </select>
-        <Button v-if="canWrite" @click="openCreate" :disabled="products.length === 0 || activeCostTypes.length === 0" class="gap-2">
+        <Button v-if="canWrite" @click="openCreate" :disabled="products.length === 0 || activeCostTypes.length === 0 || channels.length === 0" class="gap-2">
           <Plus class="size-4" />
           Добавить
         </Button>
@@ -225,6 +232,10 @@ const inputClass = 'mt-1'
 
     <div v-if="activeCostTypes.length === 0 && !isLoading" class="flex items-start gap-3 rounded-lg border border-warning/30 bg-warning/5 px-4 py-3 text-sm text-muted-foreground">
       <p>Нет активных типов расходов. Сначала добавьте типы в справочнике «Типы расходов».</p>
+    </div>
+
+    <div v-if="channels.length === 0 && !isLoading" class="flex items-start gap-3 rounded-lg border border-warning/30 bg-warning/5 px-4 py-3 text-sm text-muted-foreground">
+      <p>Нет ни одного канала продаж. Добавьте его на странице «Интеграции».</p>
     </div>
 
     <div v-if="isLoading" class="rounded-xl border border-border bg-card overflow-hidden">
@@ -341,7 +352,7 @@ const inputClass = 'mt-1'
           <DialogDescription class="sr-only">Редактирование суммы расхода</DialogDescription>
           <div class="flex flex-col gap-4">
             <p class="text-sm text-muted-foreground">
-              {{ productName(editTarget?.productId ?? '') }} — {{ editTarget?.costTypeName }}
+              {{ productName(editTarget?.productId ?? '') }} · {{ channelName(editTarget?.channelId ?? '') }} — {{ editTarget?.costTypeName }}
             </p>
             <div :class="fieldClass">
               <Label>Сумма, ₽</Label>

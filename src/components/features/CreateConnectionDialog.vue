@@ -15,12 +15,15 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Spinner } from '@/components/ui/spinner'
 import { integrationsApi } from '@/services/api'
-import type { AvailableChannel } from '@/types'
 import { toast } from 'vue-sonner'
 
 const props = defineProps<{
-  channel: AvailableChannel
   modelValue: boolean
+  // Канал уже существует (создан заранее в Catalog) — сюда только привязываем подключение.
+  channelId: string
+  channelName: string
+  templateCode: string
+  templateDisplayName: string
 }>()
 
 const emit = defineEmits<{
@@ -58,7 +61,7 @@ const handleSubmit = async (): Promise<void> => {
     return
   }
 
-  if (props.channel.code === 'ozon' && sellerId.value.trim().length === 0) {
+  if (props.templateCode === 'ozon' && sellerId.value.trim().length === 0) {
     toast.error('Поле Client ID обязательно для заполнения')
     return
   }
@@ -66,16 +69,15 @@ const handleSubmit = async (): Promise<void> => {
   isSubmitting.value = true
 
   try {
-    const payload = {
-      systemChannelTemplateCode: props.channel.code,
+    await integrationsApi.createConnection({
+      channelId: props.channelId,
+      systemChannelTemplateCode: props.templateCode,
       apiKey: trimmedApiKey,
-      ...(props.channel.code === 'ozon' && {
+      ...(props.templateCode === 'ozon' && {
         apiSecret: apiSecret.value.trim() || undefined,
         settings: { sellerId: sellerId.value.trim() },
       }),
-    }
-
-    await integrationsApi.createConnection(payload)
+    })
 
     toast.success('Подключение создано')
     emit('connected')
@@ -109,16 +111,17 @@ const handleSubmit = async (): Promise<void> => {
         class="data-[state=open]:animate-contentShow bg-popover text-popover-foreground fixed top-[50%] left-[50%] max-h-[85vh] w-[90vw] max-w-[500px] translate-x-[-50%] translate-y-[-50%] rounded-lg border shadow-lg p-6 focus:outline-none z-[100]"
       >
         <DialogTitle class="text-foreground m-0 text-lg font-semibold">
-          Подключить {{ props.channel.displayName }}
+          Подключить «{{ props.channelName }}»
         </DialogTitle>
         <DialogDescription class="text-muted-foreground mt-2 mb-4 text-sm leading-normal">
-          Введите данные для подключения к каналу продаж.
+          Введите данные API {{ props.templateDisplayName }}. Если позже токен устареет,
+          канал и его исторические данные останутся доступны — потребуется лишь обновить подключение.
         </DialogDescription>
 
         <form @submit.prevent="handleSubmit">
           <div class="space-y-4">
             <!-- Client ID (ozon only) -->
-            <div v-if="props.channel.code === 'ozon'" class="space-y-2">
+            <div v-if="props.templateCode === 'ozon'" class="space-y-2">
               <Label for="conn-seller-id">Client ID</Label>
               <Input
                 id="conn-seller-id"
@@ -148,7 +151,7 @@ const handleSubmit = async (): Promise<void> => {
             </div>
 
             <!-- API Secret (ozon only, optional) -->
-            <div v-if="props.channel.code === 'ozon'" class="space-y-2">
+            <div v-if="props.templateCode === 'ozon'" class="space-y-2">
               <Label for="conn-api-secret">API-секрет <span class="text-muted-foreground">(необязательно)</span></Label>
               <Input
                 id="conn-api-secret"

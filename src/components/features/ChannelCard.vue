@@ -2,7 +2,6 @@
 import { ref } from 'vue'
 import { Ellipsis, Trash2 } from 'lucide-vue-next'
 import { toast } from 'vue-sonner'
-import type { AvailableChannel } from '@/types'
 import {
   Card,
   CardContent,
@@ -30,9 +29,24 @@ import {
   AlertDialogRoot,
 } from '@/components/ui/alert-dialog'
 import { integrationsApi } from '@/services/api'
+import type { Connection } from '@/types'
+
+/**
+ * Channel — самостоятельная бизнес-сущность (Catalog), Connection — техническое
+ * подключение (Integrations), которое может отсутствовать/быть неактивным.
+ * Карточка отображает канал ВСЕГДА, независимо от состояния подключения.
+ */
+export interface ChannelCardModel {
+  id: string
+  name: string
+  templateDisplayName: string | null
+  isCustom: boolean
+  isActive: boolean
+  connection: Connection | null
+}
 
 const props = defineProps<{
-  channel: AvailableChannel
+  channel: ChannelCardModel
 }>()
 
 const emit = defineEmits<{
@@ -43,20 +57,20 @@ const emit = defineEmits<{
 const isDeleting = ref<boolean>(false)
 const isDeleteDialogOpen = ref<boolean>(false)
 
-const hasAccountInfo = (channel: AvailableChannel): boolean => {
-  return !!(channel.customerName || channel.legalName || channel.inn)
+const hasAccountInfo = (connection: Connection): boolean => {
+  return !!(connection.customerName || connection.customerLegalName || connection.customerInn)
 }
 
 const handleDelete = async (): Promise<void> => {
-  if (!props.channel.connectionId) {
+  if (!props.channel.connection) {
     return
   }
 
   isDeleting.value = true
 
   try {
-    await integrationsApi.deleteConnection(props.channel.connectionId)
-    toast.success('Подключение удалено')
+    await integrationsApi.deleteConnection(props.channel.connection.id)
+    toast.success('Подключение удалено. Канал и накопленные данные остаются доступны.')
     isDeleteDialogOpen.value = false
     emit('deleted')
   } catch {
@@ -68,40 +82,49 @@ const handleDelete = async (): Promise<void> => {
 </script>
 
 <template>
-  <Card class="flex flex-col" :class="props.channel.isConnected ? 'opacity-75 bg-muted' : ''">
+  <Card class="flex flex-col" :class="!props.channel.connection?.isActive ? '' : 'bg-muted/40'">
     <CardHeader class="relative">
-      <CardTitle class="text-xl">{{ props.channel.displayName }}</CardTitle>
-      <CardDescription>{{ props.channel.description ?? '' }}</CardDescription>
+      <CardTitle class="text-xl">{{ props.channel.name }}</CardTitle>
+      <CardDescription>
+        {{ props.channel.templateDisplayName ?? 'Собственный канал' }}
+      </CardDescription>
       <Badge
-        v-if="props.channel.isConnected"
+        v-if="props.channel.connection?.isActive"
         variant="success"
         class="absolute top-3 right-3"
       >
-        Активно
+        Подключено
+      </Badge>
+      <Badge
+        v-else
+        variant="secondary"
+        class="absolute top-3 right-3"
+      >
+        Не подключено
       </Badge>
     </CardHeader>
     <CardContent>
-      <span class="text-xs text-muted-foreground">API {{ props.channel.apiVersion }}</span>
+      <span v-if="!props.channel.isActive" class="text-xs text-warning">Канал архивирован</span>
     </CardContent>
 
     <!-- Подключённое состояние: информация об аккаунте слева, меню действий справа -->
-    <CardFooter v-if="props.channel.isConnected" class="mt-auto flex items-end justify-between">
+    <CardFooter v-if="props.channel.connection?.isActive" class="mt-auto flex items-end justify-between">
       <div
-        v-if="hasAccountInfo(props.channel)"
+        v-if="hasAccountInfo(props.channel.connection)"
         class="flex flex-col gap-0.5"
       >
         <span
-          v-if="props.channel.customerName"
+          v-if="props.channel.connection.customerName"
           class="text-xs font-medium text-foreground leading-tight"
-        >{{ props.channel.customerName }}</span>
+        >{{ props.channel.connection.customerName }}</span>
         <span
-          v-if="props.channel.legalName"
+          v-if="props.channel.connection.customerLegalName"
           class="text-xs text-muted-foreground leading-tight"
-        >{{ props.channel.legalName }}</span>
+        >{{ props.channel.connection.customerLegalName }}</span>
         <span
-          v-if="props.channel.inn"
+          v-if="props.channel.connection.customerInn"
           class="text-xs text-muted-foreground leading-tight"
-        >ИНН: {{ props.channel.inn }}</span>
+        >ИНН: {{ props.channel.connection.customerInn }}</span>
       </div>
       <div v-else />
 
@@ -123,14 +146,18 @@ const handleDelete = async (): Promise<void> => {
             @click="isDeleteDialogOpen = true"
           >
             <Trash2 />
-            Удалить
+            Удалить подключение
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
     </CardFooter>
 
-    <!-- Не подключённое состояние: кнопка подключения -->
-    <CardFooter v-else>
+    <!-- Нет активного подключения: канал существует, но данные не собираются автоматически -->
+    <CardFooter v-else class="flex items-center justify-between">
+      <span v-if="props.channel.connection && !props.channel.connection.isActive" class="text-xs text-muted-foreground">
+        Подключение отключено — старые данные сохранены
+      </span>
+      <span v-else />
       <Button @click="emit('connect')">
         Подключить
       </Button>
@@ -146,14 +173,14 @@ const handleDelete = async (): Promise<void> => {
           Удалить подключение
         </AlertDialogTitle>
         <AlertDialogDescription class="text-muted-foreground mt-2 mb-6 text-sm leading-normal">
-          Вы уверены, что хотите удалить это подключение?
+          Подключение к API будет остановлено. Канал «{{ props.channel.name }}» и все собранные
+          по нему данные останутся доступны — вы сможете подключить его снова в любой момент.
         </AlertDialogDescription>
 
         <div class="flex justify-end gap-3">
           <AlertDialogCancel :disabled="isDeleting">
             Отмена
           </AlertDialogCancel>
-          <!-- Используем Button напрямую, чтобы диалог закрывался только при успешном удалении -->
           <Button
             variant="destructive"
             :disabled="isDeleting"

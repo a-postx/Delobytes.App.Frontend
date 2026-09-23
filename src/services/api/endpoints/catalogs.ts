@@ -115,6 +115,25 @@ export interface UpdateCostTypeRequest {
   isActive: boolean
 }
 
+// ---------- Channels ----------
+
+export interface ChannelItem {
+  id: string
+  systemChannelTemplateId?: string
+  name: string
+  isActive: boolean
+  createdAt: string
+}
+
+export interface GetChannelsResponse {
+  items: ChannelItem[]
+}
+
+export interface CreateChannelRequest {
+  systemChannelTemplateId?: string
+  name: string
+}
+
 // ---------- Product Channel Costs ----------
 
 export interface ProductChannelCostItem {
@@ -197,6 +216,18 @@ export interface CreateProductWorkRateRequest {
 }
 
 // ---------- API objects ----------
+
+export const channelsApi = {
+  getAll: async (): Promise<GetChannelsResponse> => {
+    const response = await axiosInstance.get<GetChannelsResponse>('/api/catalogs/channels')
+    return response.data
+  },
+
+  create: async (data: CreateChannelRequest): Promise<CreateChannelResponse> => {
+    const response = await axiosInstance.post<CreateChannelResponse>('/api/catalogs/channels', data)
+    return response.data
+  },
+}
 
 export const suppliersApi = {
   getAll: async (): Promise<GetSuppliersResponse> => {

@@ -87,28 +87,29 @@ export interface UserTenant {
 }
 
 export interface AvailableChannel {
+  id: string
   code: string
   displayName: string
   description: string | null
   apiVersion: string
-  isConnected: boolean
-  connectionId: string | null
-  maskedApiKey: string | null
-  customerName: string | null
-  legalName: string | null
-  inn: string | null
 }
 
 export interface Connection {
   id: string
-  channelCode: string
-  channelDisplayName: string
+  channelId: string
+  templateCode: string
+  templateDisplayName: string
   isActive: boolean
   lastSyncAt: string | null
   createdAt: string
+  maskedApiKey: string | null
+  customerName: string | null
+  customerLegalName: string | null
+  customerInn: string | null
 }
 
 export interface CreateConnectionPayload {
+  channelId: string
   systemChannelTemplateCode: string
   apiKey: string
   apiSecret?: string
@@ -118,6 +119,26 @@ export interface CreateConnectionPayload {
 export interface CreateConnectionResult {
   connectionId: string
   channelId: string
+}
+
+export interface Channel {
+  id: string
+  name: string
+  systemChannelTemplateId: string | null
+  isCustom: boolean
+  isActive: boolean
+  createdAt: string
+  updatedAt: string | null
+}
+
+export interface CreateChannelPayload {
+  name: string
+  systemChannelTemplateId?: string
+  customApiUrl?: string
+}
+
+export interface CreateChannelResult {
+  id: string
 }
 
 export type { ProductItem, ProductStatus, GetProductsResponse, GetProductResponse, ProductDeletionStatusResponse } from './products'
