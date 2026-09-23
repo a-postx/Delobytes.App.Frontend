@@ -1,21 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
-import ChannelCard from '@/components/features/ChannelCard.vue'
-import type { AvailableChannel } from '@/types'
+import ChannelCard, { type ChannelCardModel } from '@/components/features/ChannelCard.vue'
+import type { Connection } from '@/types'
 
-vi.mock('@/services/api', () => ({
-  integrationsApi: {
-    deleteConnection: vi.fn(),
-  },
-}))
-
-vi.mock('vue-sonner', () => ({
-  toast: {
-    error: vi.fn(),
-    success: vi.fn(),
-  },
-}))
-
+vi.mock('@/services/api', () => ({ integrationsApi: { deleteConnection: vi.fn() } }))
+vi.mock('vue-sonner', () => ({ toast: { error: vi.fn(), success: vi.fn() } }))
 import { integrationsApi } from '@/services/api'
 import { toast } from 'vue-sonner'
 
@@ -23,260 +12,153 @@ const deleteConnection = integrationsApi.deleteConnection as ReturnType<typeof v
 const toastSuccess = toast.success as ReturnType<typeof vi.fn>
 const toastError = toast.error as ReturnType<typeof vi.fn>
 
-const base: AvailableChannel = {
-  code: 'wildberries',
-  displayName: 'Wildberries',
-  description: 'Крупнейший маркетплейс',
-  apiVersion: 'v2',
-  isConnected: false,
-  connectionId: null,
-  maskedApiKey: null,
-  customerName: null,
-  legalName: null,
-  inn: null,
+const activeConnection: Connection = {
+  id: 'conn-123',
+  channelId: 'channel-1',
+  templateCode: 'wildberries',
+  templateDisplayName: 'Wildberries',
+  isActive: true,
+  lastSyncAt: null,
+  createdAt: '2024-01-01T00:00:00Z',
+  maskedApiKey: '******abcdef',
+  customerName: 'Store',
+  customerLegalName: 'LLC Store',
+  customerInn: '1234567890',
 }
+const base: ChannelCardModel = {
+  id: 'channel-1',
+  name: 'Мой магазин',
+  templateDisplayName: 'Wildberries',
+  isCustom: false,
+  isActive: true,
+  connection: null,
+}
+const connected: ChannelCardModel = { ...base, connection: activeConnection }
 
-// Стабы reka-ui alert-dialog: рендерят slot независимо от состояния portal/анимаций,
-// AlertDialogRoot прокидывает open как data-атрибут для проверки состояния в тестах.
-const alertDialogStubs = {
+const stubs = {
+  Button: {
+    props: ['disabled', 'variant', 'size'],
+    emits: ['click'],
+    template: '<button :disabled="disabled" @click="$emit(\'click\')"><slot /></button>',
+  },
+  Spinner: { template: '<span class="spinner" />' },
   AlertDialogRoot: {
-    name: 'AlertDialogRoot',
     props: ['open'],
     emits: ['update:open'],
     template: '<div data-testid="alert-dialog-root" :data-open="String(open)"><slot /></div>',
   },
   AlertDialogPortal: { template: '<div><slot /></div>' },
   AlertDialogOverlay: { template: '<div />' },
-  AlertDialogContent: {
-    template: '<div data-testid="alert-dialog-content"><slot /></div>',
-  },
+  AlertDialogContent: { template: '<div><slot /></div>' },
   AlertDialogTitle: { template: '<h2><slot /></h2>' },
   AlertDialogDescription: { template: '<p><slot /></p>' },
   AlertDialogCancel: {
     props: ['disabled'],
-    emits: ['click'],
-    template:
-      '<button data-testid="dialog-cancel" type="button" :disabled="disabled" @click="$emit(\'click\')"><slot /></button>',
+    template: '<button data-testid="dialog-cancel" :disabled="disabled"><slot /></button>',
   },
-  // DropdownMenuContent рендерит slot безусловно, чтобы items были доступны в DOM
-  DropdownMenuContent: {
-    template: '<div data-testid="dropdown-content"><slot /></div>',
+  DropdownMenu: { template: '<div><slot /></div>' },
+  DropdownMenuTrigger: {
+    props: ['asChild'],
+    template: '<div data-testid="dropdown-trigger"><slot /></div>',
   },
+  DropdownMenuContent: { template: '<div data-testid="dropdown-content"><slot /></div>' },
   DropdownMenuItem: {
-    props: ['variant', 'disabled'],
     emits: ['click'],
-    template:
-      '<div data-testid="dropdown-item" role="menuitem" :data-variant="variant" @click="$emit(\'click\')"><slot /></div>',
+    template: '<div data-testid="dropdown-item" @click="$emit(\'click\')"><slot /></div>',
   },
 }
 
-function mountCard(channel: AvailableChannel) {
-  return mount(ChannelCard, {
-    props: { channel },
-    global: { stubs: alertDialogStubs },
-  })
-}
+const factory = (channel: ChannelCardModel = base) =>
+  mount(ChannelCard, { props: { channel }, global: { stubs } })
 
-describe('ChannelCard — общий рендер', () => {
-  it('отображает displayName, description и apiVersion', () => {
-    const wrapper = mountCard(base)
-
-    expect(wrapper.text()).toContain('Wildberries')
-    expect(wrapper.text()).toContain('Крупнейший маркетплейс')
-    expect(wrapper.text()).toContain('API v2')
-  })
-
-  it('не падает при description === null', () => {
-    const wrapper = mountCard({ ...base, description: null })
-
-    expect(wrapper.text()).toContain('Wildberries')
-  })
-})
-
-describe('ChannelCard — isConnected === false', () => {
-  it('не применяет классы opacity-75 и bg-muted', () => {
-    const wrapper = mountCard(base)
-
-    expect(wrapper.html()).not.toContain('opacity-75')
-    expect(wrapper.html()).not.toContain('bg-muted')
-  })
-
-  it('рендерит кнопку "Подключить"', () => {
-    const wrapper = mountCard(base)
-
-    expect(wrapper.text()).toContain('Подключить')
-  })
-
-  it('не показывает Badge "Активно"', () => {
-    const wrapper = mountCard(base)
-
-    expect(wrapper.text()).not.toContain('Активно')
-  })
-
-  it('эмитирует "connect" при клике', async () => {
-    const wrapper = mountCard(base)
-
-    await wrapper.find('button').trigger('click')
-
-    expect(wrapper.emitted('connect')).toHaveLength(1)
-  })
-})
-
-describe('ChannelCard — isConnected === true', () => {
-  const connected: AvailableChannel = {
-    ...base,
-    isConnected: true,
-    connectionId: 'conn-123',
-    maskedApiKey: '******abcdef',
-  }
-
+describe('ChannelCard — отображение независимого Channel', () => {
   beforeEach(() => vi.clearAllMocks())
 
-  it('применяет opacity-75 и bg-muted', () => {
-    const wrapper = mountCard(connected)
-
-    expect(wrapper.html()).toContain('opacity-75')
-    expect(wrapper.html()).toContain('bg-muted')
+  it('показывает имя канала и название шаблона', () => {
+    const wrapper = factory()
+    expect(wrapper.text()).toContain('Мой магазин')
+    expect(wrapper.text()).toContain('Wildberries')
+    expect(wrapper.text()).toContain('Не подключено')
   })
 
-  it('показывает Badge "Подключён"', () => {
-    const wrapper = mountCard(connected)
-
-    expect(wrapper.text()).toContain('Активно')
+  it('показывает собственный канал без шаблона', () => {
+    const wrapper = factory({ ...base, templateDisplayName: null, isCustom: true })
+    expect(wrapper.text()).toContain('Собственный канал')
   })
 
-  it('рендерит кнопку-триггер меню (ellipsis)', () => {
-    const wrapper = mountCard(connected)
-
-    const btn = wrapper.find('button')
-    expect(btn.exists()).toBe(true)
-    expect(btn.attributes('disabled')).toBeUndefined()
+  it('оставляет канал видимым без подключения и предлагает подключить', () => {
+    const wrapper = factory()
+    expect(wrapper.text()).toContain('Мой магазин')
+    expect(wrapper.findAll('button').some(button => button.text().trim() === 'Подключить')).toBe(true)
   })
 
-  it('не рендерит кнопку "Подключить"', () => {
-    const wrapper = mountCard(connected)
-
-    expect(wrapper.text()).not.toContain('Подключить')
+  it('показывает сохранность старых данных при неактивном Connection', () => {
+    const wrapper = factory({ ...base, connection: { ...activeConnection, isActive: false } })
+    expect(wrapper.text()).toContain('Подключение отключено — старые данные сохранены')
+    expect(wrapper.findAll('button').some(button => button.text().trim() === 'Подключить')).toBe(true)
   })
 
-  it('не эмитирует "connect" при клике на триггер меню', async () => {
-    const wrapper = mountCard(connected)
+  it('показывает сведения аккаунта и меню активного Connection', () => {
+    const wrapper = factory(connected)
+    expect(wrapper.text()).toContain('Подключено')
+    expect(wrapper.text()).toContain('Store')
+    expect(wrapper.text()).toContain('LLC Store')
+    expect(wrapper.text()).toContain('1234567890')
+    expect(wrapper.find('[data-testid="dropdown-trigger"]').exists()).toBe(true)
+    expect(wrapper.findAll('button').some(button => button.text().trim() === 'Подключить')).toBe(false)
+  })
 
-    await wrapper.find('button').trigger('click')
-
-    expect(wrapper.emitted('connect')).toBeFalsy()
+  it('показывает архивный статус Channel отдельно от Connection', () => {
+    expect(factory({ ...base, isActive: false }).text()).toContain('Канал архивирован')
   })
 })
 
-describe('ChannelCard — диалог подтверждения удаления', () => {
-  const connected: AvailableChannel = {
-    ...base,
-    isConnected: true,
-    connectionId: 'conn-123',
-    maskedApiKey: '******abcdef',
-  }
-
+describe('ChannelCard — отключение Connection', () => {
   beforeEach(() => vi.clearAllMocks())
 
-  it('диалог закрыт по умолчанию (data-open=false)', () => {
-    const wrapper = mountCard(connected)
-
-    const dialog = wrapper.find('[data-testid="alert-dialog-root"]')
-    expect(dialog.attributes('data-open')).toBe('false')
-  })
-
-  it('клик на "Удалить" в dropdown открывает диалог', async () => {
-    const wrapper = mountCard(connected)
-
+  const openConfirmDialog = async (wrapper: ReturnType<typeof factory>): Promise<void> => {
     await wrapper.find('[data-testid="dropdown-item"]').trigger('click')
+  }
 
-    const dialog = wrapper.find('[data-testid="alert-dialog-root"]')
-    expect(dialog.attributes('data-open')).toBe('true')
-  })
-
-  it('диалог содержит текст подтверждения', async () => {
-    const wrapper = mountCard(connected)
-
-    await wrapper.find('[data-testid="dropdown-item"]').trigger('click')
-
-    expect(wrapper.text()).toContain('Вы уверены, что хотите удалить это подключение?')
-  })
-
-  it('диалог содержит кнопки "Отмена" и "Да"', async () => {
-    const wrapper = mountCard(connected)
-
-    await wrapper.find('[data-testid="dropdown-item"]').trigger('click')
-
-    expect(wrapper.find('[data-testid="dialog-cancel"]').exists()).toBe(true)
-    expect(wrapper.text()).toContain('Да')
-  })
-
-  it('нет кнопки закрытия (крестика) в диалоге', async () => {
-    const wrapper = mountCard(connected)
-
-    await wrapper.find('[data-testid="dropdown-item"]').trigger('click')
-    const content = wrapper.find('[data-testid="alert-dialog-content"]')
-
-    // Проверяем отсутствие aria-label="Закрыть" или класса close
-    expect(content.html()).not.toContain('aria-label="Закрыть"')
-  })
-
-  it('вызывает deleteConnection и эмитирует "deleted" при успехе', async () => {
-    deleteConnection.mockResolvedValue(undefined)
-    const wrapper = mountCard(connected)
-
-    await wrapper.vm.handleDelete()
+  const confirmDelete = async (wrapper: ReturnType<typeof factory>): Promise<void> => {
+    const confirmButton = wrapper.findAll('button').find(button => button.text().trim() === 'Да')
+    if (!confirmButton) {
+      throw new Error('Кнопка подтверждения удаления не найдена')
+    }
+    await confirmButton.trigger('click')
     await flushPromises()
+  }
+
+  it('открывает подтверждение удаления активного подключения', async () => {
+    const wrapper = factory(connected)
+    await openConfirmDialog(wrapper)
+    expect(wrapper.find('[data-testid="alert-dialog-root"]').attributes('data-open')).toBe('true')
+    expect(wrapper.text()).toContain('Канал «Мой магазин»')
+  })
+
+  it('удаляет Connection, оставляя Channel и данные', async () => {
+    deleteConnection.mockResolvedValue(undefined)
+    const wrapper = factory(connected)
+    await openConfirmDialog(wrapper)
+    await confirmDelete(wrapper)
 
     expect(deleteConnection).toHaveBeenCalledWith('conn-123')
-    expect(toastSuccess).toHaveBeenCalledWith('Подключение удалено')
+    expect(toastSuccess).toHaveBeenCalledWith('Подключение удалено. Канал и накопленные данные остаются доступны.')
     expect(wrapper.emitted('deleted')).toHaveLength(1)
   })
 
-  it('диалог закрывается после успешного удаления', async () => {
-    deleteConnection.mockResolvedValue(undefined)
-    const wrapper = mountCard(connected)
-
-    // Открываем диалог через dropdown
-    await wrapper.find('[data-testid="dropdown-item"]').trigger('click')
-    expect(wrapper.find('[data-testid="alert-dialog-root"]').attributes('data-open')).toBe('true')
-
-    await wrapper.vm.handleDelete()
-    await flushPromises()
-
-    expect(wrapper.find('[data-testid="alert-dialog-root"]').attributes('data-open')).toBe('false')
-  })
-
-  it('диалог остаётся открытым при ошибке удаления', async () => {
-    deleteConnection.mockRejectedValue(new Error('Network error'))
-    const wrapper = mountCard(connected)
-
-    await wrapper.find('[data-testid="dropdown-item"]').trigger('click')
-    expect(wrapper.find('[data-testid="alert-dialog-root"]').attributes('data-open')).toBe('true')
-
-    await wrapper.vm.handleDelete()
-    await flushPromises()
-
-    expect(wrapper.find('[data-testid="alert-dialog-root"]').attributes('data-open')).toBe('true')
-  })
-
-  it('показывает toast.error при ошибке удаления', async () => {
-    deleteConnection.mockRejectedValue(new Error('Network error'))
-    const wrapper = mountCard(connected)
-
-    await wrapper.vm.handleDelete()
-    await flushPromises()
+  it('не эмитит deleted при ошибке удаления', async () => {
+    deleteConnection.mockRejectedValue(new Error('Server error'))
+    const wrapper = factory(connected)
+    await openConfirmDialog(wrapper)
+    await confirmDelete(wrapper)
 
     expect(toastError).toHaveBeenCalledWith('Не удалось удалить подключение, попробуйте позже')
-    expect(wrapper.emitted('deleted')).toBeFalsy()
+    expect(wrapper.emitted('deleted')).toBeUndefined()
+    expect(wrapper.find('[data-testid="alert-dialog-root"]').attributes('data-open')).toBe('true')
   })
 
-  it('не вызывает deleteConnection если connectionId отсутствует', async () => {
-    const wrapper = mountCard({ ...connected, connectionId: null })
-
-    await wrapper.vm.handleDelete()
-    await flushPromises()
-
-    expect(deleteConnection).not.toHaveBeenCalled()
+  it('не показывает меню управления подключением, если Connection отсутствует', () => {
+    expect(factory().find('[data-testid="dropdown-item"]').exists()).toBe(false)
   })
 })
