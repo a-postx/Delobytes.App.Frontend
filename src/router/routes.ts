@@ -8,7 +8,7 @@ import RegisterView from '@/views/RegisterView.vue'
 import SetupTenantView from '@/views/SetupTenantView.vue'
 import SettingsView from '@/views/SettingsView.vue'
 import TenantSettingsView from '@/views/TenantSettingsView.vue'
-import IntegrationsView from '@/views/IntegrationsView.vue'
+import SalesChannelsView from '@/views/SalesChannelsView.vue'
 import YandexCallbackView from '@/views/YandexCallbackView.vue'
 import GoogleCallbackView from '@/views/GoogleCallbackView.vue'
 import AcceptInvitationView from '@/views/AcceptInvitationView.vue'
@@ -75,7 +75,7 @@ export const routes: RouteRecordRaw[] = [
       {
         path: 'catalogs/sales-channels',
         name: 'sales-channels',
-        component: IntegrationsView,
+        component: SalesChannelsView,
         meta: {
           group: NavGroup.Sales,
           title: 'Каналы продаж',
