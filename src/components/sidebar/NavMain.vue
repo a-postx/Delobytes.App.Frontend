@@ -11,6 +11,7 @@ import {
   Gauge,
   Tag,
   DollarSign,
+  Store,
 } from 'lucide-vue-next'
 import { RouterLink } from 'vue-router'
 import {
@@ -36,6 +37,7 @@ const referenceItems = [
   { to: '/catalogs/product-work-rates', label: 'Нормы выработки', icon: Gauge },
   { to: '/catalogs/cost-types', label: 'Типы расходов', icon: Tag },
   { to: '/catalogs/product-channel-costs', label: 'Расходы по каналам', icon: DollarSign },
+  { to: '/catalogs/sales-channels', label: 'Каналы продаж', icon: Store },
 ]
 </script>
 
@@ -146,13 +148,6 @@ const referenceItems = [
           </CollapsibleTrigger>
           <CollapsibleContent>
             <SidebarMenuSub>
-              <SidebarMenuSubItem>
-                <SidebarMenuSubButton as-child>
-                  <RouterLink to="/integrations">
-                    <span>Интеграции</span>
-                  </RouterLink>
-                </SidebarMenuSubButton>
-              </SidebarMenuSubItem>
             </SidebarMenuSub>
           </CollapsibleContent>
         </SidebarMenuItem>

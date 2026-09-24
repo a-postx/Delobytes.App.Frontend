@@ -73,12 +73,12 @@ export const routes: RouteRecordRaw[] = [
         },
       },
       {
-        path: 'integrations',
-        name: 'integrations',
+        path: 'catalogs/sales-channels',
+        name: 'sales-channels',
         component: IntegrationsView,
         meta: {
-          group: NavGroup.System,
-          title: 'Интеграции',
+          group: NavGroup.Platform,
+          title: 'Каналы продаж',
           requiresAuth: true,
         },
       },

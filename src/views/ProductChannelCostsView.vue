@@ -260,7 +260,7 @@ const inputClass = 'mt-1'
         <TableHeader>
           <TableRow class="border-b border-border">
             <TableHead>Товар</TableHead>
-            <TableHead>Канал (ID)</TableHead>
+            <TableHead>Канал продаж</TableHead>
             <TableHead>Тип расхода</TableHead>
             <TableHead class="text-right">Сумма</TableHead>
             <TableHead v-if="canWrite" class="w-24 text-right">Действия</TableHead>
@@ -273,7 +273,7 @@ const inputClass = 'mt-1'
             class="hover:bg-muted/40 transition-colors"
           >
             <TableCell class="font-medium">{{ productName(item.productId) }}</TableCell>
-            <TableCell class="text-muted-foreground font-mono text-xs">{{ item.channelId.slice(0, 8) }}…</TableCell>
+            <TableCell>{{ channelName(item.channelId) }}</TableCell>
             <TableCell>{{ item.costTypeName }}</TableCell>
             <TableCell class="text-right tabular-nums">{{ formatAmount(item.amount) }}</TableCell>
             <TableCell v-if="canWrite" class="text-right">
@@ -311,8 +311,10 @@ const inputClass = 'mt-1'
               </select>
             </div>
             <div :class="fieldClass">
-              <Label>ID канала</Label>
-              <Input :class="inputClass" v-model="form.channelId" placeholder="UUID канала продаж" />
+              <Label>Канал продаж</Label>
+              <select v-model="form.channelId" class="mt-1 h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-3">
+                <option v-for="ch in channels" :key="ch.id" :value="ch.id">{{ ch.name }}</option>
+              </select>
             </div>
             <div :class="fieldClass">
               <Label>Тип расхода</Label>
