@@ -114,8 +114,7 @@ const handleSubmit = async (): Promise<void> => {
           Подключить «{{ props.channelName }}»
         </DialogTitle>
         <DialogDescription class="text-muted-foreground mt-2 mb-4 text-sm leading-normal">
-          Введите данные API {{ props.templateDisplayName }}. Если позже токен устареет,
-          канал и его исторические данные останутся доступны — потребуется лишь обновить подключение.
+          Введите данные API {{ props.templateDisplayName }}. Если позже токен устареет, потребуется обновить подключение.
         </DialogDescription>
 
         <form @submit.prevent="handleSubmit">
@@ -127,7 +126,7 @@ const handleSubmit = async (): Promise<void> => {
                 id="conn-seller-id"
                 v-model="sellerId"
                 type="text"
-                placeholder="12345678"
+                placeholder=""
                 :disabled="isSubmitting"
                 required
               />
@@ -140,7 +139,7 @@ const handleSubmit = async (): Promise<void> => {
                 id="conn-api-key"
                 v-model="apiKey"
                 type="password"
-                placeholder="••••••••••••"
+                placeholder=""
                 minlength="10"
                 :disabled="isSubmitting"
                 required
@@ -157,7 +156,7 @@ const handleSubmit = async (): Promise<void> => {
                 id="conn-api-secret"
                 v-model="apiSecret"
                 type="password"
-                placeholder="••••••••••••"
+                placeholder=""
                 :disabled="isSubmitting"
               />
             </div>

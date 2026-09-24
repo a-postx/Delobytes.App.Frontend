@@ -101,10 +101,9 @@ const handleDeleted = async (): Promise<void> => {
   <div class="flex flex-col gap-6 p-6">
     <div class="flex items-center justify-between">
       <div class="flex flex-col gap-2">
-        <h1 class="text-xl font-bold">Интеграции</h1>
+        <h1 class="text-xl font-bold">Каналы продаж</h1>
         <p class="text-muted-foreground">
-          Каналы продаж существуют независимо от подключений к внешним API. Если токен маркетплейса
-          устареет, канал и его исторические данные останутся доступны — потребуется лишь обновить подключение.
+          Каналы продаж и интеграции с ними.
         </p>
       </div>
       <Button class="gap-2" @click="isCreateChannelDialogOpen = true">
@@ -131,8 +130,7 @@ const handleDeleted = async (): Promise<void> => {
     </div>
 
     <div v-else-if="channelCards.length === 0" class="rounded-lg border border-dashed p-10 text-center text-muted-foreground">
-      Каналов продаж пока нет. Нажмите «Добавить канал», чтобы создать первый —
-      например, на основе шаблона Wildberries или Ozon.
+      Каналов продаж пока нет. Нажмите «Добавить», чтобы создать первый.
     </div>
 
     <!-- Channel grid -->

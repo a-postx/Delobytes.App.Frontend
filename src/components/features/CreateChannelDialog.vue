@@ -103,8 +103,7 @@ const handleSubmit = async (): Promise<void> => {
           Новый канал продаж
         </DialogTitle>
         <DialogDescription class="text-muted-foreground mt-2 mb-4 text-sm leading-normal">
-          Канал — это самостоятельная сущность: расходы и аналитика по нему сохраняются
-          независимо от того, подключён ли сейчас API маркетплейса.
+          Создайте канал продаж, чтобы считать расходы и проводить аналитику по нему.
         </DialogDescription>
 
         <form @submit.prevent="handleSubmit">
@@ -118,7 +117,6 @@ const handleSubmit = async (): Promise<void> => {
                 class="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-3"
               >
                 <option v-for="t in props.templates" :key="t.id" :value="t.id">{{ t.displayName }}</option>
-                <option :value="CUSTOM_VALUE">Другой / собственный канал</option>
               </select>
             </div>
 
@@ -131,19 +129,6 @@ const handleSubmit = async (): Promise<void> => {
                 placeholder="Например, Мой магазин на Wildberries"
                 :disabled="isSubmitting"
                 required
-              />
-            </div>
-
-            <div v-if="isCustom" class="space-y-2">
-              <Label for="channel-api-url">
-                URL API <span class="text-muted-foreground">(необязательно)</span>
-              </Label>
-              <Input
-                id="channel-api-url"
-                v-model="customApiUrl"
-                type="text"
-                placeholder="https://..."
-                :disabled="isSubmitting"
               />
             </div>
 
