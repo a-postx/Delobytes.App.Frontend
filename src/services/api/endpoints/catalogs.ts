@@ -234,6 +234,10 @@ export const channelsApi = {
     const response = await axiosInstance.post<CreateChannelResponse>('/api/catalogs/channels', data)
     return response.data
   },
+
+  rename: async (id: string, name: string): Promise<void> => {
+    await axiosInstance.patch(`/api/catalogs/channels/${id}`, { name })
+  },
 }
 
 export const suppliersApi = {

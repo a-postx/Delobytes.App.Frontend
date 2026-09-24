@@ -95,6 +95,11 @@ const handleDeleted = async (): Promise<void> => {
   isLoading.value = true
   await loadAll()
 }
+
+const handleRenamed = async (): Promise<void> => {
+  isLoading.value = true
+  await loadAll()
+}
 </script>
 
 <template>
@@ -141,6 +146,7 @@ const handleDeleted = async (): Promise<void> => {
         :channel="channel"
         @connect="openConnectDialog(channel)"
         @deleted="handleDeleted"
+        @renamed="handleRenamed"
       />
     </div>
   </div>

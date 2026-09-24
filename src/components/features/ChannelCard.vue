@@ -8,7 +8,6 @@ import {
   CardDescription,
   CardFooter,
   CardHeader,
-  CardTitle,
 } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -28,8 +27,9 @@ import {
   AlertDialogPortal,
   AlertDialogRoot,
 } from '@/components/ui/alert-dialog'
-import { integrationsApi } from '@/services/api'
+import { integrationsApi, channelsApi } from '@/services/api'
 import type { Connection } from '@/types'
+import EditableChannelTitle from './EditableChannelTitle.vue'
 
 /**
  * Channel — самостоятельная бизнес-сущность (Catalog), Connection — техническое
@@ -52,10 +52,12 @@ const props = defineProps<{
 const emit = defineEmits<{
   connect: []
   deleted: []
+  renamed: []
 }>()
 
 const isDeleting = ref<boolean>(false)
 const isDeleteDialogOpen = ref<boolean>(false)
+const isRenaming = ref<boolean>(false)
 
 const hasAccountInfo = (connection: Connection): boolean => {
   return !!(connection.customerName || connection.customerLegalName || connection.customerInn)
@@ -79,12 +81,30 @@ const handleDelete = async (): Promise<void> => {
     isDeleting.value = false
   }
 }
+
+const handleRename = async (newName: string): Promise<void> => {
+  isRenaming.value = true
+
+  try {
+    await channelsApi.rename(props.channel.id, newName)
+    toast.success('Название канала обновлено')
+    emit('renamed')
+  } catch {
+    toast.error('Не удалось переименовать канал, попробуйте позже')
+  } finally {
+    isRenaming.value = false
+  }
+}
 </script>
 
 <template>
   <Card class="flex flex-col" :class="!props.channel.connection?.isActive ? '' : 'bg-muted/40'">
     <CardHeader class="relative">
-      <CardTitle class="text-xl">{{ props.channel.name }}</CardTitle>
+      <EditableChannelTitle
+        :title="props.channel.name"
+        :disabled="isRenaming"
+        @save="handleRename"
+      />
       <CardDescription>
         {{ props.channel.templateDisplayName ?? 'Собственный канал' }}
       </CardDescription>
@@ -186,8 +206,8 @@ const handleDelete = async (): Promise<void> => {
             :disabled="isDeleting"
             @click="handleDelete"
           >
+            <Spinner v-if="isDeleting" size="sm" class="mr-2" />
             <span>Да</span>
-            <Spinner v-if="isDeleting" size="sm" class="ml-2" />
           </Button>
         </div>
       </AlertDialogContent>
