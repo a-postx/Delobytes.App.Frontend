@@ -54,7 +54,7 @@ describe('router: обработка несуществующих маршрут
     expect(lastMatchedName(router, '/')).toBe('home')
     expect(lastMatchedName(router, '/catalogs/suppliers')).toBe('suppliers')
     expect(lastMatchedName(router, '/tenant-settings')).toBe('tenant-settings')
-    expect(lastMatchedName(router, '/integrations')).toBe('integrations')
+    expect(lastMatchedName(router, '/catalogs/sales-channels')).toBe('sales-channels')
     expect(lastMatchedName(router, '/login')).toBe('login')
     expect(lastMatchedName(router, '/invite')).toBe('accept-invitation')
   })
