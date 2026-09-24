@@ -3,12 +3,20 @@ import { mount, flushPromises } from '@vue/test-utils'
 import ChannelCard, { type ChannelCardModel } from '@/components/features/ChannelCard.vue'
 import type { Connection } from '@/types'
 
-vi.mock('@/services/api', () => ({ integrationsApi: { deleteConnection: vi.fn() } }))
+vi.mock('@/services/api', () => ({
+  integrationsApi: { deleteConnection: vi.fn() },
+  channelsApi: { rename: vi.fn() },
+  channelParametersApi: {
+    getActive: vi.fn().mockResolvedValue({ found: false }),
+    getAll: vi.fn().mockResolvedValue({ items: [] }),
+  },
+}))
 vi.mock('vue-sonner', () => ({ toast: { error: vi.fn(), success: vi.fn() } }))
-import { integrationsApi } from '@/services/api'
+import { integrationsApi, channelsApi } from '@/services/api'
 import { toast } from 'vue-sonner'
 
 const deleteConnection = integrationsApi.deleteConnection as ReturnType<typeof vi.fn>
+const renameChannel = channelsApi.rename as ReturnType<typeof vi.fn>
 const toastSuccess = toast.success as ReturnType<typeof vi.fn>
 const toastError = toast.error as ReturnType<typeof vi.fn>
 
@@ -53,7 +61,7 @@ const stubs = {
   AlertDialogTitle: { template: '<h2><slot /></h2>' },
   AlertDialogDescription: { template: '<p><slot /></p>' },
   AlertDialogCancel: {
-    props: ['disabled'],
+    props: ['disabled', 'asChild'],
     template: '<button data-testid="dialog-cancel" :disabled="disabled"><slot /></button>',
   },
   DropdownMenu: { template: '<div><slot /></div>' },
@@ -65,6 +73,14 @@ const stubs = {
   DropdownMenuItem: {
     emits: ['click'],
     template: '<div data-testid="dropdown-item" @click="$emit(\'click\')"><slot /></div>',
+  },
+  // Панель параметров подменяем на заглушку: она ходит в API,
+  // а тесты карточки проверяют только факт её открытия.
+  ChannelDetailsSheet: {
+    name: 'ChannelDetailsSheet',
+    props: ['modelValue', 'channel'],
+    emits: ['update:modelValue'],
+    template: '<div data-testid="channel-details-sheet" :data-open="String(modelValue)" />',
   },
 }
 
@@ -110,6 +126,77 @@ describe('ChannelCard — отображение независимого Channe
 
   it('показывает архивный статус Channel отдельно от Connection', () => {
     expect(factory({ ...base, isActive: false }).text()).toContain('Канал архивирован')
+  })
+})
+
+describe('ChannelCard — параметры канала', () => {
+  beforeEach(() => vi.clearAllMocks())
+
+  const openSheet = async (wrapper: ReturnType<typeof factory>): Promise<void> => {
+    const paramsButton = wrapper
+      .findAll('button')
+      .find(button => button.attributes('aria-label') === 'Параметры канала'
+        || button.text().trim() === 'Параметры')
+    if (!paramsButton) {
+      throw new Error('Кнопка открытия параметров не найдена')
+    }
+    await paramsButton.trigger('click')
+  }
+
+  it('панель параметров закрыта по умолчанию', () => {
+    const wrapper = factory()
+    expect(wrapper.find('[data-testid="channel-details-sheet"]').attributes('data-open')).toBe('false')
+  })
+
+  it('открывает панель параметров для канала без подключения', async () => {
+    const wrapper = factory()
+    await openSheet(wrapper)
+    const sheet = wrapper.findComponent({ name: 'ChannelDetailsSheet' })
+    expect(sheet.props('modelValue')).toBe(true)
+    expect(sheet.props('channel')).toMatchObject({ id: 'channel-1', name: 'Мой магазин' })
+  })
+
+  it('открывает панель параметров для подключённого канала', async () => {
+    const wrapper = factory(connected)
+    await openSheet(wrapper)
+    expect(wrapper.findComponent({ name: 'ChannelDetailsSheet' }).props('modelValue')).toBe(true)
+  })
+
+  it('не открывает панель при нажатии «Подключить»', async () => {
+    const wrapper = factory()
+    const connectButton = wrapper.findAll('button').find(button => button.text().trim() === 'Подключить')
+    await connectButton?.trigger('click')
+
+    expect(wrapper.emitted('connect')).toHaveLength(1)
+    expect(wrapper.findComponent({ name: 'ChannelDetailsSheet' }).props('modelValue')).toBe(false)
+  })
+})
+
+describe('ChannelCard — переименование канала', () => {
+  beforeEach(() => vi.clearAllMocks())
+
+  it('сохраняет новое имя через API и эмитит renamed', async () => {
+    renameChannel.mockResolvedValue(undefined)
+    const wrapper = factory()
+
+    const title = wrapper.findComponent({ name: 'EditableChannelTitle' })
+    title.vm.$emit('save', 'Новое имя')
+    await flushPromises()
+
+    expect(renameChannel).toHaveBeenCalledWith('channel-1', 'Новое имя')
+    expect(toastSuccess).toHaveBeenCalledWith('Название канала обновлено')
+    expect(wrapper.emitted('renamed')).toHaveLength(1)
+  })
+
+  it('не эмитит renamed при ошибке переименования', async () => {
+    renameChannel.mockRejectedValue(new Error('Server error'))
+    const wrapper = factory()
+
+    wrapper.findComponent({ name: 'EditableChannelTitle' }).vm.$emit('save', 'Новое имя')
+    await flushPromises()
+
+    expect(toastError).toHaveBeenCalledWith('Не удалось переименовать канал, попробуйте позже')
+    expect(wrapper.emitted('renamed')).toBeUndefined()
   })
 })
 

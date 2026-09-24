@@ -80,7 +80,7 @@ const handleKeydown = (e: KeyboardEvent): void => {
     <span class="text-xl font-semibold">{{ props.title }}</span>
     <Pencil
       v-if="!props.disabled"
-      class="size-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity"
+      class="size-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity"
     />
   </div>
 </template>

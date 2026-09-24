@@ -12,6 +12,7 @@ export type {
 } from './endpoints/tenantLegalEntity'
 export {
   channelsApi,
+  channelParametersApi,
   suppliersApi,
   componentsApi,
   costTypesApi,
@@ -24,6 +25,11 @@ export type {
   GetChannelsResponse,
   CreateChannelRequest,
   CreateChannelResponse,
+  ChannelParameterSetItem,
+  GetChannelParameterSetsResponse,
+  GetActiveChannelParameterSetResponse,
+  CreateChannelParameterSetRequest,
+  CreateChannelParameterSetResponse,
   SupplierItem,
   GetSuppliersResponse,
   CreateSupplierRequest,

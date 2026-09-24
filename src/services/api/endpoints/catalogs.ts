@@ -141,6 +141,48 @@ export interface CreateChannelResponse {
   id: string
 }
 
+// ---------- Channel Parameter Sets ----------
+
+/**
+ * Версия коммерческих параметров канала. Бэкенд отдаёт доли, а не проценты:
+ * 0.15 === 15%. UI переводит значения в проценты на границе компонента.
+ */
+export interface ChannelParameterSetItem {
+  id: string
+  channelId: string
+  commissionPercent: number
+  acquiringPercent: number
+  sppPercent: number
+  sppEnabled: boolean
+  validFrom: string // YYYY-MM-DD
+  createdAt: string
+}
+
+export interface GetChannelParameterSetsResponse {
+  items: ChannelParameterSetItem[]
+}
+
+/**
+ * Активная версия. Бэкенд возвращает 404, когда активной версии нет,
+ * поэтому channelsParametersApi.getActive приводит 404 к { found: false }.
+ */
+export interface GetActiveChannelParameterSetResponse extends ChannelParameterSetItem {
+  found: boolean
+}
+
+export interface CreateChannelParameterSetRequest {
+  commissionPercent: number
+  acquiringPercent: number
+  sppPercent: number
+  sppEnabled: boolean
+  validFrom: string // YYYY-MM-DD
+}
+
+export interface CreateChannelParameterSetResponse {
+  id: string
+  channelFound: boolean
+}
+
 // ---------- Product Channel Costs ----------
 
 export interface ProductChannelCostItem {
@@ -237,6 +279,57 @@ export const channelsApi = {
 
   rename: async (id: string, name: string): Promise<void> => {
     await axiosInstance.patch(`/api/catalogs/channels/${id}`, { name })
+  },
+}
+
+export const channelParametersApi = {
+  /** Все версии параметров канала, отсортированные бэкендом по validFrom DESC. */
+  getAll: async (channelId: string): Promise<GetChannelParameterSetsResponse> => {
+    const response = await axiosInstance.get<GetChannelParameterSetsResponse>(
+      `/api/catalogs/channels/${channelId}/parameter-sets`,
+    )
+    return response.data
+  },
+
+  /**
+   * Активная версия параметров. Отсутствие активной версии — это не ошибка,
+   * а нормальное состояние нового канала, поэтому 404 превращаем в found: false.
+   */
+  getActive: async (channelId: string): Promise<GetActiveChannelParameterSetResponse> => {
+    try {
+      const response = await axiosInstance.get<GetActiveChannelParameterSetResponse>(
+        `/api/catalogs/channels/${channelId}/parameter-sets/active`,
+      )
+      return { ...response.data, found: true }
+    } catch (error: unknown) {
+      const status = (error as { response?: { status?: number } }).response?.status
+      if (status === 404) {
+        return {
+          id: '',
+          channelId,
+          commissionPercent: 0,
+          acquiringPercent: 0,
+          sppPercent: 0,
+          sppEnabled: false,
+          validFrom: '',
+          createdAt: '',
+          found: false,
+        }
+      }
+      throw error
+    }
+  },
+
+  /** Создаёт новую версию параметров. Существующие версии не изменяются. */
+  create: async (
+    channelId: string,
+    data: CreateChannelParameterSetRequest,
+  ): Promise<CreateChannelParameterSetResponse> => {
+    const response = await axiosInstance.post<CreateChannelParameterSetResponse>(
+      `/api/catalogs/channels/${channelId}/parameter-sets`,
+      data,
+    )
+    return response.data
   },
 }
 

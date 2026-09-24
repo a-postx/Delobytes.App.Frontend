@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { Ellipsis, Trash2 } from 'lucide-vue-next'
+import { Ellipsis, Settings2, Trash2 } from 'lucide-vue-next'
 import { toast } from 'vue-sonner'
 import {
   Card,
@@ -30,6 +30,7 @@ import {
 import { integrationsApi, channelsApi } from '@/services/api'
 import type { Connection } from '@/types'
 import EditableChannelTitle from './EditableChannelTitle.vue'
+import ChannelDetailsSheet from './ChannelDetailsSheet.vue'
 
 /**
  * Channel — самостоятельная бизнес-сущность (Catalog), Connection — техническое
@@ -58,6 +59,7 @@ const emit = defineEmits<{
 const isDeleting = ref<boolean>(false)
 const isDeleteDialogOpen = ref<boolean>(false)
 const isRenaming = ref<boolean>(false)
+const isDetailsSheetOpen = ref<boolean>(false)
 
 const hasAccountInfo = (connection: Connection): boolean => {
   return !!(connection.customerName || connection.customerLegalName || connection.customerInn)
@@ -148,39 +150,60 @@ const handleRename = async (newName: string): Promise<void> => {
       </div>
       <div v-else />
 
-      <DropdownMenu>
-        <DropdownMenuTrigger as-child>
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            :disabled="isDeleting"
-            aria-label="Действия с подключением"
-          >
-            <Spinner v-if="isDeleting" size="sm" />
-            <Ellipsis v-else />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          <DropdownMenuItem
-            variant="destructive"
-            @click="isDeleteDialogOpen = true"
-          >
-            <Trash2 />
-            Удалить подключение
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+      <div class="flex items-center gap-1">
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          aria-label="Параметры канала"
+          @click="isDetailsSheetOpen = true"
+        >
+          <Settings2 />
+        </Button>
+
+        <DropdownMenu>
+          <DropdownMenuTrigger as-child>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              :disabled="isDeleting"
+              aria-label="Действия с подключением"
+            >
+              <Spinner v-if="isDeleting" size="sm" />
+              <Ellipsis v-else />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem
+              variant="destructive"
+              @click="isDeleteDialogOpen = true"
+            >
+              <Trash2 />
+              Удалить подключение
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
     </CardFooter>
 
     <!-- Нет активного подключения: канал существует, но данные не собираются автоматически -->
-    <CardFooter v-else class="flex items-center justify-between">
+    <CardFooter v-else class="flex items-center justify-between gap-2">
       <span v-if="props.channel.connection && !props.channel.connection.isActive" class="text-xs text-muted-foreground">
         Подключение отключено — старые данные сохранены
       </span>
       <span v-else />
-      <Button @click="emit('connect')">
-        Подключить
-      </Button>
+
+      <div class="flex items-center gap-2">
+        <Button
+          variant="outline"
+          @click="isDetailsSheetOpen = true"
+        >
+          <Settings2 class="size-4 mr-1" />
+          Параметры
+        </Button>
+        <Button @click="emit('connect')">
+          Подключить
+        </Button>
+      </div>
     </CardFooter>
   </Card>
 
@@ -194,12 +217,13 @@ const handleRename = async (newName: string): Promise<void> => {
         </AlertDialogTitle>
         <AlertDialogDescription class="text-muted-foreground mt-2 mb-6 text-sm leading-normal">
           Подключение к API будет остановлено. Канал «{{ props.channel.name }}» и все собранные
-          по нему данные останутся доступны — вы сможете подключить его снова в любой момент.
+          по нему данные останутся доступны.
         </AlertDialogDescription>
-
         <div class="flex justify-end gap-3">
-          <AlertDialogCancel :disabled="isDeleting">
-            Отмена
+          <AlertDialogCancel as-child>
+            <Button variant="outline" :disabled="isDeleting">
+              Отмена
+            </Button>
           </AlertDialogCancel>
           <Button
             variant="destructive"
@@ -207,10 +231,16 @@ const handleRename = async (newName: string): Promise<void> => {
             @click="handleDelete"
           >
             <Spinner v-if="isDeleting" size="sm" class="mr-2" />
-            <span>Да</span>
+            {{ isDeleting ? 'Удаляем...' : 'Да' }}
           </Button>
         </div>
       </AlertDialogContent>
     </AlertDialogPortal>
   </AlertDialogRoot>
+
+  <!-- Панель параметров канала: комиссия, эквайринг, СПП и история версий -->
+  <ChannelDetailsSheet
+    v-model="isDetailsSheetOpen"
+    :channel="props.channel"
+  />
 </template>
