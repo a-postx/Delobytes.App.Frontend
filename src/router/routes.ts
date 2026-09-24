@@ -77,7 +77,7 @@ export const routes: RouteRecordRaw[] = [
         name: 'sales-channels',
         component: IntegrationsView,
         meta: {
-          group: NavGroup.Platform,
+          group: NavGroup.Sales,
           title: 'Каналы продаж',
           requiresAuth: true,
         },
@@ -87,7 +87,7 @@ export const routes: RouteRecordRaw[] = [
         name: 'components',
         component: ComponentsView,
         meta: {
-          group: NavGroup.Platform,
+          group: NavGroup.Production,
           title: 'Компоненты',
           requiresAuth: true,
         },
@@ -117,7 +117,7 @@ export const routes: RouteRecordRaw[] = [
         name: 'cost-types',
         component: CostTypesView,
         meta: {
-          group: NavGroup.Platform,
+          group: NavGroup.Sales,
           title: 'Типы расходов',
           requiresAuth: true,
         },
@@ -127,7 +127,7 @@ export const routes: RouteRecordRaw[] = [
         name: 'product-channel-costs',
         component: ProductChannelCostsView,
         meta: {
-          group: NavGroup.Platform,
+          group: NavGroup.Sales,
           title: 'Расходы по каналам',
           requiresAuth: true,
         },
@@ -137,7 +137,7 @@ export const routes: RouteRecordRaw[] = [
         name: 'work-rates',
         component: WorkRatesView,
         meta: {
-          group: NavGroup.Platform,
+          group: NavGroup.Production,
           title: 'Ставки работ',
           requiresAuth: true,
         },
@@ -147,7 +147,7 @@ export const routes: RouteRecordRaw[] = [
         name: 'product-work-rates',
         component: ProductWorkRatesView,
         meta: {
-          group: NavGroup.Platform,
+          group: NavGroup.Production,
           title: 'Нормы выработки',
           requiresAuth: true,
         },

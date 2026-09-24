@@ -7,6 +7,8 @@ import type { RouteLocationNormalizedLoaded } from 'vue-router'
 export const NavGroup = {
   Panels: 'panels',
   Platform: 'platform',
+  Sales: 'sales',
+  Production: 'production',
   System: 'system',
 } as const
 
@@ -15,6 +17,8 @@ export type NavGroupType = typeof NavGroup[keyof typeof NavGroup]
 export const navGroupLabels: Record<NavGroupType, string> = {
   [NavGroup.Panels]: 'Панели',
   [NavGroup.Platform]: 'Платформа',
+  [NavGroup.Sales]: 'Продажи',
+  [NavGroup.Production]: 'Производство',
   [NavGroup.System]: 'Система',
 }
 

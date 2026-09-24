@@ -12,6 +12,8 @@ import {
   Tag,
   DollarSign,
   Store,
+  ShoppingCart,
+  Factory,
 } from 'lucide-vue-next'
 import { RouterLink } from 'vue-router'
 import {
@@ -30,14 +32,20 @@ import {
   SidebarMenuSubItem,
 } from '@/components/ui/sidebar'
 
-const referenceItems = [
-  { to: '/catalogs/suppliers', label: 'Контрагенты', icon: Truck },
+const salesItems = [
+  { to: '/catalogs/sales-channels', label: 'Каналы продаж', icon: Store },
+  { to: '/catalogs/cost-types', label: 'Типы расходов', icon: Tag },
+  { to: '/catalogs/product-channel-costs', label: 'Расходы по каналам', icon: DollarSign },
+]
+
+const productionItems = [
   { to: '/catalogs/components', label: 'Компоненты', icon: PackageOpen },
   { to: '/catalogs/work-rates', label: 'Ставки работ', icon: Hammer },
   { to: '/catalogs/product-work-rates', label: 'Нормы выработки', icon: Gauge },
-  { to: '/catalogs/cost-types', label: 'Типы расходов', icon: Tag },
-  { to: '/catalogs/product-channel-costs', label: 'Расходы по каналам', icon: DollarSign },
-  { to: '/catalogs/sales-channels', label: 'Каналы продаж', icon: Store },
+]
+
+const referenceItems = [
+  { to: '/catalogs/suppliers', label: 'Контрагенты', icon: Truck },
 ]
 </script>
 
@@ -82,6 +90,82 @@ const referenceItems = [
                 <SidebarMenuSubButton as-child>
                   <RouterLink to="/catalogs/products">
                     <span>Каталог</span>
+                  </RouterLink>
+                </SidebarMenuSubButton>
+              </SidebarMenuSubItem>
+            </SidebarMenuSub>
+          </CollapsibleContent>
+        </SidebarMenuItem>
+      </Collapsible>
+
+      <!-- Продажи -->
+      <Collapsible
+        as-child
+        :default-open="true"
+        class="group/collapsible"
+      >
+        <SidebarMenuItem>
+          <CollapsibleTrigger as-child>
+            <SidebarMenuButton :tooltip="'Продажи'">
+              <ShoppingCart />
+              <span>Продажи</span>
+              <ChevronRight class="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+            </SidebarMenuButton>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <SidebarMenuSub>
+              <SidebarMenuSubItem
+                v-for="item in salesItems"
+                :key="item.to"
+              >
+                <SidebarMenuSubButton as-child>
+                  <RouterLink
+                    :to="item.to"
+                    class="flex items-center gap-2"
+                  >
+                    <component
+                      :is="item.icon"
+                      class="size-3.5 shrink-0"
+                    />
+                    <span>{{ item.label }}</span>
+                  </RouterLink>
+                </SidebarMenuSubButton>
+              </SidebarMenuSubItem>
+            </SidebarMenuSub>
+          </CollapsibleContent>
+        </SidebarMenuItem>
+      </Collapsible>
+
+      <!-- Производство -->
+      <Collapsible
+        as-child
+        :default-open="true"
+        class="group/collapsible"
+      >
+        <SidebarMenuItem>
+          <CollapsibleTrigger as-child>
+            <SidebarMenuButton :tooltip="'Производство'">
+              <Factory />
+              <span>Производство</span>
+              <ChevronRight class="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+            </SidebarMenuButton>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <SidebarMenuSub>
+              <SidebarMenuSubItem
+                v-for="item in productionItems"
+                :key="item.to"
+              >
+                <SidebarMenuSubButton as-child>
+                  <RouterLink
+                    :to="item.to"
+                    class="flex items-center gap-2"
+                  >
+                    <component
+                      :is="item.icon"
+                      class="size-3.5 shrink-0"
+                    />
+                    <span>{{ item.label }}</span>
                   </RouterLink>
                 </SidebarMenuSubButton>
               </SidebarMenuSubItem>

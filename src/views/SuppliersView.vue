@@ -24,6 +24,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Spinner } from '@/components/ui/spinner'
@@ -356,10 +357,11 @@ const inputClass = 'mt-1'
 
             <div :class="fieldClass">
               <Label for="create-description">Описание</Label>
-              <Input
+              <Textarea
                 id="create-description"
                 v-model="form.description"
                 placeholder=""
+                :rows="3"
                 :class="inputClass"
               />
             </div>
@@ -444,10 +446,11 @@ const inputClass = 'mt-1'
 
             <div :class="fieldClass">
               <Label for="edit-description">Описание</Label>
-              <Input
+              <Textarea
                 id="edit-description"
                 v-model="form.description"
                 placeholder=""
+                :rows="3"
                 :class="inputClass"
               />
             </div>
