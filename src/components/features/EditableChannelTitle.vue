@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { ref, watch, nextTick } from 'vue'
 import { Pencil } from 'lucide-vue-next'
-import { Input } from '@/components/ui/input'
 
 const props = defineProps<{
   title: string
@@ -63,11 +62,11 @@ const handleKeydown = (e: KeyboardEvent): void => {
 
 <template>
   <div v-if="isEditing" class="relative">
-    <Input
+    <input
       ref="inputRef"
       v-model="editValue"
       type="text"
-      class="text-xl font-semibold h-auto py-0 px-0 border-none shadow-none focus-visible:ring-0"
+      class="text-xl font-semibold w-full bg-transparent outline-none border-b border-input focus:border-ring"
       @blur="save"
       @keydown="handleKeydown"
     />

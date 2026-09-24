@@ -9,7 +9,7 @@ vi.mock('vue-sonner', () => ({ toast: { error: vi.fn(), success: vi.fn() } }))
 
 import { channelsApi, integrationsApi } from '@/services/api'
 import { toast } from 'vue-sonner'
-import IntegrationsView from '@/views/IntegrationsView.vue'
+import SalesChannelsView from '@/views/SalesChannelsView.vue'
 import type { AvailableChannel, Connection } from '@/types'
 import type { ChannelItem } from '@/services/api'
 
@@ -33,7 +33,7 @@ const connection: Connection = {
 }
 
 function factory() {
-  return mount(IntegrationsView, {
+  return mount(SalesChannelsView, {
     global: { stubs: {
       ChannelCard: { name: 'ChannelCard', props: ['channel'], emits: ['connect', 'deleted'], template: '<div class="channel-card"><span>{{ channel.name }}</span><span>{{ channel.templateDisplayName }}</span><button class="btn-connect" @click="$emit(\'connect\')">connect</button><button class="btn-deleted" @click="$emit(\'deleted\')">deleted</button></div>' },
       CreateChannelDialog: { name: 'CreateChannelDialog', props: ['modelValue', 'templates'], emits: ['update:modelValue', 'created'], template: '<div class="create-channel-dialog" />' },
@@ -50,7 +50,7 @@ const setupLoadedData = (): void => {
   getConnections.mockResolvedValue([connection])
 }
 
-describe('IntegrationsView: загрузка каналов и подключений', () => {
+describe('SalesChannelsView: загрузка каналов и подключений', () => {
   beforeEach(() => vi.clearAllMocks())
   it('загружает шаблоны, каналы и подключения независимо', async () => {
     setupLoadedData()
@@ -87,7 +87,7 @@ describe('IntegrationsView: загрузка каналов и подключе�
   })
 })
 
-describe('IntegrationsView: связи Channel и Connection', () => {
+describe('SalesChannelsView: связи Channel и Connection', () => {
   beforeEach(() => vi.clearAllMocks())
   it('сопоставляет Connection с Channel по channelId и шаблон по template id', async () => {
     setupLoadedData(); const wrapper = factory(); await flushPromises()
@@ -116,7 +116,7 @@ describe('IntegrationsView: связи Channel и Connection', () => {
   })
 })
 
-describe('IntegrationsView: создание, подключение и отключение', () => {
+describe('SalesChannelsView: создание, подключение и отключение', () => {
   beforeEach(() => vi.clearAllMocks())
   it('после создания шаблонного канала обновляет данные и открывает диалог подключения', async () => {
     setupLoadedData()
