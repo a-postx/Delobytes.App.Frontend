@@ -145,8 +145,7 @@ const handleSubmit = async (): Promise<void> => {
           Параметры канала
         </DialogTitle>
         <DialogDescription class="text-muted-foreground mt-2 mb-4 text-sm leading-normal">
-          Новая версия параметров для «{{ props.channelName }}». Прошлые версии сохранятся в истории и продолжат
-          действовать до указанной даты.
+          Новая версия параметров для «{{ props.channelName }}».
         </DialogDescription>
 
         <form @submit.prevent="handleSubmit">
@@ -160,13 +159,10 @@ const handleSubmit = async (): Promise<void> => {
                 step="0.01"
                 min="0"
                 max="100"
-                placeholder="15"
+                placeholder=""
                 :disabled="isSubmitting"
                 required
               />
-              <p class="text-xs text-muted-foreground">
-                Удержание площадки за размещение товара. Обычно 5–17%.
-              </p>
             </div>
 
             <div class="space-y-2">
@@ -178,13 +174,26 @@ const handleSubmit = async (): Promise<void> => {
                 step="0.01"
                 min="0"
                 max="100"
-                placeholder="2"
+                placeholder=""
                 :disabled="isSubmitting"
                 required
               />
-              <p class="text-xs text-muted-foreground">
-                Платёжный сбор за приём денег от покупателя. Обычно 1,5–2,5%.
-              </p>
+            </div>
+			
+			<div class="flex items-center justify-between gap-4 rounded-md border p-3">
+              <div class="flex flex-col gap-0.5">
+                <Label for="parameter-spp-enabled">Учитывать СПП в расчётах</Label>
+                <span class="text-xs text-muted-foreground">
+                  Выключите, если канал не участвует в программе продвижения.
+                </span>
+              </div>
+              <Switch
+                id="parameter-spp-enabled"
+                v-model="sppEnabled"
+                :disabled="isSubmitting"
+              >
+                <SwitchThumb />
+              </Switch>
             </div>
 
             <div class="space-y-2">
@@ -200,25 +209,6 @@ const handleSubmit = async (): Promise<void> => {
                 :disabled="isSubmitting"
                 required
               />
-              <p class="text-xs text-muted-foreground">
-                Скидка программы продвижения — уменьшает цену для покупателя за счёт продавца.
-              </p>
-            </div>
-
-            <div class="flex items-center justify-between gap-4 rounded-md border p-3">
-              <div class="flex flex-col gap-0.5">
-                <Label for="parameter-spp-enabled">Учитывать СПП в расчётах</Label>
-                <span class="text-xs text-muted-foreground">
-                  Выключите, если канал не участвует в программе продвижения.
-                </span>
-              </div>
-              <Switch
-                id="parameter-spp-enabled"
-                v-model="sppEnabled"
-                :disabled="isSubmitting"
-              >
-                <SwitchThumb />
-              </Switch>
             </div>
 
             <div class="space-y-2">
