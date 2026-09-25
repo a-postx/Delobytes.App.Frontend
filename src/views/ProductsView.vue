@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, computed, watch, onUnmounted } from 'vue'
-import { Plus, Pencil, Trash2, Archive, Undo2, Package, AlertTriangle, Loader2, MoreHorizontal, X as XIcon } from 'lucide-vue-next'
+import { Plus, Pencil, Trash2, Archive, Undo2, Package, AlertTriangle, MoreHorizontal, X as XIcon } from 'lucide-vue-next'
 import {
   DialogClose,
   DialogContent,
@@ -23,7 +23,7 @@ import {
   AlertDialogCancel,
 } from '@/components/ui/alert-dialog'
 import {
-  DropdownMenuRoot,
+  DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -73,17 +73,18 @@ const deletingProductIds = ref<Set<string>>(new Set())
 
 const statusFilter = ref<'all' | 'active' | 'archived'>('active')
 
+// Поля ввода всегда дают строку, поэтому габариты в форме — это PackingUnit
+// с текстовыми значениями; числами они становятся на отправке.
+type PackingUnitForm = {
+  [K in keyof Required<PackingUnit>]: string
+}
+
 interface FormData {
   sku: string
   name: string
   description: string
-  barcodes: Array<{ value: string; type: string; isDefault: boolean }>
-  packingUnit: {
-    lengthCm: string
-    widthCm: string
-    heightCm: string
-    weightKg: string
-  }
+  barcodes: ProductBarcode[]
+  packingUnit: PackingUnitForm
 }
 
 const emptyForm = (): FormData => ({
@@ -208,7 +209,7 @@ const openEdit = (item: ProductItem): void => {
     sku: item.sku,
     name: item.name,
     description: item.description ?? '',
-    barcodes: item.barcodes ? [...item.barcodes.map(b => ({ ...b }))] : [],
+    barcodes: item.barcodes ? item.barcodes.map(b => ({ ...b })) : [],
     packingUnit: item.packingUnit ? {
       lengthCm: item.packingUnit.lengthCm.toString(),
       widthCm: item.packingUnit.widthCm.toString(),
@@ -268,7 +269,7 @@ const handleCreate = async (): Promise<void> => {
     if (form.value.barcodes.length > 0) {
       payload.barcodes = form.value.barcodes.map(b => ({
         value: b.value.trim(),
-        type: b.type.trim() || undefined,
+        type: b.type?.trim() || undefined,
         isDefault: b.isDefault
       }))
     }
@@ -307,7 +308,7 @@ const handleEdit = async (): Promise<void> => {
     if (form.value.barcodes.length > 0) {
       payload.barcodes = form.value.barcodes.map(b => ({
         value: b.value.trim(),
-        type: b.type.trim() || undefined,
+        type: b.type?.trim() || undefined,
         isDefault: b.isDefault
       }))
     }
@@ -473,7 +474,7 @@ const inputClass = 'mt-1'
             <TableCell class="text-muted-foreground text-sm">{{ formatDate(item.createdAt) }}</TableCell>
             <TableCell v-if="canWrite" class="text-right">
               <template v-if="item.status === ProductStatus.Active">
-                <DropdownMenuRoot>
+                <DropdownMenu>
                   <DropdownMenuTrigger as-child>
                     <Button variant="ghost" size="icon" class="size-8">
                       <MoreHorizontal class="size-4" />
@@ -493,11 +494,11 @@ const inputClass = 'mt-1'
                       Удалить
                     </DropdownMenuItem>
                   </DropdownMenuContent>
-                </DropdownMenuRoot>
+                </DropdownMenu>
               </template>
 
               <template v-else-if="item.status === ProductStatus.Archived">
-                <DropdownMenuRoot>
+                <DropdownMenu>
                   <DropdownMenuTrigger as-child>
                     <Button variant="ghost" size="icon" class="size-8">
                       <MoreHorizontal class="size-4" />
@@ -509,7 +510,7 @@ const inputClass = 'mt-1'
                       Восстановить
                     </DropdownMenuItem>
                   </DropdownMenuContent>
-                </DropdownMenuRoot>
+                </DropdownMenu>
               </template>
 
               <template v-else-if="item.status === ProductStatus.DeletionPending">
@@ -517,7 +518,7 @@ const inputClass = 'mt-1'
               </template>
 
               <template v-else-if="item.status === ProductStatus.DeletionFailed">
-                <DropdownMenuRoot>
+                <DropdownMenu>
                   <DropdownMenuTrigger as-child>
                     <Button variant="ghost" size="icon" class="size-8">
                       <MoreHorizontal class="size-4" />
@@ -533,7 +534,7 @@ const inputClass = 'mt-1'
                       Архив
                     </DropdownMenuItem>
                   </DropdownMenuContent>
-                </DropdownMenuRoot>
+                </DropdownMenu>
               </template>
             </TableCell>
           </TableRow>
@@ -587,7 +588,7 @@ const inputClass = 'mt-1'
                 id="create-description" 
                 v-model="form.description" 
                 placeholder="Краткое описание" 
-                rows="3"
+                :rows="3"
                 :class="inputClass"
               />
             </div>
@@ -725,7 +726,7 @@ const inputClass = 'mt-1'
                 id="edit-description" 
                 v-model="form.description" 
                 placeholder="Краткое описание" 
-                rows="3"
+                :rows="3"
                 :class="inputClass"
               />
             </div>

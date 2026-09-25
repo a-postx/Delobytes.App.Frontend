@@ -69,6 +69,10 @@ export interface CreateProductRequest {
   packingUnit?: PackingUnit
 }
 
+export interface CreateProductResponse {
+  id: string
+}
+
 export interface UpdateProductRequest {
   name: string
   description?: string
