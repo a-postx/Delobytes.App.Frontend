@@ -10,6 +10,20 @@ export enum ProductStatus {
   DeletionFailed = 'DeletionFailed',
 }
 
+export interface ProductBarcode {
+  id?: string
+  value: string
+  type?: string
+  isDefault: boolean
+}
+
+export interface PackingUnit {
+  lengthCm: number
+  widthCm: number
+  heightCm: number
+  weightKg?: number
+}
+
 export interface ProductItem {
   id: string
   sku: string
@@ -22,6 +36,8 @@ export interface ProductItem {
   deletionRequestedAt?: string
   deletedAt?: string
   creationSource: string
+  barcodes?: ProductBarcode[]
+  packingUnit?: PackingUnit
 }
 
 export interface GetProductsResponse {
@@ -41,21 +57,23 @@ export interface GetProductResponse {
   deletionRequestedAt?: string
   deletedAt?: string
   creationSource: string
+  barcodes?: ProductBarcode[]
+  packingUnit?: PackingUnit
 }
 
 export interface CreateProductRequest {
   sku: string
   name: string
   description?: string
-}
-
-export interface CreateProductResponse {
-  id: string
+  barcodes?: ProductBarcode[]
+  packingUnit?: PackingUnit
 }
 
 export interface UpdateProductRequest {
   name: string
   description?: string
+  barcodes?: ProductBarcode[]
+  packingUnit?: PackingUnit
 }
 
 export interface ProductDeletionStatusResponse {
