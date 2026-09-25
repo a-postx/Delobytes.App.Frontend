@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { ArrowLeft, ChevronRight, CreditCard, Plus, Tag, TrendingUp } from 'lucide-vue-next'
+import { ArrowLeft, ChevronRight } from 'lucide-vue-next'
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -32,10 +32,6 @@ const isLoading = ref<boolean>(true)
 const isCreateDialogOpen = ref<boolean>(false)
 const showHistory = ref<boolean>(false)
 
-const formatPercent = (fraction: number): string => {
-  return `${(fraction * 100).toFixed(2).replace('.', ',')}%`
-}
-
 const formatDate = (isoDate: string): string => {
   if (isoDate.length === 0) {
     return '—'
@@ -56,18 +52,6 @@ const todayIso = (): string => {
 const isScheduled = (item: ChannelParameterSetItem): boolean => item.validFrom.slice(0, 10) > todayIso()
 
 const scheduledCount = computed<number>(() => history.value.filter(isScheduled).length)
-
-const parameterDefaults = computed(() => {
-  if (!activeParameters.value) {
-    return null
-  }
-  return {
-    commissionPercent: activeParameters.value.commissionPercent,
-    acquiringPercent: activeParameters.value.acquiringPercent,
-    sppPercent: activeParameters.value.sppPercent,
-    sppEnabled: activeParameters.value.sppEnabled,
-  }
-})
 
 const loadData = async (): Promise<void> => {
   isLoading.value = true
@@ -145,47 +129,12 @@ const handleCreated = async (): Promise<void> => {
               </Badge>
             </div>
 
-            <div class="flex flex-col gap-3">
-              <div class="flex items-center justify-between rounded-lg border bg-card p-4">
-                <div class="flex items-center gap-3">
-                  <TrendingUp class="size-4 text-muted-foreground" />
-                  <div class="flex flex-col">
-                    <span class="text-xs uppercase tracking-wide text-muted-foreground">Комиссия</span>
-                    <span class="text-xs text-muted-foreground">с {{ formatDate(activeParameters.validFrom) }}</span>
-                  </div>
-                </div>
-                <span class="text-2xl font-bold">{{ formatPercent(activeParameters.commissionPercent) }}</span>
-              </div>
-
-              <div class="flex items-center justify-between rounded-lg border bg-card p-4">
-                <div class="flex items-center gap-3">
-                  <CreditCard class="size-4 text-muted-foreground" />
-                  <div class="flex flex-col">
-                    <span class="text-xs uppercase tracking-wide text-muted-foreground">Эквайринг</span>
-                    <span class="text-xs text-muted-foreground">с {{ formatDate(activeParameters.validFrom) }}</span>
-                  </div>
-                </div>
-                <span class="text-2xl font-bold">{{ formatPercent(activeParameters.acquiringPercent) }}</span>
-              </div>
-
-              <div class="flex items-center justify-between rounded-lg border bg-card p-4">
-                <div class="flex items-center gap-3">
-                  <Tag class="size-4 text-muted-foreground" />
-                  <div class="flex flex-col">
-                    <span class="text-xs uppercase tracking-wide text-muted-foreground">СПП</span>
-                    <span class="text-xs text-muted-foreground">
-                      {{ activeParameters.sppEnabled ? 'учитывается в расчётах' : 'не учитывается' }}
-                    </span>
-                  </div>
-                </div>
-                <span class="text-2xl font-bold">{{ formatPercent(activeParameters.sppPercent) }}</span>
+            <div class="rounded-lg border bg-card p-4">
+              <div class="flex flex-col gap-2">
+                <span class="text-sm text-muted-foreground">Действует с</span>
+                <span class="text-lg font-semibold">{{ formatDate(activeParameters.validFrom) }}</span>
               </div>
             </div>
-
-            <Button @click="isCreateDialogOpen = true">
-              <Plus class="size-4 mr-2" />
-              Изменить параметры
-            </Button>
 
             <Separator />
 
@@ -202,10 +151,9 @@ const handleCreated = async (): Promise<void> => {
 
           <section v-else class="flex flex-col items-center gap-4 rounded-lg border border-dashed p-8 text-center">
             <p class="text-sm text-muted-foreground">
-              Параметры канала ещё не заданы. Без них нельзя рассчитать маржу по этому каналу.
+              Параметры для этого канала ещё не заданы.
             </p>
-            <Button @click="isCreateDialogOpen = true">
-              <Plus class="size-4 mr-2" />
+            <Button disabled>
               Задать параметры
             </Button>
           </section>

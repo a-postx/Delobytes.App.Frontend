@@ -14,27 +14,16 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Spinner } from '@/components/ui/spinner'
-import { Switch } from '@/components/ui/switch'
-import SwitchThumb from '@/components/ui/switch/SwitchThumb.vue'
 import { channelParametersApi } from '@/services/api'
 import { toast } from 'vue-sonner'
 
 /**
  * Диалог создания новой версии параметров канала.
- * Ввод в процентах (15.5), на бэкенд уходит доля (0.155) — так значение
- * в форме совпадает с тем, что оператор видит на маркетплейсе.
  */
 const props = defineProps<{
   modelValue: boolean
   channelId: string
   channelName: string
-  /** Значения текущей активной версии, чтобы оператор правил их, а не вводил заново. */
-  defaults?: {
-    commissionPercent: number
-    acquiringPercent: number
-    sppPercent: number
-    sppEnabled: boolean
-  } | null
 }>()
 
 const emit = defineEmits<{
@@ -42,16 +31,8 @@ const emit = defineEmits<{
   'created': []
 }>()
 
-const commissionInput = ref<string>('')
-const acquiringInput = ref<string>('')
-const sppInput = ref<string>('')
-const sppEnabled = ref<boolean>(false)
 const validFrom = ref<string>('')
 const isSubmitting = ref<boolean>(false)
-
-const toPercentInput = (fraction: number): string => {
-  return fraction === 0 ? '0' : String(Number((fraction * 100).toFixed(4)))
-}
 
 const todayIso = (): string => {
   const now = new Date()
@@ -60,10 +41,6 @@ const todayIso = (): string => {
 }
 
 const resetState = (): void => {
-  commissionInput.value = props.defaults ? toPercentInput(props.defaults.commissionPercent) : ''
-  acquiringInput.value = props.defaults ? toPercentInput(props.defaults.acquiringPercent) : ''
-  sppInput.value = props.defaults ? toPercentInput(props.defaults.sppPercent) : ''
-  sppEnabled.value = props.defaults?.sppEnabled ?? false
   validFrom.value = todayIso()
   isSubmitting.value = false
 }
@@ -75,35 +52,8 @@ const handleOpenChange = (open: boolean): void => {
   }
 }
 
-const parsePercent = (raw: string): number | null => {
-  if (raw.trim().length === 0) {
-    return null
-  }
-  const value = Number(raw)
-  if (Number.isNaN(value) || value < 0 || value > 100) {
-    return null
-  }
-  return value
-}
-
-const commissionValue = computed(() => parsePercent(commissionInput.value))
-const acquiringValue = computed(() => parsePercent(acquiringInput.value))
-const sppValue = computed(() => parsePercent(sppInput.value))
-
 const isFormValid = computed<boolean>(() => {
-  return commissionValue.value !== null
-    && acquiringValue.value !== null
-    && sppValue.value !== null
-    && validFrom.value.length > 0
-})
-
-/** Комиссия + эквайринг + включённая СПП — суммарное удержание с цены продажи. */
-const totalDeduction = computed<number | null>(() => {
-  if (commissionValue.value === null || acquiringValue.value === null || sppValue.value === null) {
-    return null
-  }
-  const spp = sppEnabled.value ? sppValue.value : 0
-  return commissionValue.value + acquiringValue.value + spp
+  return validFrom.value.length > 0
 })
 
 const handleSubmit = async (): Promise<void> => {
@@ -116,10 +66,6 @@ const handleSubmit = async (): Promise<void> => {
 
   try {
     await channelParametersApi.create(props.channelId, {
-      commissionPercent: (commissionValue.value as number) / 100,
-      acquiringPercent: (acquiringValue.value as number) / 100,
-      sppPercent: (sppValue.value as number) / 100,
-      sppEnabled: sppEnabled.value,
       validFrom: validFrom.value,
     })
 
@@ -151,67 +97,6 @@ const handleSubmit = async (): Promise<void> => {
         <form @submit.prevent="handleSubmit">
           <div class="space-y-4">
             <div class="space-y-2">
-              <Label for="parameter-commission">Комиссия маркетплейса, %</Label>
-              <Input
-                id="parameter-commission"
-                v-model="commissionInput"
-                type="number"
-                step="0.01"
-                min="0"
-                max="100"
-                placeholder=""
-                :disabled="isSubmitting"
-                required
-              />
-            </div>
-
-            <div class="space-y-2">
-              <Label for="parameter-acquiring">Эквайринг, %</Label>
-              <Input
-                id="parameter-acquiring"
-                v-model="acquiringInput"
-                type="number"
-                step="0.01"
-                min="0"
-                max="100"
-                placeholder=""
-                :disabled="isSubmitting"
-                required
-              />
-            </div>
-			
-			<div class="flex items-center justify-between gap-4 rounded-md border p-3">
-              <div class="flex flex-col gap-0.5">
-                <Label for="parameter-spp-enabled">Учитывать СПП в расчётах</Label>
-                <span class="text-xs text-muted-foreground">
-                  Выключите, если канал не участвует в программе продвижения.
-                </span>
-              </div>
-              <Switch
-                id="parameter-spp-enabled"
-                v-model="sppEnabled"
-                :disabled="isSubmitting"
-              >
-                <SwitchThumb />
-              </Switch>
-            </div>
-
-            <div class="space-y-2">
-              <Label for="parameter-spp">СПП, %</Label>
-              <Input
-                id="parameter-spp"
-                v-model="sppInput"
-                type="number"
-                step="0.01"
-                min="0"
-                max="100"
-                placeholder="5"
-                :disabled="isSubmitting"
-                required
-              />
-            </div>
-
-            <div class="space-y-2">
               <Label for="parameter-valid-from">Действует с</Label>
               <Input
                 id="parameter-valid-from"
@@ -223,17 +108,6 @@ const handleSubmit = async (): Promise<void> => {
               <p class="text-xs text-muted-foreground">
                 Укажите будущую дату, чтобы запланировать изменение параметров заранее.
               </p>
-            </div>
-
-            <div
-              v-if="totalDeduction !== null"
-              class="rounded-md bg-muted p-3 text-xs text-muted-foreground"
-            >
-              Суммарное удержание с цены продажи:
-              <span class="font-semibold text-foreground">{{ totalDeduction.toFixed(2) }}%</span>.
-              При цене 1000 ₽ на счёт придёт около
-              <span class="font-semibold text-foreground">{{ (1000 * (1 - totalDeduction / 100)).toFixed(2) }} ₽</span>
-              (без учёта себестоимости).
             </div>
 
             <div class="flex justify-end gap-3 mt-6">

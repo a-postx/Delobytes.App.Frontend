@@ -144,16 +144,11 @@ export interface CreateChannelResponse {
 // ---------- Channel Parameter Sets ----------
 
 /**
- * Версия коммерческих параметров канала. Бэкенд отдаёт доли, а не проценты:
- * 0.15 === 15%. UI переводит значения в проценты на границе компонента.
+ * Версия коммерческих параметров канала.
  */
 export interface ChannelParameterSetItem {
   id: string
   channelId: string
-  commissionPercent: number
-  acquiringPercent: number
-  sppPercent: number
-  sppEnabled: boolean
   validFrom: string // YYYY-MM-DD
   createdAt: string
 }
@@ -171,10 +166,6 @@ export interface GetActiveChannelParameterSetResponse extends ChannelParameterSe
 }
 
 export interface CreateChannelParameterSetRequest {
-  commissionPercent: number
-  acquiringPercent: number
-  sppPercent: number
-  sppEnabled: boolean
   validFrom: string // YYYY-MM-DD
 }
 
@@ -307,10 +298,6 @@ export const channelParametersApi = {
         return {
           id: '',
           channelId,
-          commissionPercent: 0,
-          acquiringPercent: 0,
-          sppPercent: 0,
-          sppEnabled: false,
           validFrom: '',
           createdAt: '',
           found: false,
