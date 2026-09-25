@@ -194,9 +194,7 @@ const handleCreated = async (): Promise<void> => {
                   <Badge v-else-if="item.id === activeParameters?.id" variant="success">Действует</Badge>
                 </div>
                 <span class="text-xs text-muted-foreground">
-                  Комиссия {{ formatPercent(item.commissionPercent) }} · Эквайринг
-                  {{ formatPercent(item.acquiringPercent) }} · СПП {{ formatPercent(item.sppPercent) }}
-                  {{ item.sppEnabled ? '(вкл.)' : '(выкл.)' }}
+                  Создано {{ formatDate(item.createdAt.slice(0, 10)) }}
                 </span>
               </div>
             </li>
@@ -206,11 +204,11 @@ const handleCreated = async (): Promise<void> => {
     </SheetContent>
   </Sheet>
 
+  <!-- Диалог создания параметров -->
   <CreateChannelParametersDialog
     v-model="isCreateDialogOpen"
     :channel-id="props.channel.id"
     :channel-name="props.channel.name"
-    :defaults="parameterDefaults"
     @created="handleCreated"
   />
 </template>
