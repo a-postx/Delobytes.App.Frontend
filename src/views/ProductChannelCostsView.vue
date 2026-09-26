@@ -206,7 +206,7 @@ const inputClass = 'mt-1'
 
 <template>
   <div class="flex flex-col gap-6 p-6">
-    <div class="flex items-center justify-between">
+    <div class="flex flex-wrap items-center justify-between gap-3">
       <div class="flex flex-col gap-1">
         <h1 class="text-xl font-bold flex items-center gap-2">
           <DollarSign class="size-5 text-primary" />
