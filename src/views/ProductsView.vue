@@ -307,6 +307,7 @@ const handleEdit = async (): Promise<void> => {
 
     if (form.value.barcodes.length > 0) {
       payload.barcodes = form.value.barcodes.map(b => ({
+        id: b.id,
         value: b.value.trim(),
         type: b.type?.trim() || undefined,
         isDefault: b.isDefault
