@@ -306,12 +306,18 @@ const handleEdit = async (): Promise<void> => {
     }
 
     if (form.value.barcodes.length > 0) {
-      payload.barcodes = form.value.barcodes.map(b => ({
-        id: b.id,
-        value: b.value.trim(),
-        type: b.type?.trim() || undefined,
-        isDefault: b.isDefault
-      }))
+      payload.barcodes = form.value.barcodes.map(b => {
+        const barcode: any = {
+          value: b.value.trim(),
+          type: b.type?.trim() || undefined,
+          isDefault: b.isDefault
+        }
+        // Включаем id только если он существует (для обновления существующих баркодов)
+        if (b.id) {
+          barcode.id = b.id
+        }
+        return barcode
+      })
     }
 
     if (form.value.packingUnit.lengthCm && form.value.packingUnit.widthCm && form.value.packingUnit.heightCm) {
