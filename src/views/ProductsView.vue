@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, computed, watch, onUnmounted } from 'vue'
-import { Plus, Pencil, Trash2, Archive, Undo2, Package, AlertTriangle, MoreHorizontal, X as XIcon } from 'lucide-vue-next'
+import { Plus, Pencil, Trash2, Archive, Undo2, Package, AlertTriangle, MoreHorizontal, X as XIcon, Download } from 'lucide-vue-next'
 import {
   DialogClose,
   DialogContent,
@@ -46,16 +46,21 @@ import {
 import { StatusFilter } from '@/components/ui/status-filter'
 import ProductStatusBadge from '@/components/products/ProductStatusBadge.vue'
 import { toast } from 'vue-sonner'
-import { catalogProductsApi } from '@/services/api'
+import { catalogProductsApi, integrationsApi } from '@/services/api'
 import type { ProductItem, CreateProductRequest, UpdateProductRequest, ProductBarcode, PackingUnit } from '@/types/products'
+import type { Connection } from '@/types'
 import { ProductStatus } from '@/types/products'
 import { useCurrentUser } from '@/composables/useCurrentUser'
+import { useRouter } from 'vue-router'
 import { X } from 'lucide-vue-next'
 
 const { canWrite } = useCurrentUser()
+const router = useRouter()
 
 const items = ref<ProductItem[]>([])
 const isLoading = ref<boolean>(true)
+const connections = ref<Connection[]>([])
+const isLoadingConnections = ref<boolean>(false)
 
 const createDialogOpen = ref<boolean>(false)
 const editDialogOpen = ref<boolean>(false)
@@ -137,6 +142,24 @@ const loadItems = async (): Promise<void> => {
   }
 }
 
+const loadConnections = async (): Promise<void> => {
+  isLoadingConnections.value = true
+  try {
+    connections.value = await integrationsApi.getConnections()
+  } catch (error) {
+    console.error('Failed to load connections:', error)
+    connections.value = []
+  } finally {
+    isLoadingConnections.value = false
+  }
+}
+
+const activeWildberriesConnection = computed<Connection | null>(() => {
+  return connections.value.find(
+    c => c.isActive && c.templateCode === 'wildberries'
+  ) ?? null
+})
+
 const checkDeletionStatus = async (): Promise<void> => {
   const pendingProducts = items.value.filter(p => p.status === ProductStatus.DeletionPending)
   
@@ -191,6 +214,7 @@ watch(() => items.value, (newItems) => {
 
 onMounted(() => {
   loadItems()
+  loadConnections()
 })
 
 onUnmounted(() => {
@@ -435,10 +459,29 @@ const inputClass = 'mt-1'
             {{ statusFilter === 'active' ? 'Добавьте первый товар' : 'В этом разделе пока ничего нет' }}
           </p>
         </div>
-        <Button v-if="canWrite && statusFilter === 'active'" @click="openCreate" variant="outline" class="gap-2 mt-2">
-          <Plus class="size-4" />
-          Добавить товар
-        </Button>
+        <div v-if="canWrite && statusFilter === 'active'" class="flex flex-col sm:flex-row gap-2 mt-2">
+          <Button @click="openCreate" variant="outline" class="gap-2">
+            <Plus class="size-4" />
+            Добавить товар
+          </Button>
+          <Button 
+            v-if="!isLoadingConnections && activeWildberriesConnection" 
+            @click="router.push('/catalogs/products/imports')" 
+            variant="default" 
+            class="gap-2"
+          >
+            <Download class="size-4" />
+            Импорт из Wildberries
+          </Button>
+          <Button 
+            v-else-if="!isLoadingConnections && !activeWildberriesConnection" 
+            @click="router.push('/catalogs/sales-channels')" 
+            variant="outline" 
+            class="gap-2"
+          >
+            Настроить интеграцию
+          </Button>
+        </div>
       </div>
     </div>
 
