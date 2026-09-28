@@ -525,9 +525,14 @@ const inputClass = 'mt-1'
             <TableCell class="font-medium">{{ item.name }}</TableCell>
             <TableCell>
               <div v-if="item.barcodes && item.barcodes.length > 0" class="flex flex-wrap gap-1">
-                <Badge :variant="getBarcodeVariant(barcode.type)" class="text-xs">
-					<span v-if="getBarcodePrefix(barcode.type)" class="font-semibold mr-1">{{ getBarcodePrefix(barcode.type) }}</span>{{ barcode.value }}
-				</Badge>
+                <Badge
+                  v-for="(bc, idx) in item.barcodes"
+                  :key="idx"
+                  :variant="getBarcodeVariant(bc.type)"
+                  class="text-xs"
+                >
+                  <span v-if="getBarcodePrefix(bc.type)" class="font-semibold mr-1">{{ getBarcodePrefix(bc.type) }}</span>{{ bc.value }}
+                </Badge>
               </div>
               <span v-else class="text-muted-foreground text-sm">—</span>
             </TableCell>
