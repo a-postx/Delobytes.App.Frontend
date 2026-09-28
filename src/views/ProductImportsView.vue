@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref, onMounted, computed, onUnmounted } from 'vue'
-import { Plus, RefreshCw } from 'lucide-vue-next'
+import { ref, onMounted, computed } from 'vue'
+import { Plus, RefreshCw, Download, ArrowRightLeft, Package } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Spinner } from '@/components/ui/spinner'
@@ -18,6 +18,7 @@ import { integrationsApi } from '@/services/api'
 import type { ProductImportJob, Connection } from '@/types'
 import { ProductImportStatus } from '@/types'
 import { useCurrentUser } from '@/composables/useCurrentUser'
+import { usePolling } from '@/composables/usePolling'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
@@ -28,17 +29,19 @@ const connections = ref<Connection[]>([])
 const isLoading = ref<boolean>(true)
 const isStarting = ref<boolean>(false)
 
-let pollingInterval: number | null = null
-
-const activeWildberriesConnection = computed(() => {
-  return connections.value.find(c => c.isActive && c.templateCode === 'wildberries')
+const activeWildberriesConnection = computed<Connection | null>(() => {
+  return connections.value.find(c => c.isActive && c.templateCode === 'wildberries') ?? null
 })
 
-const hasActiveJobs = computed(() => {
-  return jobs.value.some(j => 
-    j.status === ProductImportStatus.Pending || j.status === ProductImportStatus.Running
+const hasActiveJobs = computed<boolean>(() => {
+  return jobs.value.some(
+    j => j.status === ProductImportStatus.Pending || j.status === ProductImportStatus.Running,
   )
 })
+
+const connectionById = computed<Map<string, Connection>>(
+  () => new Map(connections.value.map(c => [c.id, c])),
+)
 
 const formatDate = (dateStr: string | null): string => {
   if (!dateStr) return '—'
@@ -51,7 +54,9 @@ const formatDate = (dateStr: string | null): string => {
   })
 }
 
-const getStatusBadgeVariant = (status: string): 'default' | 'secondary' | 'destructive' | 'success' | 'warning' => {
+const getStatusBadgeVariant = (
+  status: string,
+): 'default' | 'secondary' | 'destructive' | 'success' | 'warning' => {
   switch (status) {
     case ProductImportStatus.Success:
       return 'success'
@@ -61,8 +66,6 @@ const getStatusBadgeVariant = (status: string): 'default' | 'secondary' | 'destr
       return 'destructive'
     case ProductImportStatus.PartialSuccess:
       return 'warning'
-    case ProductImportStatus.Cancelled:
-      return 'secondary'
     default:
       return 'secondary'
   }
@@ -70,20 +73,13 @@ const getStatusBadgeVariant = (status: string): 'default' | 'secondary' | 'destr
 
 const getStatusLabel = (status: string): string => {
   switch (status) {
-    case ProductImportStatus.Pending:
-      return 'Ожидание'
-    case ProductImportStatus.Running:
-      return 'Выполняется'
-    case ProductImportStatus.Success:
-      return 'Успешно'
-    case ProductImportStatus.PartialSuccess:
-      return 'Частичный успех'
-    case ProductImportStatus.Failed:
-      return 'Ошибка'
-    case ProductImportStatus.Cancelled:
-      return 'Отменено'
-    default:
-      return status
+    case ProductImportStatus.Pending: return 'Ожидание'
+    case ProductImportStatus.Running: return 'Выполняется'
+    case ProductImportStatus.Success: return 'Успешно'
+    case ProductImportStatus.PartialSuccess: return 'Частичный успех'
+    case ProductImportStatus.Failed: return 'Ошибка'
+    case ProductImportStatus.Cancelled: return 'Отменено'
+    default: return status
   }
 }
 
@@ -92,7 +88,6 @@ const loadConnections = async (): Promise<void> => {
     connections.value = await integrationsApi.getConnections()
   } catch (error) {
     console.error('Failed to load connections:', error)
-    toast.error('Не удалось загрузить подключения')
   }
 }
 
@@ -115,6 +110,14 @@ const loadData = async (): Promise<void> => {
   }
 }
 
+// Polling останавливается автоматически когда нет активных задач
+// и при размонтировании компонента (onUnmounted внутри usePolling)
+const { start: startPolling } = usePolling(loadJobs, {
+  interval: 2000,
+  shouldContinue: () => hasActiveJobs.value,
+  onError: (err) => console.error('Polling error:', err),
+})
+
 const startImport = async (): Promise<void> => {
   if (!activeWildberriesConnection.value) {
     toast.error('Нет активного подключения Wildberries')
@@ -129,10 +132,13 @@ const startImport = async (): Promise<void> => {
     })
     toast.success('Импорт запущен')
     await loadJobs()
+    // Запускаем polling после создания новой задачи
+    if (hasActiveJobs.value) {
+      startPolling()
+    }
   } catch (error: unknown) {
     const apiError = error as { message?: string }
-    const message = apiError?.message ?? 'Не удалось запустить импорт'
-    toast.error(message)
+    toast.error(apiError?.message ?? 'Не удалось запустить импорт')
   } finally {
     isStarting.value = false
   }
@@ -140,25 +146,8 @@ const startImport = async (): Promise<void> => {
 
 const refreshJobs = async (): Promise<void> => {
   await loadJobs()
-}
-
-const startPolling = (): void => {
-  if (pollingInterval) {
-    clearInterval(pollingInterval)
-  }
-  pollingInterval = window.setInterval(() => {
-    if (hasActiveJobs.value) {
-      loadJobs()
-    } else {
-      stopPolling()
-    }
-  }, 3000)
-}
-
-const stopPolling = (): void => {
-  if (pollingInterval) {
-    clearInterval(pollingInterval)
-    pollingInterval = null
+  if (hasActiveJobs.value) {
+    startPolling()
   }
 }
 
@@ -168,64 +157,98 @@ onMounted(async () => {
     startPolling()
   }
 })
-
-onUnmounted(() => {
-  stopPolling()
-})
 </script>
 
 <template>
-  <div class="container mx-auto py-6 space-y-6">
+  <div class="flex flex-col gap-6 p-6">
+    <!-- Шапка -->
     <div class="flex items-center justify-between">
-      <div>
-        <h1 class="text-3xl font-bold tracking-tight">Импорт товаров</h1>
-        <p class="text-muted-foreground mt-2">
-          История задач импорта товаров из внешних систем
-        </p>
+      <div class="flex flex-col gap-1">
+        <h1 class="text-xl font-bold">Импорт товаров</h1>
+        <p class="text-sm text-muted-foreground">История задач импорта из внешних систем.</p>
       </div>
-      <div class="flex gap-2">
+      <div class="flex items-center gap-2">
         <Button
           variant="outline"
-          size="default"
-          @click="refreshJobs"
+          size="icon"
           :disabled="isLoading"
+          @click="refreshJobs"
+          aria-label="Обновить"
         >
-          <RefreshCw :class="{ 'animate-spin': isLoading }" class="h-4 w-4" />
+          <RefreshCw class="size-4" :class="{ 'animate-spin': isLoading }" />
         </Button>
         <Button
           v-if="canWrite"
+          :disabled="isStarting || isLoading || !activeWildberriesConnection"
           @click="startImport"
-          :disabled="isStarting || !activeWildberriesConnection"
+          class="gap-2"
         >
-          <Plus class="h-4 w-4 mr-2" />
+          <Spinner v-if="isStarting" class="size-4" />
+          <Plus v-else class="size-4" />
           Запустить импорт
         </Button>
       </div>
     </div>
 
-    <div v-if="!activeWildberriesConnection && !isLoading" class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-      <p class="text-sm text-yellow-800">
+    <!-- Баннер: нет подключения WB -->
+    <div
+      v-if="!isLoading && !activeWildberriesConnection"
+      class="rounded-xl border border-border bg-card p-4 flex items-center justify-between gap-4"
+    >
+      <p class="text-sm text-muted-foreground">
         Для запуска импорта необходимо активное подключение Wildberries.
-        <router-link :to="{ name: 'sales-channels' }" class="underline font-medium">
-          Настроить подключение
-        </router-link>
       </p>
+      <Button variant="outline" size="sm" class="shrink-0 gap-2" @click="router.push({ name: 'sales-channels' })">
+        <ArrowRightLeft class="size-4" />
+        Настроить интеграцию
+      </Button>
     </div>
 
-    <div v-if="isLoading" class="space-y-3">
-      <Skeleton class="h-12 w-full" />
-      <Skeleton class="h-12 w-full" />
-      <Skeleton class="h-12 w-full" />
+    <!-- Skeleton при загрузке -->
+    <div v-if="isLoading" class="flex flex-col gap-2">
+      <Skeleton v-for="n in 4" :key="n" class="h-10 w-full rounded-lg" />
     </div>
 
-    <div v-else-if="jobs.length === 0" class="text-center py-12 bg-muted/50 rounded-lg">
-      <p class="text-muted-foreground">Нет задач импорта</p>
-      <p class="text-sm text-muted-foreground mt-1">
-        Запустите первый импорт товаров из Wildberries
-      </p>
+    <!-- Пустое состояние -->
+    <div
+      v-else-if="jobs.length === 0"
+      class="rounded-xl border border-border bg-card p-12"
+    >
+      <div class="flex flex-col items-center justify-center gap-3 text-center">
+        <div class="size-12 rounded-full bg-muted flex items-center justify-center">
+          <Download class="size-6 text-muted-foreground" />
+        </div>
+        <div>
+          <h3 class="font-semibold">Нет задач импорта</h3>
+          <p class="text-sm text-muted-foreground">
+            Запустите первый импорт товаров из Wildberries.
+          </p>
+        </div>
+        <Button
+          v-if="canWrite && activeWildberriesConnection"
+          :disabled="isStarting"
+          @click="startImport"
+          variant="outline"
+          class="gap-2 mt-2"
+        >
+          <Spinner v-if="isStarting" class="size-4" />
+          <Plus v-else class="size-4" />
+          Запустить импорт
+        </Button>
+        <Button
+          v-else-if="canWrite && !activeWildberriesConnection"
+          variant="outline"
+          class="gap-2 mt-2"
+          @click="router.push({ name: 'sales-channels' })"
+        >
+          <ArrowRightLeft class="size-4" />
+          Настроить интеграцию
+        </Button>
+      </div>
     </div>
 
-    <div v-else class="border rounded-lg">
+    <!-- Таблица задач -->
+    <div v-else class="rounded-xl border border-border bg-card overflow-hidden">
       <Table>
         <TableHeader>
           <TableRow>
@@ -233,47 +256,50 @@ onUnmounted(() => {
             <TableHead>Подключение</TableHead>
             <TableHead>Статус</TableHead>
             <TableHead>Завершена</TableHead>
-            <TableHead class="text-right">Обработано</TableHead>
-            <TableHead class="text-right">Создано</TableHead>
-            <TableHead class="text-right">Обновлено</TableHead>
-            <TableHead class="text-right">Пропущено</TableHead>
-            <TableHead class="text-right">Ошибки</TableHead>
+            <TableHead class="text-right tabular-nums">Обработано</TableHead>
+            <TableHead class="text-right tabular-nums">Создано</TableHead>
+            <TableHead class="text-right tabular-nums">Обновлено</TableHead>
+            <TableHead class="text-right tabular-nums">Пропущено</TableHead>
+            <TableHead class="text-right tabular-nums">Ошибок</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           <TableRow v-for="job in jobs" :key="job.id">
-            <TableCell class="font-medium">
+            <TableCell class="font-medium whitespace-nowrap">
               {{ formatDate(job.createdAt) }}
             </TableCell>
             <TableCell>
               <span class="text-sm">
-                {{ connections.find(c => c.id === job.connectionId)?.templateDisplayName ?? '—' }}
+                {{ connectionById.get(job.connectionId)?.templateDisplayName ?? '—' }}
               </span>
             </TableCell>
             <TableCell>
               <div class="flex items-center gap-2">
+                <Spinner
+                  v-if="job.status === ProductImportStatus.Running || job.status === ProductImportStatus.Pending"
+                  class="size-3.5 shrink-0"
+                />
                 <Badge :variant="getStatusBadgeVariant(job.status)">
                   {{ getStatusLabel(job.status) }}
                 </Badge>
-                <Spinner v-if="job.status === ProductImportStatus.Running" class="h-4 w-4" />
               </div>
             </TableCell>
-            <TableCell>
+            <TableCell class="whitespace-nowrap text-sm text-muted-foreground">
               {{ formatDate(job.completedAt) }}
             </TableCell>
-            <TableCell class="text-right">
+            <TableCell class="text-right tabular-nums text-sm">
               {{ job.recordsProcessed }}
             </TableCell>
-            <TableCell class="text-right">
+            <TableCell class="text-right tabular-nums text-sm">
               {{ job.recordsCreated }}
             </TableCell>
-            <TableCell class="text-right">
+            <TableCell class="text-right tabular-nums text-sm">
               {{ job.recordsUpdated }}
             </TableCell>
-            <TableCell class="text-right">
+            <TableCell class="text-right tabular-nums text-sm">
               {{ job.recordsSkipped }}
             </TableCell>
-            <TableCell class="text-right">
+            <TableCell class="text-right tabular-nums text-sm">
               <span :class="{ 'text-destructive font-medium': job.recordsFailed > 0 }">
                 {{ job.recordsFailed }}
               </span>
@@ -281,24 +307,6 @@ onUnmounted(() => {
           </TableRow>
         </TableBody>
       </Table>
-    </div>
-
-    <div v-if="jobs.some(j => j.errorMessage)" class="space-y-2">
-      <h3 class="text-sm font-medium">Ошибки импорта</h3>
-      <div
-        v-for="job in jobs.filter(j => j.errorMessage)"
-        :key="job.id"
-        class="bg-destructive/10 border border-destructive/20 rounded-lg p-3"
-      >
-        <div class="flex items-start gap-2">
-          <Badge variant="destructive" class="shrink-0">
-            {{ formatDate(job.createdAt) }}
-          </Badge>
-          <p class="text-sm text-destructive">
-            {{ job.errorMessage }}
-          </p>
-        </div>
-      </div>
     </div>
   </div>
 </template>

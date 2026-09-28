@@ -14,6 +14,7 @@ import {
   Store,
   ShoppingCart,
   Factory,
+  Download,
 } from 'lucide-vue-next'
 import { RouterLink } from 'vue-router'
 import {
@@ -232,6 +233,14 @@ const referenceItems = [
           </CollapsibleTrigger>
           <CollapsibleContent>
             <SidebarMenuSub>
+              <SidebarMenuSubItem>
+                <SidebarMenuSubButton as-child>
+                  <RouterLink to="/catalogs/products/imports" class="flex items-center gap-2">
+                    <Download class="size-3.5 shrink-0" />
+                    <span>Импорт товаров</span>
+                  </RouterLink>
+                </SidebarMenuSubButton>
+              </SidebarMenuSubItem>
             </SidebarMenuSub>
           </CollapsibleContent>
         </SidebarMenuItem>
