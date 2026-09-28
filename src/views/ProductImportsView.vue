@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
-import { Plus, RefreshCw, Download, ArrowRightLeft, Package } from 'lucide-vue-next'
+import { Plus, RefreshCw, Download, ArrowRightLeft } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Spinner } from '@/components/ui/spinner'
