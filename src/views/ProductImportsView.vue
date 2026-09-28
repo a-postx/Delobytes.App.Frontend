@@ -264,7 +264,7 @@ onMounted(async () => {
           </TableRow>
         </TableHeader>
         <TableBody>
-          <TableRow v-for="job in jobs" :key="job.id">
+          <TableRow v-for="job in jobs" :key="job.id" class="hover:bg-muted/50 transition-colors">
             <TableCell class="font-medium whitespace-nowrap">
               {{ formatDate(job.createdAt) }}
             </TableCell>

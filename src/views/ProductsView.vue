@@ -525,14 +525,9 @@ const inputClass = 'mt-1'
             <TableCell class="font-medium">{{ item.name }}</TableCell>
             <TableCell>
               <div v-if="item.barcodes && item.barcodes.length > 0" class="flex flex-wrap gap-1">
-                <Badge
-                  v-for="(barcode, idx) in item.barcodes"
-                  :key="idx"
-                  :variant="getBarcodeVariant(barcode.type)"
-                  class="text-xs"
-                >
-                  <span v-if="getBarcodePrefix(barcode.type)" class="font-semibold mr-1">{{ getBarcodePrefix(barcode.type) }}</span>{{ barcode.value }}
-                </Badge>
+                <Badge :variant="getBarcodeVariant(barcode.type)" class="text-xs">
+					<span v-if="getBarcodePrefix(barcode.type)" class="font-semibold mr-1">{{ getBarcodePrefix(barcode.type) }}</span>{{ barcode.value }}
+				</Badge>
               </div>
               <span v-else class="text-muted-foreground text-sm">—</span>
             </TableCell>
@@ -613,7 +608,7 @@ const inputClass = 'mt-1'
     <!-- Create Dialog -->
     <DialogRoot v-model:open="createDialogOpen">
       <DialogPortal>
-        <DialogOverlay class="fixed inset-0 z-50 bg-black/50" />
+        <DialogOverlay class="bg-background/80 backdrop-blur-sm fixed inset-0 z-50" />
         <DialogContent :class="dialogContentClass">
           <div class="flex items-start justify-between mb-4">
             <div>
@@ -752,7 +747,7 @@ const inputClass = 'mt-1'
     <!-- Edit Dialog -->
     <DialogRoot v-model:open="editDialogOpen">
       <DialogPortal>
-        <DialogOverlay class="fixed inset-0 z-50 bg-black/50" />
+        <DialogOverlay class="bg-background/80 backdrop-blur-sm fixed inset-0 z-50" />
         <DialogContent :class="dialogContentClass">
           <div class="flex items-start justify-between mb-4">
             <div>

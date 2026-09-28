@@ -78,7 +78,7 @@ export const routes: RouteRecordRaw[] = [
         name: 'sales-channels',
         component: SalesChannelsView,
         meta: {
-          group: NavGroup.Sales,
+          group: NavGroup.System,
           title: 'Каналы продаж',
           requiresAuth: true,
         },
