@@ -20,6 +20,7 @@ import ProductChannelCostsView from '@/views/ProductChannelCostsView.vue'
 import WorkRatesView from '@/views/WorkRatesView.vue'
 import ProductWorkRatesView from '@/views/ProductWorkRatesView.vue'
 import StepperDemoView from '@/views/StepperDemoView.vue'
+import ProductImportsView from '@/views/ProductImportsView.vue'
 import NotFoundView from '@/views/NotFoundView.vue'
 
 /**
@@ -109,6 +110,16 @@ export const routes: RouteRecordRaw[] = [
         meta: {
           group: NavGroup.Platform,
           title: 'Каталог',
+          requiresAuth: true,
+        },
+      },
+      {
+        path: 'catalogs/products/imports',
+        name: 'product-imports',
+        component: ProductImportsView,
+        meta: {
+          group: NavGroup.Platform,
+          title: 'Импорт товаров',
           requiresAuth: true,
         },
       },

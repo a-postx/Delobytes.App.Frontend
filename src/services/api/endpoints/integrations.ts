@@ -5,6 +5,10 @@ import type {
   Connection,
   CreateConnectionPayload,
   CreateConnectionResult,
+  ProductImportCreateResponse,
+  GetProductImportsResponse,
+  GetProductImportResponse,
+  StartProductImportRequest,
 } from '@/types'
 
 interface ChannelsResponse {
@@ -52,5 +56,51 @@ export const integrationsApi = {
 
   deleteConnection: async (id: string): Promise<void> => {
     await axiosInstance.delete(`/api/integrations/connections/${id}`)
+  },
+
+  /** Запуск импорта товаров из внешней системы (Wildberries) */
+  createProductImport: async (payload: StartProductImportRequest): Promise<ProductImportCreateResponse> => {
+    try {
+      const response = await axiosInstance.post<ProductImportCreateResponse>(
+        '/api/integrations/product-imports',
+        payload,
+      )
+      return response.data
+    } catch (error: unknown) {
+      const axiosError = error as AxiosError<ApiErrorResponse>
+      const status = axiosError.response?.status
+      if (status === 400 || status === 404 || status === 409) {
+        const message = axiosError.response?.data?.message ?? 'Ошибка запуска импорта'
+        throw { message }
+      }
+      throw error
+    }
+  },
+
+  /** Получить список задач импорта */
+  getProductImports: async (): Promise<GetProductImportsResponse> => {
+    const response = await axiosInstance.get<GetProductImportsResponse>('/api/integrations/product-imports')
+    return response.data
+  },
+
+  /** Получить детали задачи импорта */
+  getProductImport: async (id: string): Promise<GetProductImportResponse> => {
+    const response = await axiosInstance.get<GetProductImportResponse>(`/api/integrations/product-imports/${id}`)
+    return response.data
+  },
+
+  /** Отменить задачу импорта */
+  cancelProductImport: async (id: string): Promise<void> => {
+    try {
+      await axiosInstance.post(`/api/integrations/product-imports/${id}/cancel`)
+    } catch (error: unknown) {
+      const axiosError = error as AxiosError<ApiErrorResponse>
+      const status = axiosError.response?.status
+      if (status === 404 || status === 409) {
+        const message = axiosError.response?.data?.message ?? 'Ошибка отмены импорта'
+        throw { message }
+      }
+      throw error
+    }
   },
 }
