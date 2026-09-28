@@ -233,7 +233,7 @@ const inputClass = 'mt-1'
     <!-- Create dialog -->
     <DialogRoot v-model:open="createDialogOpen">
       <DialogPortal>
-        <DialogOverlay class="fixed inset-0 z-[99] bg-black/50" />
+        <DialogOverlay class="bg-background/80 backdrop-blur-sm fixed inset-0 z-50" />
         <DialogContent :class="dialogContentClass">
           <div class="flex items-center justify-between mb-4">
             <DialogTitle class="text-lg font-semibold">Новый тип расхода</DialogTitle>

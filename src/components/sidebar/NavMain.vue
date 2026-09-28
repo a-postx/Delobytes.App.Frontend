@@ -34,7 +34,6 @@ import {
 } from '@/components/ui/sidebar'
 
 const salesItems = [
-  { to: '/catalogs/sales-channels', label: 'Каналы продаж', icon: Store },
   { to: '/catalogs/cost-types', label: 'Типы расходов', icon: Tag },
   { to: '/catalogs/product-channel-costs', label: 'Расходы по каналам', icon: DollarSign },
 ]
@@ -233,6 +232,14 @@ const referenceItems = [
           </CollapsibleTrigger>
           <CollapsibleContent>
             <SidebarMenuSub>
+              <SidebarMenuSubItem>
+                <SidebarMenuSubButton as-child>
+                  <RouterLink to="/catalogs/sales-channels" class="flex items-center gap-2">
+                    <Store class="size-3.5 shrink-0" />
+                    <span>Каналы продаж</span>
+                  </RouterLink>
+                </SidebarMenuSubButton>
+              </SidebarMenuSubItem>
               <SidebarMenuSubItem>
                 <SidebarMenuSubButton as-child>
                   <RouterLink to="/catalogs/products/imports" class="flex items-center gap-2">
