@@ -130,6 +130,24 @@ const filteredItems = computed(() => {
 const formatDate = (dateStr: string): string =>
   new Date(dateStr).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' })
 
+const getBarcodePrefix = (type?: string): string => {
+  const prefixMap: Record<string, string> = {
+    'wildberries': 'ВБ',
+    'ozon': 'ОЗ',
+    'yandex': 'ЯМ',
+  }
+  return prefixMap[type?.toLowerCase() ?? ''] ?? ''
+}
+
+const getBarcodeVariant = (type?: string): 'default' | 'marketplace-wb' | 'marketplace-oz' | 'marketplace-ym' => {
+  const variantMap: Record<string, 'marketplace-wb' | 'marketplace-oz' | 'marketplace-ym'> = {
+    'wildberries': 'marketplace-wb',
+    'ozon': 'marketplace-oz',
+    'yandex': 'marketplace-ym',
+  }
+  return variantMap[type?.toLowerCase() ?? ''] ?? 'default'
+}
+
 const loadItems = async (): Promise<void> => {
   isLoading.value = true
   try {
@@ -510,10 +528,10 @@ const inputClass = 'mt-1'
                 <Badge
                   v-for="(barcode, idx) in item.barcodes"
                   :key="idx"
-                  variant="secondary"
+                  :variant="getBarcodeVariant(barcode.type)"
                   class="text-xs"
                 >
-                  {{ barcode.value }}
+                  <span v-if="getBarcodePrefix(barcode.type)" class="font-semibold mr-1">{{ getBarcodePrefix(barcode.type) }}</span>{{ barcode.value }}
                 </Badge>
               </div>
               <span v-else class="text-muted-foreground text-sm">—</span>
@@ -652,7 +670,9 @@ const inputClass = 'mt-1'
                     :key="idx"
                     class="flex items-center gap-2 p-2 bg-muted rounded-md"
                   >
-                    <Badge variant="secondary" class="flex-shrink-0">{{ barcode.value }}</Badge>
+                    <Badge :variant="getBarcodeVariant(barcode.type)" class="flex-shrink-0">
+                      <span v-if="getBarcodePrefix(barcode.type)" class="font-semibold mr-1">{{ getBarcodePrefix(barcode.type) }}</span>{{ barcode.value }}
+                    </Badge>
                     <span v-if="barcode.type" class="text-xs text-muted-foreground">{{ barcode.type }}</span>
                     <Button 
                       variant="ghost" 
@@ -790,7 +810,9 @@ const inputClass = 'mt-1'
                     :key="idx"
                     class="flex items-center gap-2 p-2 bg-muted rounded-md"
                   >
-                    <Badge variant="secondary" class="flex-shrink-0">{{ barcode.value }}</Badge>
+                    <Badge :variant="getBarcodeVariant(barcode.type)" class="flex-shrink-0">
+                      <span v-if="getBarcodePrefix(barcode.type)" class="font-semibold mr-1">{{ getBarcodePrefix(barcode.type) }}</span>{{ barcode.value }}
+                    </Badge>
                     <span v-if="barcode.type" class="text-xs text-muted-foreground">{{ barcode.type }}</span>
                     <Button 
                       variant="ghost" 
