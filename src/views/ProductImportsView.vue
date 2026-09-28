@@ -51,20 +51,20 @@ const formatDate = (dateStr: string | null): string => {
   })
 }
 
-const getStatusBadgeVariant = (status: string): 'default' | 'secondary' | 'destructive' | 'outline' => {
+const getStatusBadgeVariant = (status: string): 'default' | 'secondary' | 'destructive' | 'success' | 'warning' => {
   switch (status) {
     case ProductImportStatus.Success:
-      return 'default'
+      return 'success'
     case ProductImportStatus.Running:
       return 'secondary'
     case ProductImportStatus.Failed:
       return 'destructive'
     case ProductImportStatus.PartialSuccess:
-      return 'secondary'
+      return 'warning'
     case ProductImportStatus.Cancelled:
-      return 'outline'
+      return 'secondary'
     default:
-      return 'outline'
+      return 'secondary'
   }
 }
 
@@ -124,7 +124,7 @@ const startImport = async (): Promise<void> => {
 
   isStarting.value = true
   try {
-    const response = await integrationsApi.createProductImport({
+    await integrationsApi.createProductImport({
       connectionId: activeWildberriesConnection.value.id,
     })
     toast.success('Импорт запущен')
