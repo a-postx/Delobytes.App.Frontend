@@ -245,27 +245,34 @@ const openCreate = (): void => {
   createDialogOpen.value = true
 }
 
-const openEdit = (item: ProductItem): void => {
+const openEdit = async (item: ProductItem): Promise<void> => {
   editTarget.value = item
-  form.value = {
-    sku: item.sku,
-    name: item.name,
-    description: item.description ?? '',
-    barcodes: item.barcodes ? item.barcodes.map(b => ({ ...b })) : [],
-    packingUnit: item.packingUnit ? {
-      lengthCm: item.packingUnit.lengthCm.toString(),
-      widthCm: item.packingUnit.widthCm.toString(),
-      heightCm: item.packingUnit.heightCm.toString(),
-      weightKg: item.packingUnit.weightKg?.toString() ?? ''
-    } : {
-      lengthCm: '',
-      widthCm: '',
-      heightCm: '',
-      weightKg: ''
+  
+  try {
+    const fullProduct = await catalogProductsApi.getById(item.id)
+    
+    form.value = {
+      sku: fullProduct.sku,
+      name: fullProduct.name,
+      description: fullProduct.description ?? '',
+      barcodes: fullProduct.barcodes ? fullProduct.barcodes.map(b => ({ ...b })) : [],
+      packingUnit: fullProduct.packingUnit ? {
+        lengthCm: fullProduct.packingUnit.lengthCm.toString(),
+        widthCm: fullProduct.packingUnit.widthCm.toString(),
+        heightCm: fullProduct.packingUnit.heightCm.toString(),
+        weightKg: fullProduct.packingUnit.weightKg?.toString() ?? ''
+      } : {
+        lengthCm: '',
+        widthCm: '',
+        heightCm: '',
+        weightKg: ''
+      }
     }
+    newBarcode.value = { value: '', type: '', isDefault: false }
+    editDialogOpen.value = true
+  } catch {
+    toast.error('Не удалось загрузить данные продукта')
   }
-  newBarcode.value = { value: '', type: '', isDefault: false }
-  editDialogOpen.value = true
 }
 
 const openDelete = (item: ProductItem): void => {
