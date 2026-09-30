@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, nextTick } from 'vue'
+import { ref, computed, nextTick, watch, onBeforeUnmount } from 'vue'
 import { ChevronLeft, ChevronRight, X, ZoomIn, ImageOff } from 'lucide-vue-next'
 import type { ProductPhoto } from '@/types/products'
 
@@ -49,6 +49,50 @@ const onLightboxKeydown = (e: KeyboardEvent): void => {
   if (e.key === 'ArrowRight') { e.preventDefault(); next() }
   if (e.key === 'Escape') { e.preventDefault(); closeLightbox() }
 }
+
+// Прокручивается окно браузера, поэтому на время просмотра блокируем прокрутку body.
+// Ширину скроллбара компенсируем отступом, чтобы страница под оверлеем не сдвигалась.
+let isScrollLocked: boolean = false
+let prevBodyOverflow: string = ''
+let prevBodyPaddingRight: string = ''
+
+const lockScroll = (): void => {
+  if (isScrollLocked) {
+    return
+  }
+
+  const scrollbarWidth: number = window.innerWidth - document.documentElement.clientWidth
+  prevBodyOverflow = document.body.style.overflow
+  prevBodyPaddingRight = document.body.style.paddingRight
+  document.body.style.overflow = 'hidden'
+
+  if (scrollbarWidth > 0) {
+    document.body.style.paddingRight = `${scrollbarWidth}px`
+  }
+
+  isScrollLocked = true
+}
+
+const unlockScroll = (): void => {
+  if (!isScrollLocked) {
+    return
+  }
+
+  document.body.style.overflow = prevBodyOverflow
+  document.body.style.paddingRight = prevBodyPaddingRight
+  isScrollLocked = false
+}
+
+watch(lightboxOpen, (isOpen: boolean): void => {
+  if (isOpen) {
+    lockScroll()
+  } else {
+    unlockScroll()
+  }
+})
+
+// Уход со страницы при открытом лайтбоксе не должен оставить body заблокированным
+onBeforeUnmount(unlockScroll)
 
 const handleImageError = (photoId: string): void => {
   loadErrors.value = new Set([...loadErrors.value, photoId])
@@ -111,61 +155,62 @@ const handleImageError = (photoId: string): void => {
       </button>
     </div>
 
-    <!-- Лайтбокс — без Teleport, внутри DOM-дерева DialogContent,
-         чтобы reka-ui не интерпретировал клики как "вне диалога".
-         position:fixed внутри transformed-предка ведёт себя как absolute. -->
-    <div
-      v-if="lightboxOpen"
-      ref="lightboxEl"
-      class="lightbox"
-      role="dialog"
-      aria-modal="true"
-      :aria-label="`Фото ${largePhotos[activeIndex]?.displayOrder ?? ''}`"
-      tabindex="0"
-      @click.stop="closeLightbox"
-      @keydown="onLightboxKeydown"
-    >
-      <button
-        class="lightbox-close"
-        type="button"
-        aria-label="Закрыть"
+    <!-- Лайтбокс вынесен в body: внутри страницы sticky-колонка создаёт свой контекст
+         наложения, и оверлей оказывался под сайдбаром и шапкой. -->
+    <Teleport to="body">
+      <div
+        v-if="lightboxOpen"
+        ref="lightboxEl"
+        class="lightbox"
+        role="dialog"
+        aria-modal="true"
+        :aria-label="`Фото ${largePhotos[activeIndex]?.displayOrder ?? ''}`"
+        tabindex="0"
         @click.stop="closeLightbox"
+        @keydown="onLightboxKeydown"
       >
-        <X class="size-5" />
-      </button>
+        <button
+          class="lightbox-close"
+          type="button"
+          aria-label="Закрыть"
+          @click.stop="closeLightbox"
+        >
+          <X class="size-5" />
+        </button>
 
-      <button
-        v-if="largePhotos.length > 1"
-        class="lightbox-nav lightbox-nav--prev"
-        type="button"
-        aria-label="Предыдущее фото"
-        @click.stop="prev"
-      >
-        <ChevronLeft class="size-6" />
-      </button>
+        <button
+          v-if="largePhotos.length > 1"
+          class="lightbox-nav lightbox-nav--prev"
+          type="button"
+          aria-label="Предыдущее фото"
+          @click.stop="prev"
+        >
+          <ChevronLeft class="size-6" />
+        </button>
 
-      <div class="lightbox-img-wrap" @click.stop>
-        <img
-          :src="largePhotos[activeIndex]?.url"
-          :alt="`Фото ${largePhotos[activeIndex]?.displayOrder}`"
-          class="lightbox-img"
-        />
+        <div class="lightbox-img-wrap" @click.stop>
+          <img
+            :src="largePhotos[activeIndex]?.url"
+            :alt="`Фото ${largePhotos[activeIndex]?.displayOrder}`"
+            class="lightbox-img"
+          />
+        </div>
+
+        <button
+          v-if="largePhotos.length > 1"
+          class="lightbox-nav lightbox-nav--next"
+          type="button"
+          aria-label="Следующее фото"
+          @click.stop="next"
+        >
+          <ChevronRight class="size-6" />
+        </button>
+
+        <div v-if="largePhotos.length > 1" class="lightbox-counter" aria-live="polite">
+          {{ activeIndex + 1 }} / {{ largePhotos.length }}
+        </div>
       </div>
-
-      <button
-        v-if="largePhotos.length > 1"
-        class="lightbox-nav lightbox-nav--next"
-        type="button"
-        aria-label="Следующее фото"
-        @click.stop="next"
-      >
-        <ChevronRight class="size-6" />
-      </button>
-
-      <div v-if="largePhotos.length > 1" class="lightbox-counter" aria-live="polite">
-        {{ activeIndex + 1 }} / {{ largePhotos.length }}
-      </div>
-    </div>
+    </Teleport>
   </div>
 
   <div v-else class="photo-empty">
@@ -290,22 +335,22 @@ const handleImageError = (photoId: string): void => {
   background: hsl(var(--muted) / 0.4);
 }
 
-/* Lightbox */
+/* Lightbox: на весь экран поверх сайдбара (z-10) и шапки (z-10) */
 .lightbox {
   position: fixed;
   inset: 0;
-  z-index: 50;
+  z-index: 200;
   background: hsl(0 0% 0% / 0.88);
   display: flex;
   align-items: center;
   justify-content: center;
   outline: none;
-  border-radius: var(--radius);
+  overscroll-behavior: contain;
 }
 
 .lightbox-img-wrap {
-  max-width: calc(100% - 128px);
-  max-height: calc(100% - 88px);
+  max-width: calc(100vw - 128px);
+  max-height: calc(100vh - 96px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -313,9 +358,10 @@ const handleImageError = (photoId: string): void => {
 
 .lightbox-img {
   max-width: 100%;
-  max-height: 100%;
+  max-height: calc(100vh - 96px);
   object-fit: contain;
   border-radius: var(--radius);
+  user-select: none;
 }
 
 .lightbox-close {
@@ -372,6 +418,21 @@ const handleImageError = (photoId: string): void => {
 
 .lightbox-nav--prev { left: 12px; }
 .lightbox-nav--next { right: 12px; }
+
+@media (max-width: 640px) {
+  .lightbox-img-wrap {
+    max-width: calc(100vw - 24px);
+  }
+
+  .lightbox-nav {
+    top: auto;
+    bottom: 12px;
+    transform: none;
+  }
+
+  .lightbox-nav--prev { left: 16px; }
+  .lightbox-nav--next { right: 16px; }
+}
 
 .lightbox-counter {
   position: absolute;
