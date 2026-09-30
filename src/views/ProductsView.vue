@@ -45,10 +45,9 @@ import {
 } from '@/components/ui/table'
 import { StatusFilter } from '@/components/ui/status-filter'
 import ProductStatusBadge from '@/components/products/ProductStatusBadge.vue'
-import ProductPhotoGallery from '@/components/products/ProductPhotoGallery.vue'
 import { toast } from 'vue-sonner'
 import { catalogProductsApi, integrationsApi } from '@/services/api'
-import type { ProductItem, CreateProductRequest, UpdateProductRequest, ProductBarcode, PackingUnit, ProductPhoto } from '@/types/products'
+import type { ProductItem, CreateProductRequest, UpdateProductRequest, ProductBarcode, PackingUnit } from '@/types/products'
 import type { Connection } from '@/types'
 import { ProductStatus } from '@/types/products'
 import { useCurrentUser } from '@/composables/useCurrentUser'
@@ -64,19 +63,16 @@ const connections = ref<Connection[]>([])
 const isLoadingConnections = ref<boolean>(false)
 
 const createDialogOpen = ref<boolean>(false)
-const editDialogOpen = ref<boolean>(false)
 const deleteDialogOpen = ref<boolean>(false)
 const archiveDialogOpen = ref<boolean>(false)
 const restoreDialogOpen = ref<boolean>(false)
 
-const editTarget = ref<ProductItem | null>(null)
 const deleteTarget = ref<ProductItem | null>(null)
 const archiveTarget = ref<ProductItem | null>(null)
 const restoreTarget = ref<ProductItem | null>(null)
 const isSaving = ref<boolean>(false)
 const isDeleting = ref<boolean>(false)
 const deletingProductIds = ref<Set<string>>(new Set())
-const editPhotos = ref<ProductPhoto[]>([])
 
 const statusFilter = ref<'all' | 'active' | 'archived'>('active')
 
@@ -247,35 +243,8 @@ const openCreate = (): void => {
   createDialogOpen.value = true
 }
 
-const openEdit = async (item: ProductItem): Promise<void> => {
-  editTarget.value = item
-  
-  try {
-    const fullProduct = await catalogProductsApi.getById(item.id)
-    
-    form.value = {
-      sku: fullProduct.sku,
-      name: fullProduct.name,
-      description: fullProduct.description ?? '',
-      barcodes: fullProduct.barcodes ? fullProduct.barcodes.map(b => ({ ...b })) : [],
-      packingUnit: fullProduct.packingUnit ? {
-        lengthCm: fullProduct.packingUnit.lengthCm.toString(),
-        widthCm: fullProduct.packingUnit.widthCm.toString(),
-        heightCm: fullProduct.packingUnit.heightCm.toString(),
-        weightKg: fullProduct.packingUnit.weightKg?.toString() ?? ''
-      } : {
-        lengthCm: '',
-        widthCm: '',
-        heightCm: '',
-        weightKg: ''
-      }
-    }
-    editPhotos.value = fullProduct.photos ?? []
-    newBarcode.value = { value: '', type: '', isDefault: false }
-    editDialogOpen.value = true
-  } catch {
-    toast.error('Не удалось загрузить данные продукта')
-  }
+const openEdit = (item: ProductItem): void => {
+  window.open(`/catalogs/product?productId=${item.id}`, '_blank')
 }
 
 const openDelete = (item: ProductItem): void => {
@@ -346,50 +315,6 @@ const handleCreate = async (): Promise<void> => {
   }
 }
 
-const handleEdit = async (): Promise<void> => {
-  if (!editTarget.value) return
-  if (!form.value.name.trim()) { toast.error('Введите название'); return }
-
-  isSaving.value = true
-  try {
-    const payload: UpdateProductRequest = {
-      name: form.value.name.trim(),
-      description: form.value.description.trim() || undefined,
-    }
-
-    if (form.value.barcodes.length > 0) {
-      payload.barcodes = form.value.barcodes.map(b => {
-        const barcode: any = {
-          value: b.value.trim(),
-          type: b.type?.trim() || undefined,
-          isDefault: b.isDefault
-        }
-        // Включаем id только если он существует (для обновления существующих баркодов)
-        if (b.id) {
-          barcode.id = b.id
-        }
-        return barcode
-      })
-    }
-
-    if (form.value.packingUnit.lengthCm && form.value.packingUnit.widthCm && form.value.packingUnit.heightCm) {
-      payload.packingUnit = {
-        lengthCm: parseFloat(form.value.packingUnit.lengthCm),
-        widthCm: parseFloat(form.value.packingUnit.widthCm),
-        heightCm: parseFloat(form.value.packingUnit.heightCm),
-        weightKg: form.value.packingUnit.weightKg ? parseFloat(form.value.packingUnit.weightKg) : undefined
-      }
-    }
-
-    await catalogProductsApi.update(editTarget.value.id, payload)
-    toast.success('Товар обновлён')
-    editDialogOpen.value = false
-    await loadItems()
-  } catch {
-    toast.error('Не удалось обновить товар')
-  } finally {
-    isSaving.value = false
-  }
 }
 
 const handleDelete = async (): Promise<void> => {
@@ -772,152 +697,6 @@ const inputClass = 'mt-1'
       </DialogPortal>
     </DialogRoot>
 
-    <!-- Edit Dialog -->
-    <DialogRoot v-model:open="editDialogOpen">
-      <DialogPortal>
-        <DialogOverlay class="bg-background/80 backdrop-blur-sm fixed inset-0 z-50" />
-        <DialogContent :class="dialogContentClass">
-          <div class="flex items-start justify-between mb-4">
-            <div>
-              <DialogTitle class="text-lg font-semibold">Изменить товар</DialogTitle>
-              <DialogDescription class="text-sm text-muted-foreground mt-1">
-                Обновите информацию о товаре
-              </DialogDescription>
-            </div>
-            <DialogClose as-child>
-              <Button variant="ghost" size="sm" class="size-8 p-0">
-                <X class="size-4" />
-              </Button>
-            </DialogClose>
-          </div>
-
-          <div class="flex flex-col gap-4">
-            <div :class="fieldClass">
-              <Label for="edit-sku">SKU</Label>
-              <Input 
-                id="edit-sku" 
-                v-model="form.sku" 
-                disabled
-                :class="inputClass"
-              />
-              <p class="text-xs text-muted-foreground">SKU нельзя изменить</p>
-            </div>
-
-            <div :class="fieldClass">
-              <Label for="edit-name">Название *</Label>
-              <Input 
-                id="edit-name" 
-                v-model="form.name" 
-                placeholder="Название товара" 
-                :class="inputClass"
-              />
-            </div>
-
-            <div :class="fieldClass">
-              <Label for="edit-description">Описание</Label>
-              <Textarea 
-                id="edit-description" 
-                v-model="form.description" 
-                placeholder="Краткое описание" 
-                :rows="3"
-                :class="inputClass"
-              />
-            </div>
-
-            <div :class="fieldClass">
-              <Label>Баркоды товара</Label>
-              <div class="flex flex-col gap-2 mt-1">
-                <div v-if="form.barcodes.length > 0" class="flex flex-col gap-2 mb-2">
-                  <div 
-                    v-for="(barcode, idx) in form.barcodes" 
-                    :key="idx"
-                    class="flex items-center gap-2 p-2 bg-muted rounded-md"
-                  >
-                    <Badge :variant="getBarcodeVariant(barcode.type)" class="flex-shrink-0">
-                      <span v-if="getBarcodePrefix(barcode.type)" class="font-semibold mr-1">{{ getBarcodePrefix(barcode.type) }}</span>{{ barcode.value }}
-                    </Badge>
-                    <span v-if="barcode.type" class="text-xs text-muted-foreground">{{ barcode.type }}</span>
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      class="size-6 ml-auto" 
-                      @click="removeBarcode(idx)"
-                    >
-                      <XIcon class="size-3" />
-                    </Button>
-                  </div>
-                </div>
-                <div class="flex gap-2">
-                  <Input 
-                    v-model="newBarcode.value" 
-                    placeholder="Значение баркода" 
-                    class="flex-1"
-                  />
-                  <Input 
-                    v-model="newBarcode.type" 
-                    placeholder="Тип (опц.)" 
-                    class="w-32"
-                  />
-                  <Button variant="outline" size="sm" @click="addBarcode">
-                    <Plus class="size-4" />
-                  </Button>
-                </div>
-              </div>
-            </div>
-
-            <div :class="fieldClass">
-              <Label>Габариты упаковки (см, кг)</Label>
-              <div class="flex gap-2 mt-1">
-                <Input 
-                  v-model="form.packingUnit.lengthCm" 
-                  placeholder="Длина" 
-                  type="number" 
-                  step="0.01"
-                />
-                <Input 
-                  v-model="form.packingUnit.widthCm" 
-                  placeholder="Ширина" 
-                  type="number" 
-                  step="0.01"
-                />
-                <Input 
-                  v-model="form.packingUnit.heightCm" 
-                  placeholder="Высота" 
-                  type="number" 
-                  step="0.01"
-                />
-              </div>
-              <div class="flex gap-2 mt-2">
-                <Input 
-                  v-model="form.packingUnit.weightKg" 
-                  placeholder="Вес" 
-                  type="number" 
-                  step="0.01"
-                  class="w-full"
-                />
-              </div>
-            </div>
-
-            <div :class="fieldClass">
-              <Label>Фотографии</Label>
-              <div class="mt-1">
-                <ProductPhotoGallery :photos="editPhotos" />
-              </div>
-            </div>
-          </div>
-
-          <div class="flex gap-3 mt-6">
-            <Button @click="handleEdit" :disabled="isSaving" class="flex-1">
-              <Spinner v-if="isSaving" class="mr-2" />
-              {{ isSaving ? 'Сохранение...' : 'Сохранить' }}
-            </Button>
-            <DialogClose as-child>
-              <Button variant="outline" :disabled="isSaving">Отмена</Button>
-            </DialogClose>
-          </div>
-        </DialogContent>
-      </DialogPortal>
-    </DialogRoot>
 
     <!-- Delete Dialog -->
     <AlertDialogRoot v-model:open="deleteDialogOpen">

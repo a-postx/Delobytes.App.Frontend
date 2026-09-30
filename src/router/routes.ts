@@ -16,6 +16,7 @@ import ComponentsView from '@/views/ComponentsView.vue'
 import SuppliersView from '@/views/SuppliersView.vue'
 import CostTypesView from '@/views/CostTypesView.vue'
 import ProductsView from '@/views/ProductsView.vue'
+import ProductEditView from '@/views/ProductEditView.vue'
 import ProductChannelCostsView from '@/views/ProductChannelCostsView.vue'
 import WorkRatesView from '@/views/WorkRatesView.vue'
 import ProductWorkRatesView from '@/views/ProductWorkRatesView.vue'
@@ -110,6 +111,15 @@ export const routes: RouteRecordRaw[] = [
         meta: {
           group: NavGroup.Platform,
           title: 'Каталог',
+          requiresAuth: true,
+        },
+      },
+      {
+        path: 'catalogs/product',
+        name: 'product-edit',
+        component: ProductEditView,
+        meta: {
+          title: 'Редактирование товара',
           requiresAuth: true,
         },
       },
