@@ -245,7 +245,7 @@ onMounted(() => {
 
         <div class="flex flex-col gap-1">
           <Label for="sku">SKU</Label>
-          <Input id="sku" :value="form.sku" disabled class="mt-1" />
+          <Input id="sku" v-model="form.sku" disabled class="mt-1" />
           <p class="text-xs text-muted-foreground">SKU нельзя изменить</p>
         </div>
 
