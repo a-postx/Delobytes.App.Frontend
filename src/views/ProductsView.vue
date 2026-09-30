@@ -315,8 +315,6 @@ const handleCreate = async (): Promise<void> => {
   }
 }
 
-}
-
 const handleDelete = async (): Promise<void> => {
   if (!deleteTarget.value) return
   isDeleting.value = true
