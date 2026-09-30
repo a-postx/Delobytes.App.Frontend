@@ -20,6 +20,10 @@ const largePhotos = computed<ProductPhoto[]>(() =>
     .sort((a, b) => a.displayOrder - b.displayOrder)
 )
 
+// Первое фото — главное, остальные — вспомогательные
+const mainPhoto = computed<ProductPhoto | null>(() => largePhotos.value[0] ?? null)
+const restPhotos = computed<ProductPhoto[]>(() => largePhotos.value.slice(1))
+
 const openLightbox = (index: number): void => {
   activeIndex.value = index
   lightboxOpen.value = true
@@ -53,17 +57,44 @@ const handleImageError = (photoId: string): void => {
 
 <template>
   <div v-if="largePhotos.length > 0" class="photo-gallery">
-    <div class="photo-grid">
+
+    <!-- Главное фото — на всю ширину -->
+    <button
+      v-if="mainPhoto"
+      class="photo-main"
+      type="button"
+      aria-label="Просмотр главного фото"
+      @click.stop="openLightbox(0)"
+    >
+      <div v-if="loadErrors.has(mainPhoto.id)" class="photo-error">
+        <ImageOff class="size-6 text-muted-foreground" />
+      </div>
+      <template v-else>
+        <img
+          :src="mainPhoto.url"
+          :alt="`Фото ${mainPhoto.displayOrder}`"
+          class="photo-img"
+          loading="eager"
+          @error="handleImageError(mainPhoto.id)"
+        />
+        <div class="photo-overlay" aria-hidden="true">
+          <ZoomIn class="size-5" />
+        </div>
+      </template>
+    </button>
+
+    <!-- Остальные фото — по два в строку -->
+    <div v-if="restPhotos.length > 0" class="photo-grid">
       <button
-        v-for="(photo, idx) in largePhotos"
+        v-for="(photo, idx) in restPhotos"
         :key="photo.id"
         class="photo-tile"
         type="button"
         :aria-label="`Просмотр фото ${photo.displayOrder}`"
-        @click.stop="openLightbox(idx)"
+        @click.stop="openLightbox(idx + 1)"
       >
         <div v-if="loadErrors.has(photo.id)" class="photo-error">
-          <ImageOff class="size-5 text-muted-foreground" />
+          <ImageOff class="size-4 text-muted-foreground" />
         </div>
         <template v-else>
           <img
@@ -74,17 +105,15 @@ const handleImageError = (photoId: string): void => {
             @error="handleImageError(photo.id)"
           />
           <div class="photo-overlay" aria-hidden="true">
-            <ZoomIn class="size-4" />
+            <ZoomIn class="size-3" />
           </div>
         </template>
-        <span class="photo-badge" aria-hidden="true">{{ photo.displayOrder }}</span>
       </button>
     </div>
 
-    <!-- Лайтбокс рендерится внутри компонента (без Teleport),
-         чтобы оставаться в DOM-дереве DialogContent и не провоцировать
-         его закрытие библиотекой reka-ui. Position: fixed внутри
-         transformed-предка ведёт себя как absolute — покрывает весь диалог. -->
+    <!-- Лайтбокс — без Teleport, внутри DOM-дерева DialogContent,
+         чтобы reka-ui не интерпретировал клики как "вне диалога".
+         position:fixed внутри transformed-предка ведёт себя как absolute. -->
     <div
       v-if="lightboxOpen"
       ref="lightboxEl"
@@ -148,33 +177,63 @@ const handleImageError = (photoId: string): void => {
 <style scoped>
 .photo-gallery {
   position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
-.photo-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
-  gap: 8px;
-}
-
-/* Tile */
-.photo-tile {
+/* Главное фото */
+.photo-main {
   position: relative;
+  width: 100%;
   aspect-ratio: 1;
   border-radius: var(--radius);
   overflow: hidden;
   border: 1px solid hsl(var(--border));
   background: hsl(var(--muted));
   cursor: pointer;
+  padding: 0;
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: border-color 120ms ease;
+}
+
+.photo-main:hover {
+  border-color: hsl(var(--primary));
+}
+
+.photo-main:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+}
+
+/* Сетка вспомогательных фото: 2 колонки */
+.photo-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+/* Общие стили для всех тайлов */
+.photo-tile {
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: calc(var(--radius) * 0.75);
+  overflow: hidden;
+  border: 1px solid hsl(var(--border));
+  background: hsl(var(--muted));
+  cursor: pointer;
   padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   transition: border-color 120ms ease, transform 120ms ease;
 }
 
 .photo-tile:hover {
   border-color: hsl(var(--primary));
-  transform: scale(1.025);
+  transform: scale(1.03);
 }
 
 .photo-tile:focus-visible {
@@ -183,7 +242,7 @@ const handleImageError = (photoId: string): void => {
 }
 
 .photo-tile:active {
-  transform: scale(0.98);
+  transform: scale(0.97);
 }
 
 .photo-img {
@@ -196,7 +255,7 @@ const handleImageError = (photoId: string): void => {
 .photo-overlay {
   position: absolute;
   inset: 0;
-  background: hsl(var(--foreground) / 0.28);
+  background: hsl(var(--foreground) / 0.25);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -205,22 +264,9 @@ const handleImageError = (photoId: string): void => {
   transition: opacity 120ms ease;
 }
 
+.photo-main:hover .photo-overlay,
 .photo-tile:hover .photo-overlay {
   opacity: 1;
-}
-
-.photo-badge {
-  position: absolute;
-  top: 4px;
-  left: 4px;
-  background: hsl(var(--background) / 0.82);
-  color: hsl(var(--foreground));
-  font-size: 10px;
-  font-weight: 600;
-  line-height: 1;
-  padding: 2px 5px;
-  border-radius: 4px;
-  backdrop-filter: blur(4px);
 }
 
 .photo-error {
@@ -238,15 +284,13 @@ const handleImageError = (photoId: string): void => {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  padding: 24px;
+  padding: 32px 16px;
   border: 1px dashed hsl(var(--border));
   border-radius: var(--radius);
   background: hsl(var(--muted) / 0.4);
 }
 
-/* Lightbox — position: fixed внутри transformed-предка (DialogContent)
-   ведёт себя как absolute: перекрывает весь диалог, не выходя за его bounds.
-   z-index 50 достаточен внутри этого stacking context. */
+/* Lightbox */
 .lightbox {
   position: fixed;
   inset: 0;
@@ -269,7 +313,7 @@ const handleImageError = (photoId: string): void => {
 
 .lightbox-img {
   max-width: 100%;
-  max-height: calc(100% - 88px);
+  max-height: 100%;
   object-fit: contain;
   border-radius: var(--radius);
 }
@@ -326,13 +370,8 @@ const handleImageError = (photoId: string): void => {
   outline-offset: 2px;
 }
 
-.lightbox-nav--prev {
-  left: 12px;
-}
-
-.lightbox-nav--next {
-  right: 12px;
-}
+.lightbox-nav--prev { left: 12px; }
+.lightbox-nav--next { right: 12px; }
 
 .lightbox-counter {
   position: absolute;
@@ -349,6 +388,7 @@ const handleImageError = (photoId: string): void => {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .photo-main,
   .photo-tile,
   .photo-overlay,
   .lightbox-close,
