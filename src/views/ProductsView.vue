@@ -45,9 +45,10 @@ import {
 } from '@/components/ui/table'
 import { StatusFilter } from '@/components/ui/status-filter'
 import ProductStatusBadge from '@/components/products/ProductStatusBadge.vue'
+import ProductPhotoGallery from '@/components/products/ProductPhotoGallery.vue'
 import { toast } from 'vue-sonner'
 import { catalogProductsApi, integrationsApi } from '@/services/api'
-import type { ProductItem, CreateProductRequest, UpdateProductRequest, ProductBarcode, PackingUnit } from '@/types/products'
+import type { ProductItem, CreateProductRequest, UpdateProductRequest, ProductBarcode, PackingUnit, ProductPhoto } from '@/types/products'
 import type { Connection } from '@/types'
 import { ProductStatus } from '@/types/products'
 import { useCurrentUser } from '@/composables/useCurrentUser'
@@ -75,6 +76,7 @@ const restoreTarget = ref<ProductItem | null>(null)
 const isSaving = ref<boolean>(false)
 const isDeleting = ref<boolean>(false)
 const deletingProductIds = ref<Set<string>>(new Set())
+const editPhotos = ref<ProductPhoto[]>([])
 
 const statusFilter = ref<'all' | 'active' | 'archived'>('active')
 
@@ -268,6 +270,7 @@ const openEdit = async (item: ProductItem): Promise<void> => {
         weightKg: ''
       }
     }
+    editPhotos.value = fullProduct.photos ?? []
     newBarcode.value = { value: '', type: '', isDefault: false }
     editDialogOpen.value = true
   } catch {
@@ -514,6 +517,7 @@ const inputClass = 'mt-1'
       <Table>
         <TableHeader>
           <TableRow>
+            <TableHead class="w-14">Фото</TableHead>
             <TableHead>SKU</TableHead>
             <TableHead>Название</TableHead>
             <TableHead>Баркоды</TableHead>
@@ -528,6 +532,18 @@ const inputClass = 'mt-1'
             :key="item.id"
             class="hover:bg-muted/40 transition-colors"
           >
+            <TableCell class="w-14 py-1.5">
+              <div class="size-10 rounded-md overflow-hidden border border-border bg-muted flex items-center justify-center flex-shrink-0">
+                <img
+                  v-if="item.photos && item.photos.length > 0"
+                  :src="item.photos[0].url"
+                  :alt="item.name"
+                  class="size-full object-cover"
+                  loading="lazy"
+                />
+                <span v-else class="text-muted-foreground text-xs leading-none select-none" aria-hidden="true">—</span>
+              </div>
+            </TableCell>
             <TableCell class="font-mono text-sm">{{ item.sku }}</TableCell>
             <TableCell class="font-medium">{{ item.name }}</TableCell>
             <TableCell>
@@ -879,6 +895,13 @@ const inputClass = 'mt-1'
                   step="0.01"
                   class="w-full"
                 />
+              </div>
+            </div>
+
+            <div :class="fieldClass">
+              <Label>Фотографии</Label>
+              <div class="mt-1">
+                <ProductPhotoGallery :photos="editPhotos" />
               </div>
             </div>
           </div>

@@ -24,6 +24,15 @@ export interface PackingUnit {
   weightKg?: number
 }
 
+export interface ProductPhoto {
+  id: string
+  displayOrder: number
+  sizeVariant: string
+  url: string
+  width?: number
+  height?: number
+}
+
 export interface ProductItem {
   id: string
   sku: string
@@ -38,6 +47,7 @@ export interface ProductItem {
   creationSource: string
   barcodes?: ProductBarcode[]
   packingUnit?: PackingUnit
+  photos?: ProductPhoto[]
 }
 
 export interface GetProductsResponse {
@@ -59,6 +69,7 @@ export interface GetProductResponse {
   creationSource: string
   barcodes?: ProductBarcode[]
   packingUnit?: PackingUnit
+  photos?: ProductPhoto[]
 }
 
 export interface CreateProductRequest {
