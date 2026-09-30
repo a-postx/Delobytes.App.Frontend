@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, nextTick } from 'vue'
 import { ChevronLeft, ChevronRight, X, ZoomIn, ImageOff } from 'lucide-vue-next'
 import type { ProductPhoto } from '@/types/products'
 
@@ -12,6 +12,7 @@ const props = defineProps<Props>()
 const lightboxOpen = ref<boolean>(false)
 const activeIndex = ref<number>(0)
 const loadErrors = ref<Set<string>>(new Set())
+const lightboxEl = ref<HTMLElement | null>(null)
 
 const largePhotos = computed<ProductPhoto[]>(() =>
   props.photos
@@ -22,6 +23,9 @@ const largePhotos = computed<ProductPhoto[]>(() =>
 const openLightbox = (index: number): void => {
   activeIndex.value = index
   lightboxOpen.value = true
+  nextTick(() => {
+    lightboxEl.value?.focus()
+  })
 }
 
 const closeLightbox = (): void => {
@@ -36,11 +40,10 @@ const next = (): void => {
   activeIndex.value = (activeIndex.value + 1) % largePhotos.value.length
 }
 
-const onKeydown = (e: KeyboardEvent): void => {
-  if (!lightboxOpen.value) return
-  if (e.key === 'ArrowLeft') { prev() }
-  if (e.key === 'ArrowRight') { next() }
-  if (e.key === 'Escape') { closeLightbox() }
+const onLightboxKeydown = (e: KeyboardEvent): void => {
+  if (e.key === 'ArrowLeft') { e.preventDefault(); prev() }
+  if (e.key === 'ArrowRight') { e.preventDefault(); next() }
+  if (e.key === 'Escape') { e.preventDefault(); closeLightbox() }
 }
 
 const handleImageError = (photoId: string): void => {
@@ -49,12 +52,7 @@ const handleImageError = (photoId: string): void => {
 </script>
 
 <template>
-  <div
-    v-if="largePhotos.length > 0"
-    class="photo-gallery"
-    @keydown="onKeydown"
-    tabindex="-1"
-  >
+  <div v-if="largePhotos.length > 0" class="photo-gallery">
     <div class="photo-grid">
       <button
         v-for="(photo, idx) in largePhotos"
@@ -62,7 +60,7 @@ const handleImageError = (photoId: string): void => {
         class="photo-tile"
         type="button"
         :aria-label="`Просмотр фото ${photo.displayOrder}`"
-        @click="openLightbox(idx)"
+        @click.stop="openLightbox(idx)"
       >
         <div v-if="loadErrors.has(photo.id)" class="photo-error">
           <ImageOff class="size-5 text-muted-foreground" />
@@ -83,59 +81,62 @@ const handleImageError = (photoId: string): void => {
       </button>
     </div>
 
-    <Teleport to="body">
-      <div
-        v-if="lightboxOpen"
-        class="lightbox"
-        role="dialog"
-        aria-modal="true"
-        :aria-label="`Фото ${(largePhotos[activeIndex]?.displayOrder ?? '')}`"
-        tabindex="0"
-        @click.self="closeLightbox"
-        @keydown="onKeydown"
+    <!-- Лайтбокс рендерится внутри компонента (без Teleport),
+         чтобы оставаться в DOM-дереве DialogContent и не провоцировать
+         его закрытие библиотекой reka-ui. Position: fixed внутри
+         transformed-предка ведёт себя как absolute — покрывает весь диалог. -->
+    <div
+      v-if="lightboxOpen"
+      ref="lightboxEl"
+      class="lightbox"
+      role="dialog"
+      aria-modal="true"
+      :aria-label="`Фото ${largePhotos[activeIndex]?.displayOrder ?? ''}`"
+      tabindex="0"
+      @click.stop="closeLightbox"
+      @keydown="onLightboxKeydown"
+    >
+      <button
+        class="lightbox-close"
+        type="button"
+        aria-label="Закрыть"
+        @click.stop="closeLightbox"
       >
-        <button
-          class="lightbox-close"
-          type="button"
-          aria-label="Закрыть"
-          @click="closeLightbox"
-        >
-          <X class="size-5" />
-        </button>
+        <X class="size-5" />
+      </button>
 
-        <button
-          v-if="largePhotos.length > 1"
-          class="lightbox-nav lightbox-nav--prev"
-          type="button"
-          aria-label="Предыдущее фото"
-          @click="prev"
-        >
-          <ChevronLeft class="size-6" />
-        </button>
+      <button
+        v-if="largePhotos.length > 1"
+        class="lightbox-nav lightbox-nav--prev"
+        type="button"
+        aria-label="Предыдущее фото"
+        @click.stop="prev"
+      >
+        <ChevronLeft class="size-6" />
+      </button>
 
-        <div class="lightbox-img-wrap">
-          <img
-            :src="largePhotos[activeIndex]?.url"
-            :alt="`Фото ${largePhotos[activeIndex]?.displayOrder}`"
-            class="lightbox-img"
-          />
-        </div>
-
-        <button
-          v-if="largePhotos.length > 1"
-          class="lightbox-nav lightbox-nav--next"
-          type="button"
-          aria-label="Следующее фото"
-          @click="next"
-        >
-          <ChevronRight class="size-6" />
-        </button>
-
-        <div v-if="largePhotos.length > 1" class="lightbox-counter" aria-live="polite">
-          {{ activeIndex + 1 }} / {{ largePhotos.length }}
-        </div>
+      <div class="lightbox-img-wrap" @click.stop>
+        <img
+          :src="largePhotos[activeIndex]?.url"
+          :alt="`Фото ${largePhotos[activeIndex]?.displayOrder}`"
+          class="lightbox-img"
+        />
       </div>
-    </Teleport>
+
+      <button
+        v-if="largePhotos.length > 1"
+        class="lightbox-nav lightbox-nav--next"
+        type="button"
+        aria-label="Следующее фото"
+        @click.stop="next"
+      >
+        <ChevronRight class="size-6" />
+      </button>
+
+      <div v-if="largePhotos.length > 1" class="lightbox-counter" aria-live="polite">
+        {{ activeIndex + 1 }} / {{ largePhotos.length }}
+      </div>
+    </div>
   </div>
 
   <div v-else class="photo-empty">
@@ -146,7 +147,7 @@ const handleImageError = (photoId: string): void => {
 
 <style scoped>
 .photo-gallery {
-  outline: none;
+  position: relative;
 }
 
 .photo-grid {
@@ -243,21 +244,24 @@ const handleImageError = (photoId: string): void => {
   background: hsl(var(--muted) / 0.4);
 }
 
-/* Lightbox */
+/* Lightbox — position: fixed внутри transformed-предка (DialogContent)
+   ведёт себя как absolute: перекрывает весь диалог, не выходя за его bounds.
+   z-index 50 достаточен внутри этого stacking context. */
 .lightbox {
   position: fixed;
   inset: 0;
-  z-index: 200;
+  z-index: 50;
   background: hsl(0 0% 0% / 0.88);
   display: flex;
   align-items: center;
   justify-content: center;
   outline: none;
+  border-radius: var(--radius);
 }
 
 .lightbox-img-wrap {
-  max-width: calc(100vw - 128px);
-  max-height: calc(100vh - 88px);
+  max-width: calc(100% - 128px);
+  max-height: calc(100% - 88px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -265,20 +269,20 @@ const handleImageError = (photoId: string): void => {
 
 .lightbox-img {
   max-width: 100%;
-  max-height: calc(100vh - 88px);
+  max-height: calc(100% - 88px);
   object-fit: contain;
   border-radius: var(--radius);
 }
 
 .lightbox-close {
   position: absolute;
-  top: 16px;
-  right: 16px;
-  width: 40px;
-  height: 40px;
+  top: 12px;
+  right: 12px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
-  background: hsl(255 100% 100% / 0.12);
-  border: 1px solid hsl(255 100% 100% / 0.2);
+  background: hsl(0 0% 100% / 0.15);
+  border: 1px solid hsl(0 0% 100% / 0.2);
   color: #fff;
   display: flex;
   align-items: center;
@@ -288,7 +292,7 @@ const handleImageError = (photoId: string): void => {
 }
 
 .lightbox-close:hover {
-  background: hsl(255 100% 100% / 0.22);
+  background: hsl(0 0% 100% / 0.28);
 }
 
 .lightbox-close:focus-visible {
@@ -300,11 +304,11 @@ const handleImageError = (photoId: string): void => {
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
-  width: 44px;
-  height: 44px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
-  background: hsl(255 100% 100% / 0.12);
-  border: 1px solid hsl(255 100% 100% / 0.2);
+  background: hsl(0 0% 100% / 0.15);
+  border: 1px solid hsl(0 0% 100% / 0.2);
   color: #fff;
   display: flex;
   align-items: center;
@@ -314,7 +318,7 @@ const handleImageError = (photoId: string): void => {
 }
 
 .lightbox-nav:hover {
-  background: hsl(255 100% 100% / 0.25);
+  background: hsl(0 0% 100% / 0.28);
 }
 
 .lightbox-nav:focus-visible {
@@ -323,24 +327,25 @@ const handleImageError = (photoId: string): void => {
 }
 
 .lightbox-nav--prev {
-  left: 16px;
+  left: 12px;
 }
 
 .lightbox-nav--next {
-  right: 16px;
+  right: 12px;
 }
 
 .lightbox-counter {
   position: absolute;
-  bottom: 16px;
+  bottom: 12px;
   left: 50%;
   transform: translateX(-50%);
   color: #fff;
   font-size: 13px;
-  background: hsl(255 100% 100% / 0.15);
-  padding: 4px 12px;
+  background: hsl(0 0% 100% / 0.15);
+  padding: 3px 10px;
   border-radius: 100px;
   backdrop-filter: blur(4px);
+  pointer-events: none;
 }
 
 @media (prefers-reduced-motion: reduce) {
