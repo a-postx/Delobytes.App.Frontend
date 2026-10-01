@@ -13,6 +13,7 @@ import { Spinner } from '@/components/ui/spinner'
 import { CopyButton } from '@/components/ui/copy-button'
 import CreateTenantDialog from '@/components/features/CreateTenantDialog.vue'
 import LegalEntitySettingsCard from '@/components/features/LegalEntitySettingsCard.vue'
+import TaxProfileCard from '@/components/features/TaxProfileCard.vue'
 import TenantMemberAccessDialog from '@/components/features/TenantMemberAccessDialog.vue'
 import TenantMembersTable from '@/components/features/TenantMembersTable.vue'
 import { useCurrentUser } from '@/composables/useCurrentUser'
@@ -151,6 +152,8 @@ const handleMembersRefresh = (): void => {
     </Card>
 
     <LegalEntitySettingsCard />
+
+    <TaxProfileCard />
 
     <Card v-if="canManageMembers">
       <CardHeader>

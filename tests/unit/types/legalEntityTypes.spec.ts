@@ -1,32 +1,17 @@
 import { describe, it, expect } from 'vitest'
-import { TaxType, VatType } from '@/types'
+import { VatType } from '@/types'
 
 /**
  * These tests pin the wire contract between the frontend and the backend.
  *
- * The API registers JsonStringEnumConverter, so TaxType/VatType are serialized as
- * the member names of the C# enums ("Usn", "None", …). Declaring them as numbers on
- * the client silently broke value matching, so the shape is asserted explicitly here.
+ * The API registers JsonStringEnumConverter, so VatType is serialized as the member
+ * names of the C# enum ("None", …). Declaring them as numbers on the client silently
+ * broke value matching, so the shape is asserted explicitly here.
+ *
+ * TaxType is gone: the tax regime now lives in its own versioned resource
+ * (TaxRegime), so the legal entity payload no longer carries it.
  */
 describe('tax enum wire contract', () => {
-  describe('TaxType', () => {
-    it('uses the backend member names as values', () => {
-      expect(TaxType.Usn).toBe('Usn')
-      expect(TaxType.Osno).toBe('Osno')
-      expect(TaxType.Npd).toBe('Npd')
-    })
-
-    it('contains exactly the three regimes declared by the backend enum', () => {
-      expect(Object.values(TaxType)).toEqual(['Usn', 'Osno', 'Npd'])
-    })
-
-    it('uses string values, not the numeric enum ordinals', () => {
-      for (const value of Object.values(TaxType)) {
-        expect(typeof value).toBe('string')
-      }
-    })
-  })
-
   describe('VatType', () => {
     it('uses the backend member names as values', () => {
       expect(VatType.None).toBe('None')
@@ -46,24 +31,21 @@ describe('tax enum wire contract', () => {
     })
   })
 
-  it('matches a realistic GET /api/tenant/legal-entity payload', () => {
+  it('matches a realistic GET /api/tenant/tax-profiles payload', () => {
     const apiPayload = {
-      tenantId: 'd40fc941-b390-4d6d-b346-8aff2c2716bd',
-      legalName: null,
-      inn: null,
-      taxType: 'Usn',
-      taxRatePercent: 6.0,
-      vatType: 'None',
+      id: '11111111-1111-1111-1111-111111111111',
+      regime: 'UsnIncome',
+      ratePercent: 6.0,
+      vat: 'None',
+      validFrom: '2026-01-01',
     }
 
-    expect(Object.values(TaxType)).toContain(apiPayload.taxType)
-    expect(Object.values(VatType)).toContain(apiPayload.vatType)
+    expect(Object.values(VatType)).toContain(apiPayload.vat)
   })
 
   it('does not match the numeric sentinel that means "not chosen yet"', () => {
     // A tenant whose settings were never saved keeps the CLR default of 0,
-    // which is not a declared enum member on either side.
-    expect(Object.values(TaxType)).not.toContain(0)
+    // which is not a declared enum member on the client.
     expect(Object.values(VatType)).not.toContain(0)
   })
 })

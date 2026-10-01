@@ -116,8 +116,6 @@ const unitLabel = (u: Unit): string => unitOptions.find(o => o.value === u)?.lab
 const formatDate = (dateStr: string): string =>
   new Date(dateStr).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' })
 
-const formatPrice = (v: number): string => formatMoney(v)
-
 const activeSuppliers = (): SupplierItem[] => suppliers.value.filter(s => s.isActive)
 
 const isPriceDateInPast = computed<boolean>(() => {

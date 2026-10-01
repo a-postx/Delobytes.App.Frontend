@@ -1,30 +1,20 @@
 import { axiosInstance } from '../client'
-import type { TaxType, VatType } from '@/types'
 
 export interface GetTenantLegalEntityResponse {
   tenantId: string
   legalName: string | null
   inn: string | null
-  taxType: TaxType
-  taxRatePercent: number
-  vatType: VatType
 }
 
 export interface UpdateTenantLegalEntityRequest {
   legalName: string | null
   inn: string | null
-  taxType: TaxType
-  taxRatePercent: number
-  vatType: VatType
 }
 
 export interface UpdateTenantLegalEntityResponse {
   tenantId: string
   legalName: string | null
   inn: string | null
-  taxType: TaxType
-  taxRatePercent: number
-  vatType: VatType
 }
 
 export const tenantLegalEntityApi = {

@@ -81,8 +81,6 @@ const filteredItems = computed(() => {
 const formatDate = (d: string): string =>
   new Date(d).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' })
 
-const formatCurrency = (v: number): string => formatMoney(v)
-
 const { loading: isLoading, execute: fetchWorkRates } = useApiCall<{ items: WorkRateItem[] }>({
   fallbackMessage: 'Не удалось загрузить ставки работ',
 })

@@ -12,72 +12,19 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { usePermissions } from '@/composables/usePermissions'
+import { useTenantMoney } from '@/composables/useTenantMoney'
 import { tenantLegalEntityApi } from '@/services/api/endpoints/tenantLegalEntity'
-import { TaxType, VatType } from '@/types'
 import { toast } from 'vue-sonner'
 
 const { canEditTenantSettings } = usePermissions()
-
-/** Прочерк вместо пустого значения: показывает, что режим ещё не задан пользователем. */
-const EMPTY_VALUE_PLACEHOLDER = '—'
-
-const TAX_TYPE_OPTIONS: { value: TaxType; label: string }[] = [
-  { value: TaxType.Usn, label: 'УСН' },
-  { value: TaxType.Osno, label: 'ОСНО' },
-  { value: TaxType.Npd, label: 'НПД' },
-]
-
-const VAT_TYPE_OPTIONS: { value: VatType; label: string }[] = [
-  { value: VatType.None, label: 'Без НДС' },
-  { value: VatType.Five, label: '5%' },
-  { value: VatType.Seven, label: '7%' },
-  { value: VatType.TwentyTwo, label: '22%' },
-]
+const { currency, currencySymbol } = useTenantMoney()
 
 const isLoading = ref<boolean>(true)
 const isSaving = ref<boolean>(false)
 
 const legalName = ref<string>('')
 const inn = ref<string>('')
-// Пустая строка означает «значение не задано». Система не подставляет режимы и ставки
-// автоматически — до явного выбора пользователем расчёт показателей по каналам недоступен.
-const taxType = ref<string>('')
-// Поле ставки — <input type="number">, поэтому Vue приводит v-model к number,
-// а у пустого поля значением остаётся ''. Тип честно допускает оба варианта.
-const taxRatePercent = ref<string | number>('')
-const vatType = ref<string>('')
-
-const isKnownOption = (
-  options: { value: string; label: string }[],
-  value: string,
-): boolean => options.some((option) => option.value === value)
-
-/**
- * Приводит значение поля ставки к числу: null означает «значение не задано».
- */
-const parseRatePercent = (value: string | number): number | null => {
-  if (typeof value === 'number') {
-    return Number.isFinite(value) ? value : null
-  }
-
-  const normalized: string = value.trim()
-
-  if (normalized === '') {
-    return null
-  }
-
-  const parsed: number = Number.parseFloat(normalized)
-
-  return Number.isNaN(parsed) ? null : parsed
-}
 
 /**
  * Приводит необязательное текстовое поле к виду, пригодному для отправки:
@@ -94,10 +41,6 @@ onMounted(async () => {
     const data = await tenantLegalEntityApi.get()
     legalName.value = data.legalName ?? ''
     inn.value = data.inn ?? ''
-    // Значение вне списка означает «пользователь ещё не выбирал режим» — показываем прочерк.
-    taxType.value = isKnownOption(TAX_TYPE_OPTIONS, data.taxType) ? data.taxType : ''
-    taxRatePercent.value = data.taxRatePercent > 0 ? data.taxRatePercent : ''
-    vatType.value = isKnownOption(VAT_TYPE_OPTIONS, data.vatType) ? data.vatType : ''
   } catch {
     // данные не загружены — оставляем пустые значения, ничего не подставляем
   } finally {
@@ -110,32 +53,12 @@ const handleSave = async (): Promise<void> => {
     return
   }
 
-  if (!isKnownOption(TAX_TYPE_OPTIONS, taxType.value)) {
-    toast.error('Выберите систему налогообложения')
-    return
-  }
-
-  if (!isKnownOption(VAT_TYPE_OPTIONS, vatType.value)) {
-    toast.error('Выберите режим НДС')
-    return
-  }
-
-  const parsedRate: number | null = parseRatePercent(taxRatePercent.value)
-
-  if (parsedRate === null) {
-    toast.error('Укажите ставку налога')
-    return
-  }
-
   isSaving.value = true
 
   try {
     await tenantLegalEntityApi.update({
       legalName: normalizeOptionalText(legalName.value),
       inn: normalizeOptionalText(inn.value),
-      taxType: taxType.value as TaxType,
-      taxRatePercent: parsedRate,
-      vatType: vatType.value as VatType,
     })
     toast.success('Настройки юридического лица сохранены')
   } catch (error: unknown) {
@@ -153,7 +76,7 @@ const handleSave = async (): Promise<void> => {
   <Card>
     <CardHeader>
       <CardTitle class="text-lg">Юрлицо</CardTitle>
-      <CardDescription>Реквизиты и налоговые ставки.</CardDescription>
+      <CardDescription>Реквизиты организации.</CardDescription>
     </CardHeader>
     <CardContent class="space-y-4">
       <div v-if="isLoading" class="flex justify-center py-6">
@@ -189,59 +112,12 @@ const handleSave = async (): Promise<void> => {
             </div>
           </div>
 
-          <!-- Строка 2: система налогообложения, ставка налога, режим НДС -->
-          <div class="grid gap-x-4 gap-y-3 sm:grid-cols-3">
-            <div class="space-y-1.5">
-              <Label for="tax-type">Система налогообложения</Label>
-              <Select v-model="taxType" :disabled="!canEditTenantSettings">
-                <SelectTrigger id="tax-type" class="w-full">
-                  <SelectValue :placeholder="EMPTY_VALUE_PLACEHOLDER" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem
-                    v-for="option in TAX_TYPE_OPTIONS"
-                    :key="option.value"
-                    :value="option.value"
-                  >
-                    {{ option.label }}
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div class="space-y-1.5">
-              <Label for="tax-rate">Ставка налога, %</Label>
-              <Input
-                id="tax-rate"
-                v-model="taxRatePercent"
-                type="number"
-                inputmode="decimal"
-                min="0"
-                max="100"
-                step="0.01"
-                :disabled="!canEditTenantSettings"
-                :readonly="!canEditTenantSettings"
-                :class="{ 'cursor-not-allowed opacity-60': !canEditTenantSettings }"
-              />
-            </div>
-
-            <div class="space-y-1.5">
-              <Label for="vat-type">Режим НДС</Label>
-              <Select v-model="vatType" :disabled="!canEditTenantSettings">
-                <SelectTrigger id="vat-type" class="w-full">
-                  <SelectValue :placeholder="EMPTY_VALUE_PLACEHOLDER" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem
-                    v-for="option in VAT_TYPE_OPTIONS"
-                    :key="option.value"
-                    :value="option.value"
-                  >
-                    {{ option.label }}
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+          <!-- Валюта задаётся на уровне тенанта и здесь только отображается -->
+          <div class="space-y-1.5">
+            <Label for="currency">Валюта учёта</Label>
+            <p id="currency" class="text-sm text-muted-foreground">
+              Валюта учёта: {{ currency }} ({{ currencySymbol }})
+            </p>
           </div>
 
           <p v-if="!canEditTenantSettings" class="text-xs text-muted-foreground">

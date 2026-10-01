@@ -79,8 +79,6 @@ const productName = (id: string): string =>
 const channelName = (id: string): string =>
   channels.value.find(c => c.id === id)?.name ?? id.slice(0, 8) + '...'
 
-const formatAmount = (amount: number): string => formatMoney(amount)
-
 const filteredItems = computed<ProductChannelCostItem[]>(() => {
   if (!filterProductId.value) return items.value
   return items.value.filter(i => i.productId === filterProductId.value)
@@ -382,7 +380,7 @@ const inputClass = 'mt-1'
         <AlertDialogContent class="bg-popover text-popover-foreground fixed top-[50%] left-[50%] w-[90vw] max-w-[420px] translate-x-[-50%] translate-y-[-50%] rounded-lg border shadow-lg p-6 z-[100]">
           <AlertDialogTitle class="text-lg font-semibold">Удалить запись?</AlertDialogTitle>
           <AlertDialogDescription class="mt-2 text-sm text-muted-foreground">
-            Расход «{{ deleteTarget?.costTypeName }}» — {{ formatAmount(deleteTarget?.amount ?? 0) }} будет удалён без возможности восстановления.
+            Расход «{{ deleteTarget?.costTypeName }}» — {{ formatMoney(deleteTarget?.amount ?? 0) }} будет удалён без возможности восстановления.
           </AlertDialogDescription>
           <div class="flex justify-end gap-2 mt-6">
             <AlertDialogCancel as-child>

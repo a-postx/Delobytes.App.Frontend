@@ -21,9 +21,6 @@ describe('tenantLegalEntityApi', () => {
           tenantId: 'd40fc941-b390-4d6d-b346-8aff2c2716bd',
           legalName: null,
           inn: null,
-          taxType: 'Usn',
-          taxRatePercent: 6,
-          vatType: 'None',
         },
       }
 
@@ -39,9 +36,6 @@ describe('tenantLegalEntityApi', () => {
         tenantId: 'd40fc941-b390-4d6d-b346-8aff2c2716bd',
         legalName: 'ООО «Ромашка»',
         inn: '7712345678',
-        taxType: 'Osno',
-        taxRatePercent: 20,
-        vatType: 'TwentyTwo',
       }
 
       vi.mocked(axiosInstance.get).mockResolvedValue({ data: payload })
@@ -57,9 +51,6 @@ describe('tenantLegalEntityApi', () => {
           tenantId: 'd40fc941-b390-4d6d-b346-8aff2c2716bd',
           legalName: null,
           inn: null,
-          taxType: 'Usn',
-          taxRatePercent: 6,
-          vatType: 'None',
         },
       }
 
@@ -67,10 +58,9 @@ describe('tenantLegalEntityApi', () => {
 
       const result = await tenantLegalEntityApi.get()
 
-      expect(result.taxType).toBe('Usn')
-      expect(result.vatType).toBe('None')
-      expect(typeof result.taxType).toBe('string')
-      expect(typeof result.vatType).toBe('string')
+      expect(result.legalName).toBeNull()
+      expect(result.inn).toBeNull()
+      expect(Object.keys(result)).toEqual(['tenantId', 'legalName', 'inn'])
     })
 
     it('propagates the error when the request fails', async () => {
@@ -92,9 +82,7 @@ describe('tenantLegalEntityApi', () => {
       const payload = {
         legalName: 'ООО «Ромашка»',
         inn: '7712345678',
-        taxType: 'Usn' as const,
-        taxRatePercent: 6,
-        vatType: 'None' as const,
+
       }
 
       const mockResponse = {
@@ -116,9 +104,7 @@ describe('tenantLegalEntityApi', () => {
       const payload = {
         legalName: null,
         inn: null,
-        taxType: 'Npd' as const,
-        taxRatePercent: 4,
-        vatType: 'None' as const,
+
       }
 
       vi.mocked(axiosInstance.patch).mockResolvedValue({
@@ -130,9 +116,6 @@ describe('tenantLegalEntityApi', () => {
       expect(axiosInstance.patch).toHaveBeenCalledWith('/api/tenant/legal-entity', {
         legalName: null,
         inn: null,
-        taxType: 'Npd',
-        taxRatePercent: 4,
-        vatType: 'None',
       })
     })
 
@@ -140,9 +123,7 @@ describe('tenantLegalEntityApi', () => {
       const payload = {
         legalName: null,
         inn: null,
-        taxType: 'Osno' as const,
-        taxRatePercent: 20,
-        vatType: 'Seven' as const,
+
       }
 
       vi.mocked(axiosInstance.patch).mockResolvedValue({
@@ -153,10 +134,9 @@ describe('tenantLegalEntityApi', () => {
 
       const sentPayload = vi.mocked(axiosInstance.patch).mock.calls[0][1] as Record<string, unknown>
 
-      expect(sentPayload.taxType).toBe('Osno')
-      expect(sentPayload.vatType).toBe('Seven')
-      expect(typeof sentPayload.taxType).toBe('string')
-      expect(typeof sentPayload.vatType).toBe('string')
+      expect(sentPayload.legalName).toBe('ООО «Ромашка»')
+      expect(sentPayload.inn).toBe('7712345678')
+      expect(Object.keys(sentPayload)).toEqual(['legalName', 'inn'])
     })
 
     it('propagates the error when the request fails', async () => {
@@ -173,9 +153,6 @@ describe('tenantLegalEntityApi', () => {
         tenantLegalEntityApi.update({
           legalName: null,
           inn: null,
-          taxType: 'Usn',
-          taxRatePercent: 150,
-          vatType: 'None',
         })
       ).rejects.toEqual(mockError)
     })

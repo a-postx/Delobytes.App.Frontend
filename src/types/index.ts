@@ -1,16 +1,8 @@
 /**
- * Значения соответствуют именам членов Backend-перечислений TaxType/VatType.
+ * Значения соответствуют именам членов Backend-перечисления VatType.
  * API сериализует enum'ы строками (JsonStringEnumConverter), поэтому здесь именно
  * строки, а не числа: иначе сравнение со значением из ответа всегда даёт несовпадение.
  */
-export const TaxType = {
-  Usn: 'Usn',
-  Osno: 'Osno',
-  Npd: 'Npd',
-} as const
-
-export type TaxType = typeof TaxType[keyof typeof TaxType]
-
 export const VatType = {
   None: 'None',
   Five: 'Five',
@@ -76,6 +68,10 @@ export interface CurrentUser {
   email: string
   tenantId: string
   tenantName: string
+  /** Валюта учёта активного тенанта, ISO 4217. */
+  currency: string
+  /** Часовой пояс активного тенанта, IANA. */
+  timeZone: string
   role: string
   tenants: UserTenant[]
 }

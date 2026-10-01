@@ -1,12 +1,18 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
-import { computed, nextTick } from 'vue'
+import { computed, nextTick, ref } from 'vue'
 import LegalEntitySettingsCard from '@/components/features/LegalEntitySettingsCard.vue'
 import { tenantLegalEntityApi } from '@/services/api/endpoints/tenantLegalEntity'
 import { usePermissions } from '@/composables/usePermissions'
+import { useCurrentUser } from '@/composables/useCurrentUser'
+import type { CurrentUser } from '@/types'
 
 vi.mock('@/composables/usePermissions', () => ({
   usePermissions: vi.fn(),
+}))
+
+vi.mock('@/composables/useCurrentUser', () => ({
+  useCurrentUser: vi.fn(),
 }))
 
 vi.mock('@/services/api/endpoints/tenantLegalEntity', () => ({
@@ -24,17 +30,30 @@ vi.mock('vue-sonner', () => ({
 }))
 
 /**
- * Integration-level assertions that use the real reka-ui Select wrappers instead of
- * stubs. This is what catches a mismatch between the enum values the API returns as
- * strings and the option values the card offers.
+ * Integration-level assertions that mount the real components (no stubs), so the
+ * currency line is checked against what the design system actually renders — a stub
+ * would happily mirror any markup, including markup that never reaches the DOM.
  */
-describe('LegalEntitySettingsCard with real Select', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-    vi.mocked(usePermissions).mockReturnValue({
-      canEditTenantSettings: computed(() => true),
-    } as unknown as ReturnType<typeof usePermissions>)
+describe('LegalEntitySettingsCard with real components', () => {
+  const currentUser = ref<CurrentUser | null>(null)
+
+  const buildUser = (currency: string): CurrentUser => ({
+    userId: 'user-1',
+    displayName: 'Тест',
+    email: 'test@example.com',
+    tenantId: 'd40fc941-b390-4d6d-b346-8aff2c2716bd',
+    tenantName: 'Пространство',
+    currency,
+    timeZone: 'Europe/Moscow',
+    role: 'Administrator',
+    tenants: [],
   })
+
+  const mockCanEdit = (canEdit: boolean): void => {
+    vi.mocked(usePermissions).mockReturnValue({
+      canEditTenantSettings: computed(() => canEdit),
+    } as unknown as ReturnType<typeof usePermissions>)
+  }
 
   const mountCard = async () => {
     const wrapper = mount(LegalEntitySettingsCard, { attachTo: document.body })
@@ -43,128 +62,85 @@ describe('LegalEntitySettingsCard with real Select', () => {
     return wrapper
   }
 
-  it('shows the saved tax regime and VAT mode as their labels', async () => {
+  const mountedWrappers: { unmount: () => void }[] = []
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockCanEdit(true)
+    currentUser.value = buildUser('RUB')
+
+    vi.mocked(useCurrentUser).mockReturnValue({
+      currentUser,
+    } as unknown as ReturnType<typeof useCurrentUser>)
+
     vi.mocked(tenantLegalEntityApi.get).mockResolvedValue({
       tenantId: 'd40fc941-b390-4d6d-b346-8aff2c2716bd',
       legalName: 'ООО «Ромашка»',
       inn: '7712345678',
-      taxType: 'Usn',
-      taxRatePercent: 6,
-      vatType: 'None',
     })
+  })
 
+  afterEach(() => {
+    mountedWrappers.splice(0).forEach((wrapper) => wrapper.unmount())
+  })
+
+  it('renders the legal name and INN in real inputs', async () => {
     const wrapper = await mountCard()
+    mountedWrappers.push(wrapper)
 
-    expect(wrapper.find('#tax-type').text()).toBe('УСН')
-    expect(wrapper.find('#vat-type').text()).toBe('Без НДС')
+    expect(wrapper.find('#inn').element).toBeInstanceOf(HTMLInputElement)
+    expect((wrapper.find('#inn').element as HTMLInputElement).value).toBe('7712345678')
+    expect((wrapper.find('#legal-name').element as HTMLInputElement).value).toBe('ООО «Ромашка»')
+  })
+
+  it('renders the currency as text, not as an editable control', async () => {
+    const wrapper = await mountCard()
+    mountedWrappers.push(wrapper)
+
+    const currencyNode = wrapper.find('#currency')
+
+    expect(currencyNode.exists()).toBe(true)
+    expect(currencyNode.element.tagName).toBe('P')
+    expect(currencyNode.text()).toBe('Валюта учёта: RUB (₽)')
   })
 
   it.each([
-    ['Usn', 'УСН'],
-    ['Osno', 'ОСНО'],
-    ['Npd', 'НПД'],
-  ])('renders the %s tax regime as %s', async (taxType, expectedLabel) => {
-    vi.mocked(tenantLegalEntityApi.get).mockResolvedValue({
-      tenantId: 'd40fc941-b390-4d6d-b346-8aff2c2716bd',
-      legalName: null,
-      inn: null,
-      taxType,
-      taxRatePercent: 6,
-      vatType: 'None',
-    } as never)
+    ['RUB', '₽'],
+    ['KZT', '₸'],
+  ])('renders the symbol of the %s tenant currency as %s', async (currency, symbol) => {
+    currentUser.value = buildUser(currency)
 
     const wrapper = await mountCard()
+    mountedWrappers.push(wrapper)
 
-    expect(wrapper.find('#tax-type').text()).toBe(expectedLabel)
+    expect(wrapper.find('#currency').text()).toContain(currency)
+    expect(wrapper.find('#currency').text()).toContain(symbol)
   })
 
-  it.each([
-    ['None', 'Без НДС'],
-    ['Five', '5%'],
-    ['Seven', '7%'],
-    ['TwentyTwo', '22%'],
-  ])('renders the %s VAT mode as %s', async (vatType, expectedLabel) => {
-    vi.mocked(tenantLegalEntityApi.get).mockResolvedValue({
-      tenantId: 'd40fc941-b390-4d6d-b346-8aff2c2716bd',
-      legalName: null,
-      inn: null,
-      taxType: 'Usn',
-      taxRatePercent: 6,
-      vatType,
-    } as never)
-
+  it('does not render any tax selector, even for an administrator', async () => {
     const wrapper = await mountCard()
+    mountedWrappers.push(wrapper)
 
-    expect(wrapper.find('#vat-type').text()).toBe(expectedLabel)
+    expect(wrapper.find('#tax-type').exists()).toBe(false)
+    expect(wrapper.find('#vat-type').exists()).toBe(false)
+    expect(wrapper.find('#tax-rate').exists()).toBe(false)
   })
 
-  it('shows an em dash when the tenant has never chosen a tax regime', async () => {
-    // A tenant created before the settings were filled in keeps the CLR default of 0,
-    // which the API serializes as the number 0 rather than an enum name.
-    vi.mocked(tenantLegalEntityApi.get).mockResolvedValue({
-      tenantId: 'd40fc941-b390-4d6d-b346-8aff2c2716bd',
-      legalName: null,
-      inn: null,
-      taxType: 0,
-      taxRatePercent: 0,
-      vatType: 0,
-    } as never)
+  it('disables the real inputs for a non-administrator', async () => {
+    mockCanEdit(false)
 
     const wrapper = await mountCard()
+    mountedWrappers.push(wrapper)
 
-    expect(wrapper.find('#tax-type').text()).toBe('—')
-    expect(wrapper.find('#vat-type').text()).toBe('—')
+    expect(wrapper.find('#inn').attributes('disabled')).toBeDefined()
+    expect(wrapper.find('#legal-name').attributes('disabled')).toBeDefined()
   })
 
-  it('shows an em dash for a regime name the frontend does not know', async () => {
-    vi.mocked(tenantLegalEntityApi.get).mockResolvedValue({
-      tenantId: 'd40fc941-b390-4d6d-b346-8aff2c2716bd',
-      legalName: null,
-      inn: null,
-      taxType: 'SomeFutureRegime',
-      taxRatePercent: 6,
-      vatType: 'SomeFutureVatMode',
-    } as never)
-
+  it('keeps the real inputs enabled for an administrator', async () => {
     const wrapper = await mountCard()
+    mountedWrappers.push(wrapper)
 
-    expect(wrapper.find('#tax-type').text()).toBe('—')
-    expect(wrapper.find('#vat-type').text()).toBe('—')
-  })
-
-  it('disables both triggers for a non-administrator', async () => {
-    vi.mocked(usePermissions).mockReturnValue({
-      canEditTenantSettings: computed(() => false),
-    } as unknown as ReturnType<typeof usePermissions>)
-
-    vi.mocked(tenantLegalEntityApi.get).mockResolvedValue({
-      tenantId: 'd40fc941-b390-4d6d-b346-8aff2c2716bd',
-      legalName: null,
-      inn: null,
-      taxType: 'Usn',
-      taxRatePercent: 6,
-      vatType: 'None',
-    })
-
-    const wrapper = await mountCard()
-
-    expect(wrapper.find('#tax-type').attributes('disabled')).toBeDefined()
-    expect(wrapper.find('#vat-type').attributes('disabled')).toBeDefined()
-  })
-
-  it('keeps both triggers enabled for an administrator', async () => {
-    vi.mocked(tenantLegalEntityApi.get).mockResolvedValue({
-      tenantId: 'd40fc941-b390-4d6d-b346-8aff2c2716bd',
-      legalName: null,
-      inn: null,
-      taxType: 'Usn',
-      taxRatePercent: 6,
-      vatType: 'None',
-    })
-
-    const wrapper = await mountCard()
-
-    expect(wrapper.find('#tax-type').attributes('disabled')).toBeUndefined()
-    expect(wrapper.find('#vat-type').attributes('disabled')).toBeUndefined()
+    expect(wrapper.find('#inn').attributes('disabled')).toBeUndefined()
+    expect(wrapper.find('#legal-name').attributes('disabled')).toBeUndefined()
   })
 })

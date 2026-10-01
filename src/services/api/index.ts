@@ -10,6 +10,15 @@ export type {
   UpdateTenantLegalEntityRequest,
   UpdateTenantLegalEntityResponse,
 } from './endpoints/tenantLegalEntity'
+export { tenantTaxProfilesApi, TaxRegime, TAX_REGIME_OPTIONS } from './endpoints/tenantTaxProfiles'
+export type {
+  TenantTaxProfileItem,
+  GetTenantTaxProfilesResponse,
+  GetActiveTenantTaxProfileResponse,
+  CreateTenantTaxProfileRequest,
+  CreateTenantTaxProfileResponse,
+  DeleteTenantTaxProfileResponse,
+} from './endpoints/tenantTaxProfiles'
 export {
   channelsApi,
   channelParametersApi,
