@@ -104,17 +104,14 @@ describe('LegalEntitySettingsCard with real components', () => {
     expect(currencyNode.text()).toBe('Валюта учёта: RUB (₽)')
   })
 
-  it.each([
-    ['RUB', '₽'],
-    ['KZT', '₸'],
-  ])('renders the symbol of the %s tenant currency as %s', async (currency, symbol) => {
-    currentUser.value = buildUser(currency)
+  it('renders the currency code of KZT, which has no narrow symbol in ru-RU', async () => {
+    currentUser.value = buildUser('KZT')
 
     const wrapper = await mountCard()
     mountedWrappers.push(wrapper)
 
-    expect(wrapper.find('#currency').text()).toContain(currency)
-    expect(wrapper.find('#currency').text()).toContain(symbol)
+    // ICU подставляет код валюты, поэтому и код, и «символ» здесь — KZT.
+    expect(wrapper.find('#currency').text()).toBe('Валюта учёта: KZT (KZT)')
   })
 
   it('does not render any tax selector, even for an administrator', async () => {

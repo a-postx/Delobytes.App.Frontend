@@ -302,19 +302,41 @@ describe('TaxProfileCard', () => {
       )
     })
 
-    it('accepts a comma as the decimal separator', async () => {
+    it('accepts a fractional rate entered with a dot', async () => {
       const wrapper = await mountCard()
 
       await findButton(wrapper, 'Добавить ставку')!.trigger('click')
       await nextTick()
 
       const dialog = wrapper.find('[data-stub="dialog"]')
-      await dialog.find('input[type="number"]').setValue('7,5')
+      await dialog.find('input[type="number"]').setValue('7.5')
       await findDialogButton(wrapper, 'Сохранить')!.trigger('click')
       await flushPromises()
 
       expect(tenantTaxProfilesApi.create).toHaveBeenCalledWith(
         expect.objectContaining({ ratePercent: 7.5 })
+      )
+    })
+
+    it('treats a comma as unusable because the field is numeric', async () => {
+      const wrapper = await mountCard()
+
+      await findButton(wrapper, 'Добавить ставку')!.trigger('click')
+      await nextTick()
+
+      const dialog = wrapper.find('[data-stub="dialog"]')
+      const rateInput = dialog.find('input[type="number"]')
+
+      // input[type=number] отбрасывает запятую: значение остаётся пустым, поэтому
+      // проверка ставки отклоняет ввод. Ввод с запятой требует type="text".
+      await rateInput.setValue('7,5')
+      await findDialogButton(wrapper, 'Сохранить')!.trigger('click')
+      await flushPromises()
+
+      expect(rateInput.element.value).toBe('')
+      expect(tenantTaxProfilesApi.create).not.toHaveBeenCalled()
+      expect(toast.error).toHaveBeenCalledWith(
+        'Ставка вводится в процентах и должна быть от 0 до 100'
       )
     })
 

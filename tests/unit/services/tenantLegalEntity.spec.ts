@@ -119,11 +119,10 @@ describe('tenantLegalEntityApi', () => {
       })
     })
 
-    it('keeps enum values as strings on the wire', async () => {
+    it('sends only the legal entity fields, without the tax ones', async () => {
       const payload = {
-        legalName: null,
-        inn: null,
-
+        legalName: 'ООО «Ромашка»',
+        inn: '7712345678',
       }
 
       vi.mocked(axiosInstance.patch).mockResolvedValue({

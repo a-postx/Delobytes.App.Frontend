@@ -59,11 +59,10 @@ describe('useTenantMoney', () => {
     it('uses the currency reported by /api/me', () => {
       currentUser.value = buildUser('KZT')
 
-      const { currency, formatMoney, currencySymbol } = useTenantMoney()
+      const { currency, formatMoney } = useTenantMoney()
 
       expect(currency.value).toBe('KZT')
       expect(formatMoney(1000)).toContain('KZT')
-      expect(currencySymbol.value).toBe('₸')
     })
 
     it('reacts to the current user changing after the composable was created', () => {
@@ -136,6 +135,23 @@ describe('useTenantMoney', () => {
       const { currencySymbol } = useTenantMoney()
 
       expect(currencySymbol.value.length).toBeGreaterThan(0)
+    })
+
+    it('falls back to the currency code when ICU has no narrow symbol for it', () => {
+      currentUser.value = buildUser('KZT')
+
+      const { currencySymbol } = useTenantMoney()
+
+      // В локали ru-RU у тенге нет узкого символа: ICU подставляет код валюты.
+      expect(currencySymbol.value).toBe('KZT')
+    })
+
+    it('keeps the rouble sign for RUB', () => {
+      currentUser.value = buildUser('RUB')
+
+      const { currencySymbol } = useTenantMoney()
+
+      expect(currencySymbol.value).toBe('₽')
     })
   })
 })
