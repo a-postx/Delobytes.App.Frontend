@@ -47,9 +47,11 @@ import type {
 } from '@/services/api'
 import { useCurrentUser } from '@/composables/useCurrentUser'
 import { useApiCall } from '@/composables/useApiCall'
+import { useTenantMoney } from '@/composables/useTenantMoney'
 import { X } from 'lucide-vue-next'
 
 const { canWrite } = useCurrentUser()
+const { formatMoney } = useTenantMoney()
 
 const items = ref<ComponentItem[]>([])
 const suppliers = ref<SupplierItem[]>([])
@@ -114,8 +116,7 @@ const unitLabel = (u: Unit): string => unitOptions.find(o => o.value === u)?.lab
 const formatDate = (dateStr: string): string =>
   new Date(dateStr).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' })
 
-const formatPrice = (v: number): string =>
-  v.toLocaleString('ru-RU', { style: 'currency', currency: 'RUB', maximumFractionDigits: 2 })
+const formatPrice = (v: number): string => formatMoney(v)
 
 const activeSuppliers = (): SupplierItem[] => suppliers.value.filter(s => s.isActive)
 
@@ -338,7 +339,7 @@ const selectClass = 'flex h-10 w-full rounded-md border border-input bg-backgrou
               <p v-if="item.description" class="text-xs text-muted-foreground mt-0.5 font-normal">{{ item.description }}</p>
             </TableCell>
             <TableCell class="text-sm">{{ unitLabel(item.unit) }}</TableCell>
-            <TableCell class="text-right tabular-nums">{{ item.activePrice ? formatPrice(item.activePrice.pricePerUnit) : '—' }}</TableCell>
+            <TableCell class="text-right tabular-nums">{{ formatMoney(item.activePrice?.pricePerUnit ?? 0) }}</TableCell>
             <TableCell class="text-sm">
               {{ item.activePrice?.supplierName || '—' }}
             </TableCell>

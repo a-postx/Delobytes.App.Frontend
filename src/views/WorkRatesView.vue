@@ -42,9 +42,11 @@ import { workRatesApi } from '@/services/api'
 import type { WorkRateItem, CreateWorkRateRequest, UpdateWorkRateRequest } from '@/services/api'
 import { useCurrentUser } from '@/composables/useCurrentUser'
 import { useApiCall } from '@/composables/useApiCall'
+import { useTenantMoney } from '@/composables/useTenantMoney'
 import { X } from 'lucide-vue-next'
 
 const { canWrite } = useCurrentUser()
+const { formatMoney } = useTenantMoney()
 
 const items = ref<WorkRateItem[]>([])
 const createDialogOpen = ref<boolean>(false)
@@ -79,8 +81,7 @@ const filteredItems = computed(() => {
 const formatDate = (d: string): string =>
   new Date(d).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' })
 
-const formatCurrency = (v: number): string =>
-  v.toLocaleString('ru-RU', { style: 'currency', currency: 'RUB', maximumFractionDigits: 2 })
+const formatCurrency = (v: number): string => formatMoney(v)
 
 const { loading: isLoading, execute: fetchWorkRates } = useApiCall<{ items: WorkRateItem[] }>({
   fallbackMessage: 'Не удалось загрузить ставки работ',
@@ -242,7 +243,7 @@ const inputClass = 'mt-1'
             class="hover:bg-muted/40 transition-colors"
           >
             <TableCell class="font-medium">{{ item.name }}</TableCell>
-            <TableCell class="text-right tabular-nums">{{ formatCurrency(item.dailyWage) }}</TableCell>
+            <TableCell class="text-right tabular-nums">{{ formatMoney(item.dailyWage) }}</TableCell>
             <TableCell class="tabular-nums text-muted-foreground">{{ item.validFrom }}</TableCell>
             <TableCell>
               <Badge :variant="item.isActive ? 'success' : 'warning'">

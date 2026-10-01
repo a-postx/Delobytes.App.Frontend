@@ -45,9 +45,11 @@ import type {
 } from '@/services/api'
 import type { ProductItem } from '@/types/products'
 import { useCurrentUser } from '@/composables/useCurrentUser'
+import { useTenantMoney } from '@/composables/useTenantMoney'
 import { X } from 'lucide-vue-next'
 
 const { canWrite } = useCurrentUser()
+const { formatMoney, currencySymbol } = useTenantMoney()
 
 const items = ref<ProductChannelCostItem[]>([])
 const products = ref<ProductItem[]>([])
@@ -77,8 +79,7 @@ const productName = (id: string): string =>
 const channelName = (id: string): string =>
   channels.value.find(c => c.id === id)?.name ?? id.slice(0, 8) + '...'
 
-const formatAmount = (amount: number): string =>
-  new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB', minimumFractionDigits: 2 }).format(amount)
+const formatAmount = (amount: number): string => formatMoney(amount)
 
 const filteredItems = computed<ProductChannelCostItem[]>(() => {
   if (!filterProductId.value) return items.value
@@ -275,7 +276,7 @@ const inputClass = 'mt-1'
             <TableCell class="font-medium">{{ productName(item.productId) }}</TableCell>
             <TableCell>{{ channelName(item.channelId) }}</TableCell>
             <TableCell>{{ item.costTypeName }}</TableCell>
-            <TableCell class="text-right tabular-nums">{{ formatAmount(item.amount) }}</TableCell>
+            <TableCell class="text-right tabular-nums">{{ formatMoney(item.amount) }}</TableCell>
             <TableCell v-if="canWrite" class="text-right">
               <div class="flex items-center justify-end gap-2">
                 <Button variant="ghost" size="icon" class="size-8" @click="openEdit(item)">
@@ -323,7 +324,7 @@ const inputClass = 'mt-1'
               </select>
             </div>
             <div :class="fieldClass">
-              <Label>Сумма, ₽</Label>
+              <Label>Сумма, {{ currencySymbol }}</Label>
               <Input :class="inputClass" v-model="form.amount" type="number" min="0" step="0.01" placeholder="0.00" />
             </div>
             <div class="flex justify-end gap-2 mt-2">
@@ -357,7 +358,7 @@ const inputClass = 'mt-1'
               {{ productName(editTarget?.productId ?? '') }} · {{ channelName(editTarget?.channelId ?? '') }} — {{ editTarget?.costTypeName }}
             </p>
             <div :class="fieldClass">
-              <Label>Сумма, ₽</Label>
+              <Label>Сумма, {{ currencySymbol }}</Label>
               <Input :class="inputClass" v-model="editForm.amount" type="number" min="0" step="0.01" />
             </div>
             <div class="flex justify-end gap-2 mt-2">
