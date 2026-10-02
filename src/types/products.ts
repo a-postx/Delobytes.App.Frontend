@@ -95,8 +95,17 @@ export interface CreateProductResponse {
   id: string
 }
 
+/**
+ * Partial update of a product: an omitted field is left untouched by the backend.
+ *
+ * `sku` is the only field a marketplace-linked product may change — everything else keeps being
+ * overwritten by the import until write-back ships, so the form does not send it for those
+ * products. `description` is intentionally not nullable-clearing: an empty string clears it,
+ * because the field is editable.
+ */
 export interface UpdateProductRequest {
-  name: string
+  sku?: string
+  name?: string
   description?: string
   barcodes?: ProductBarcode[]
   packingUnit?: PackingUnit

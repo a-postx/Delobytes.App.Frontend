@@ -13,6 +13,7 @@ import ProductPhotoGallery from '@/components/products/ProductPhotoGallery.vue'
 import ProductChannelBadges from '@/components/products/ProductChannelBadges.vue'
 import { toast } from 'vue-sonner'
 import { catalogProductsApi } from '@/services/api'
+import { extractErrorMessage } from '@/composables/useApi'
 import { channelDisplay, normalizeChannel } from '@/utils/channelBadges'
 import type { GetProductResponse, UpdateProductRequest, ProductBarcode, PackingUnit, ProductPhoto } from '@/types/products'
 import { useCurrentUser } from '@/composables/useCurrentUser'
@@ -30,8 +31,11 @@ const photos = ref<ProductPhoto[]>([])
 const product = ref<GetProductResponse | null>(null)
 
 // Временная мера до появления отправки данных в маркетплейсы (см. ТЗ п.2.1):
-// связанные товары не редактируются на фронтенде, т.к. импорт может перезаписать
-// Name/Description/Barcodes/PackingUnit. Когда появится write-back, отключение снять.
+// у связанного товара импорт перезаписывает Name/Description/Barcodes/PackingUnit, поэтому
+// эти поля остаются только для чтения. SKU — исключение: импорт его не трогает после создания
+// (см. ImportProductBatchConsumer.FindProductByBarcodeAsync — сопоставление идёт по nmID и
+// штрихкоду, но не по Product.Sku), поэтому SKU открыт для правки и у связанных товаров.
+// Когда появится write-back, отключение снять со всех полей.
 const isLinked = computed<boolean>(() => (product.value?.channelLinks?.length ?? 0) > 0)
 const linkedChannelMessage = computed<string>(() => {
   const links = product.value?.channelLinks ?? []
@@ -121,52 +125,73 @@ const loadProduct = async (): Promise<void> => {
 }
 
 const handleSave = async (): Promise<void> => {
-  if (!form.value.name.trim()) {
+  const sku: string = form.value.sku.trim()
+
+  // Checked locally as well as by the backend: the field is the point of this form, and a
+  // round-trip that can only answer "не пусто" is wasted motion.
+  if (!sku) {
+    toast.error('Введите SKU')
+    return
+  }
+
+  // Для связанного товара остальные поля не редактируются, но подставляются в форму из
+  // ответа API — отправлять их нельзя, иначе локальная копия перезапишет данные импорта.
+  if (!isLinked.value && !form.value.name.trim()) {
     toast.error('Введите название')
     return
   }
 
   isSaving.value = true
   try {
-    const payload: UpdateProductRequest = {
-      name: form.value.name.trim(),
-      description: form.value.description.trim() || undefined,
+    const payload: UpdateProductRequest = {}
+
+    // Отправляем SKU только когда он изменился: у связанного товара бэкенд по изменению
+    // выставит UpdatedAt, и лишняя запись без правок исказила бы историю изменений.
+    if (sku !== (product.value?.sku ?? '')) {
+      payload.sku = sku
     }
 
-    if (form.value.barcodes.length > 0) {
-      payload.barcodes = form.value.barcodes.map(b => {
-        const barcode: ProductBarcode = {
-          value: b.value.trim(),
-          type: b.type?.trim() || undefined,
-          isDefault: b.isDefault,
-        }
-        if (b.id) {
-          barcode.id = b.id
-        }
-        return barcode
-      })
-    }
+    if (!isLinked.value) {
+      payload.name = form.value.name.trim()
+      payload.description = form.value.description.trim() || undefined
 
-    if (
-      form.value.packingUnit.lengthCm &&
-      form.value.packingUnit.widthCm &&
-      form.value.packingUnit.heightCm
-    ) {
-      payload.packingUnit = {
-        lengthCm: parseFloat(form.value.packingUnit.lengthCm),
-        widthCm: parseFloat(form.value.packingUnit.widthCm),
-        heightCm: parseFloat(form.value.packingUnit.heightCm),
-        weightKg: form.value.packingUnit.weightKg
-          ? parseFloat(form.value.packingUnit.weightKg)
-          : undefined,
+      if (form.value.barcodes.length > 0) {
+        payload.barcodes = form.value.barcodes.map(b => {
+          const barcode: ProductBarcode = {
+            value: b.value.trim(),
+            type: b.type?.trim() || undefined,
+            isDefault: b.isDefault,
+          }
+          if (b.id) {
+            barcode.id = b.id
+          }
+          return barcode
+        })
+      }
+
+      if (
+        form.value.packingUnit.lengthCm &&
+        form.value.packingUnit.widthCm &&
+        form.value.packingUnit.heightCm
+      ) {
+        payload.packingUnit = {
+          lengthCm: parseFloat(form.value.packingUnit.lengthCm),
+          widthCm: parseFloat(form.value.packingUnit.widthCm),
+          heightCm: parseFloat(form.value.packingUnit.heightCm),
+          weightKg: form.value.packingUnit.weightKg
+            ? parseFloat(form.value.packingUnit.weightKg)
+            : undefined,
+        }
       }
     }
 
     await catalogProductsApi.update(productId.value, payload)
     toast.success('Товар обновлён')
     router.push('/catalogs/products')
-  } catch {
-    toast.error('Не удалось обновить товар')
+  } catch (error: unknown) {
+    // Серверное сообщение содержит причину: занятый SKU приходит как 409
+    // catalog.product.sku_conflict, пустой — как 422 common.validation_failed.
+    toast.error(extractErrorMessage(error, 'Не удалось обновить товар'))
   } finally {
     isSaving.value = false
   }
@@ -243,13 +268,20 @@ onMounted(() => {
       <div class="flex flex-col gap-4">
         <ProductChannelBadges v-if="product?.channelLinks?.length" :links="product.channelLinks" />
         <p v-if="isLinked" class="text-sm text-muted-foreground">
-          Данные получены из {{ linkedChannelMessage }} и синхронизируются с маркетплейсом. Редактирование недоступно.
+          Данные получены из {{ linkedChannelMessage }} и синхронизируются с маркетплейсом. Редактировать можно только SKU.
         </p>
 
         <div class="flex flex-col gap-1">
-          <Label for="sku">SKU</Label>
-          <Input id="sku" v-model="form.sku" disabled class="mt-1" />
-          <p class="text-xs text-muted-foreground">SKU нельзя изменить</p>
+          <Label for="sku">SKU *</Label>
+          <Input
+            id="sku"
+            v-model="form.sku"
+            class="mt-1"
+            :disabled="!canWrite"
+          />
+          <p class="text-xs text-muted-foreground">
+            Внутренний артикул. Правка не влияет на сопоставление товара с карточкой маркетплейса.
+          </p>
         </div>
 
         <div class="flex flex-col gap-1">
@@ -359,7 +391,7 @@ onMounted(() => {
         </div>
 
         <!-- Кнопки действий -->
-        <div v-if="canWrite && !isLinked" class="flex gap-3 pt-2">
+        <div v-if="canWrite" class="flex gap-3 pt-2">
           <Button @click="handleSave" :disabled="isSaving" class="flex-1">
             <Spinner v-if="isSaving" class="mr-2" />
             {{ isSaving ? 'Сохранение...' : 'Сохранить' }}
