@@ -45,6 +45,13 @@ const productWithLink = {
 const factory = () => shallowMount(ProductsView, {
   global: {
     stubs: {
+      Table: { template: '<table><slot /></table>' },
+      TableHeader: { template: '<thead><slot /></thead>' },
+      TableBody: { template: '<tbody><slot /></tbody>' },
+      TableRow: { template: '<tr><slot /></tr>' },
+      TableHead: { template: '<th><slot /></th>' },
+      TableCell: { template: '<td><slot /></td>' },
+
       ProductChannelBadges: {
         props: ['links'],
         template: '<div class="product-channel-badges">{{ links[0].externalProductId }}</div>',
@@ -110,7 +117,10 @@ describe('ProductsView channel links', () => {
     const wrapper = factory()
     await flushPromises()
 
-    expect(wrapper.find('.product-channel-badges').text()).toContain('123456789')
+    const badges = wrapper.find('.product-channel-badges')
+
+    expect(badges.exists()).toBe(true)
+    expect(badges.text()).toContain('123456789')
   })
 
   it('does not render channel badges for an empty channel links array', async () => {
