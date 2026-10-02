@@ -10,9 +10,11 @@ import { Badge } from '@/components/ui/badge'
 import { Spinner } from '@/components/ui/spinner'
 import { Skeleton } from '@/components/ui/skeleton'
 import ProductPhotoGallery from '@/components/products/ProductPhotoGallery.vue'
+import ProductChannelBadges from '@/components/products/ProductChannelBadges.vue'
 import { toast } from 'vue-sonner'
 import { catalogProductsApi } from '@/services/api'
-import type { UpdateProductRequest, ProductBarcode, PackingUnit, ProductPhoto } from '@/types/products'
+import { channelDisplay, normalizeChannel } from '@/utils/channelBadges'
+import type { GetProductResponse, UpdateProductRequest, ProductBarcode, PackingUnit, ProductPhoto } from '@/types/products'
 import { useCurrentUser } from '@/composables/useCurrentUser'
 
 const route = useRoute()
@@ -25,6 +27,16 @@ const isLoading = ref<boolean>(true)
 const isSaving = ref<boolean>(false)
 const notFound = ref<boolean>(false)
 const photos = ref<ProductPhoto[]>([])
+const product = ref<GetProductResponse | null>(null)
+
+// Временная мера до появления отправки данных в маркетплейсы (см. ТЗ п.2.1):
+// связанные товары не редактируются на фронтенде, т.к. импорт может перезаписать
+// Name/Description/Barcodes/PackingUnit. Когда появится write-back, отключение снять.
+const isLinked = computed<boolean>(() => (product.value?.channelLinks?.length ?? 0) > 0)
+const linkedChannelMessage = computed<string>(() => {
+  const links = product.value?.channelLinks ?? []
+  return links.length === 1 ? links[0].channelName : 'маркетплейсов'
+})
 
 // Поля формы — числовые значения хранятся как строка до отправки
 type PackingUnitForm = {
@@ -49,25 +61,11 @@ const form = ref<FormData>({
 
 const newBarcode = ref({ value: '', type: '', isDefault: false })
 
-const getBarcodePrefix = (type?: string): string => {
-  const prefixMap: Record<string, string> = {
-    wildberries: 'ВБ',
-    ozon: 'ОЗ',
-    yandex: 'ЯМ',
-  }
-  return prefixMap[type?.toLowerCase() ?? ''] ?? ''
-}
+const getBarcodePrefix = (type?: string): string => channelDisplay(normalizeChannel(type)).prefix
 
 const getBarcodeVariant = (
   type?: string,
-): 'default' | 'marketplace-wb' | 'marketplace-oz' | 'marketplace-ym' => {
-  const variantMap: Record<string, 'marketplace-wb' | 'marketplace-oz' | 'marketplace-ym'> = {
-    wildberries: 'marketplace-wb',
-    ozon: 'marketplace-oz',
-    yandex: 'marketplace-ym',
-  }
-  return variantMap[type?.toLowerCase() ?? ''] ?? 'default'
-}
+): 'default' | 'marketplace-wb' | 'marketplace-oz' | 'marketplace-ym' => channelDisplay(normalizeChannel(type)).variant
 
 const addBarcode = (): void => {
   if (!newBarcode.value.value.trim()) {
@@ -91,28 +89,29 @@ const loadProduct = async (): Promise<void> => {
 
   isLoading.value = true
   try {
-    const product = await catalogProductsApi.getById(productId.value)
+    const response = await catalogProductsApi.getById(productId.value)
 
-    if (!product.found) {
+    if (!response.found) {
       notFound.value = true
       return
     }
 
+    product.value = response
     form.value = {
-      sku: product.sku,
-      name: product.name,
-      description: product.description ?? '',
-      barcodes: product.barcodes ? product.barcodes.map(b => ({ ...b })) : [],
-      packingUnit: product.packingUnit
+      sku: response.sku,
+      name: response.name,
+      description: response.description ?? '',
+      barcodes: response.barcodes ? response.barcodes.map(b => ({ ...b })) : [],
+      packingUnit: response.packingUnit
         ? {
-            lengthCm: product.packingUnit.lengthCm.toString(),
-            widthCm: product.packingUnit.widthCm.toString(),
-            heightCm: product.packingUnit.heightCm.toString(),
-            weightKg: product.packingUnit.weightKg?.toString() ?? '',
+            lengthCm: response.packingUnit.lengthCm.toString(),
+            widthCm: response.packingUnit.widthCm.toString(),
+            heightCm: response.packingUnit.heightCm.toString(),
+            weightKg: response.packingUnit.weightKg?.toString() ?? '',
           }
         : { lengthCm: '', widthCm: '', heightCm: '', weightKg: '' },
     }
-    photos.value = product.photos ?? []
+    photos.value = response.photos ?? []
   } catch {
     toast.error('Не удалось загрузить данные товара')
     notFound.value = true
@@ -242,6 +241,10 @@ onMounted(() => {
 
       <!-- Правая колонка: форма -->
       <div class="flex flex-col gap-4">
+        <ProductChannelBadges v-if="product?.channelLinks?.length" :links="product.channelLinks" />
+        <p v-if="isLinked" class="text-sm text-muted-foreground">
+          Данные получены из {{ linkedChannelMessage }} и синхронизируются с маркетплейсом. Редактирование недоступно.
+        </p>
 
         <div class="flex flex-col gap-1">
           <Label for="sku">SKU</Label>
@@ -256,7 +259,7 @@ onMounted(() => {
             v-model="form.name"
             placeholder="Название товара"
             class="mt-1"
-            :disabled="!canWrite"
+            :disabled="!canWrite || isLinked"
           />
         </div>
 
@@ -268,7 +271,7 @@ onMounted(() => {
             placeholder="Краткое описание"
             :rows="4"
             class="mt-1"
-            :disabled="!canWrite"
+            :disabled="!canWrite || isLinked"
           />
         </div>
 
@@ -290,7 +293,7 @@ onMounted(() => {
                   {{ barcode.type }}
                 </span>
                 <Button
-                  v-if="canWrite"
+                  v-if="canWrite && !isLinked"
                   variant="ghost"
                   size="icon"
                   class="size-6 ml-auto"
@@ -300,7 +303,7 @@ onMounted(() => {
                 </Button>
               </div>
             </div>
-            <div v-if="canWrite" class="flex gap-2">
+            <div v-if="canWrite && !isLinked" class="flex gap-2">
               <Input
                 v-model="newBarcode.value"
                 placeholder="Значение баркода"
@@ -326,21 +329,21 @@ onMounted(() => {
               placeholder="Длина"
               type="number"
               step="0.01"
-              :disabled="!canWrite"
+              :disabled="!canWrite || isLinked"
             />
             <Input
               v-model="form.packingUnit.widthCm"
               placeholder="Ширина"
               type="number"
               step="0.01"
-              :disabled="!canWrite"
+              :disabled="!canWrite || isLinked"
             />
             <Input
               v-model="form.packingUnit.heightCm"
               placeholder="Высота"
               type="number"
               step="0.01"
-              :disabled="!canWrite"
+              :disabled="!canWrite || isLinked"
             />
           </div>
           <div class="flex gap-2 mt-2">
@@ -350,13 +353,13 @@ onMounted(() => {
               type="number"
               step="0.01"
               class="w-full"
-              :disabled="!canWrite"
+              :disabled="!canWrite || isLinked"
             />
           </div>
         </div>
 
         <!-- Кнопки действий -->
-        <div v-if="canWrite" class="flex gap-3 pt-2">
+        <div v-if="canWrite && !isLinked" class="flex gap-3 pt-2">
           <Button @click="handleSave" :disabled="isSaving" class="flex-1">
             <Spinner v-if="isSaving" class="mr-2" />
             {{ isSaving ? 'Сохранение...' : 'Сохранить' }}

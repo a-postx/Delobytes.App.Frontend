@@ -45,6 +45,8 @@ import {
 } from '@/components/ui/table'
 import { StatusFilter } from '@/components/ui/status-filter'
 import ProductStatusBadge from '@/components/products/ProductStatusBadge.vue'
+import ProductChannelBadges from '@/components/products/ProductChannelBadges.vue'
+import { channelDisplay, normalizeChannel } from '@/utils/channelBadges'
 import { toast } from 'vue-sonner'
 import { catalogProductsApi, integrationsApi } from '@/services/api'
 import type { ProductItem, CreateProductRequest, ProductBarcode, PackingUnit } from '@/types/products'
@@ -128,23 +130,10 @@ const filteredItems = computed(() => {
 const formatDate = (dateStr: string): string =>
   new Date(dateStr).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' })
 
-const getBarcodePrefix = (type?: string): string => {
-  const prefixMap: Record<string, string> = {
-    'wildberries': 'ВБ',
-    'ozon': 'ОЗ',
-    'yandex': 'ЯМ',
-  }
-  return prefixMap[type?.toLowerCase() ?? ''] ?? ''
-}
+const getBarcodePrefix = (type?: string): string => channelDisplay(normalizeChannel(type)).prefix
 
-const getBarcodeVariant = (type?: string): 'default' | 'marketplace-wb' | 'marketplace-oz' | 'marketplace-ym' => {
-  const variantMap: Record<string, 'marketplace-wb' | 'marketplace-oz' | 'marketplace-ym'> = {
-    'wildberries': 'marketplace-wb',
-    'ozon': 'marketplace-oz',
-    'yandex': 'marketplace-ym',
-  }
-  return variantMap[type?.toLowerCase() ?? ''] ?? 'default'
-}
+const getBarcodeVariant = (type?: string): 'default' | 'marketplace-wb' | 'marketplace-oz' | 'marketplace-ym' =>
+  channelDisplay(normalizeChannel(type)).variant
 
 const loadItems = async (): Promise<void> => {
   isLoading.value = true
@@ -443,6 +432,7 @@ const inputClass = 'mt-1'
             <TableHead class="w-14">Фото</TableHead>
             <TableHead>SKU</TableHead>
             <TableHead>Название</TableHead>
+            <TableHead>Канал</TableHead>
             <TableHead>Баркоды</TableHead>
             <TableHead>Статус</TableHead>
             <TableHead>Создан</TableHead>
@@ -469,6 +459,10 @@ const inputClass = 'mt-1'
             </TableCell>
             <TableCell class="font-mono text-sm">{{ item.sku }}</TableCell>
             <TableCell class="font-medium">{{ item.name }}</TableCell>
+            <TableCell>
+              <ProductChannelBadges v-if="item.channelLinks?.length" :links="item.channelLinks" />
+              <span v-else class="text-muted-foreground text-sm">—</span>
+            </TableCell>
             <TableCell>
               <div v-if="item.barcodes && item.barcodes.length > 0" class="flex flex-wrap gap-1">
                 <Badge

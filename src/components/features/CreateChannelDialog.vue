@@ -78,6 +78,7 @@ const handleSubmit = async (): Promise<void> => {
     const result = await channelsApi.create({
       name: name.value.trim(),
       systemChannelTemplateId: isCustom.value ? undefined : selectedTemplate.value?.id,
+      code: isCustom.value ? undefined : selectedTemplate.value?.code,
       customApiUrl: isCustom.value && customApiUrl.value.trim() ? customApiUrl.value.trim() : undefined,
     })
 

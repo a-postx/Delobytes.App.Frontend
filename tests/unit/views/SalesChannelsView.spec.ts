@@ -23,8 +23,8 @@ const templates: AvailableChannel[] = [
   { id: 'template-wb', code: 'wildberries', displayName: 'Wildberries', description: null, apiVersion: 'v2' },
 ]
 const channels: ChannelItem[] = [
-  { id: 'channel-ozon', name: 'Мой Ozon', systemChannelTemplateId: 'template-ozon', isCustom: false, isActive: true, createdAt: '2024-01-01T00:00:00Z' },
-  { id: 'channel-custom', name: 'Свой магазин', isCustom: true, isActive: true, createdAt: '2024-01-02T00:00:00Z' },
+  { id: 'channel-ozon', name: 'Мой Ozon', code: 'ozon', systemChannelTemplateId: 'template-ozon', isCustom: false, isActive: true, createdAt: '2024-01-01T00:00:00Z' },
+  { id: 'channel-custom', name: 'Свой магазин', code: null, isCustom: true, isActive: true, createdAt: '2024-01-02T00:00:00Z' },
 ]
 const connection: Connection = {
   id: 'conn-ozon', channelId: 'channel-ozon', templateCode: 'ozon', templateDisplayName: 'Ozon',
@@ -120,7 +120,7 @@ describe('SalesChannelsView: создание, подключение и отк�
   beforeEach(() => vi.clearAllMocks())
   it('после создания шаблонного канала обновляет данные и открывает диалог подключения', async () => {
     setupLoadedData()
-    const newChannel: ChannelItem = { id: 'channel-new', name: 'Новый Ozon', systemChannelTemplateId: 'template-ozon', isCustom: false, isActive: true, createdAt: '2024-01-03T00:00:00Z' }
+    const newChannel: ChannelItem = { id: 'channel-new', name: 'Новый Ozon', code: 'ozon', systemChannelTemplateId: 'template-ozon', isCustom: false, isActive: true, createdAt: '2024-01-03T00:00:00Z' }
     getChannels.mockResolvedValueOnce({ items: channels }).mockResolvedValueOnce({ items: [...channels, newChannel] })
     const wrapper = factory(); await flushPromises()
     await wrapper.findComponent({ name: 'CreateChannelDialog' }).vm.$emit('created', 'channel-new', 'ozon')

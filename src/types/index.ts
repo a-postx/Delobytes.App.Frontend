@@ -120,6 +120,7 @@ export interface CreateConnectionResult {
 export interface Channel {
   id: string
   name: string
+  code: string | null
   systemChannelTemplateId: string | null
   isCustom: boolean
   isActive: boolean
@@ -137,7 +138,7 @@ export interface CreateChannelResult {
   id: string
 }
 
-export type { ProductItem, ProductStatus, GetProductsResponse, GetProductResponse, ProductDeletionStatusResponse } from './products'
+export type { ProductItem, ProductStatus, GetProductsResponse, GetProductResponse, ProductDeletionStatusResponse, ProductChannelLink } from './products'
 export { ProductStatus as ProductStatusEnum } from './products'
 export type { ProductImportJob, ProductImportCreateResponse, GetProductImportsResponse, GetProductImportResponse, StartProductImportRequest } from './productImports'
 export { ProductImportStatus, ProductImportJobType } from './productImports'

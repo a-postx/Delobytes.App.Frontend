@@ -33,6 +33,15 @@ export interface ProductPhoto {
   height?: number
 }
 
+export interface ProductChannelLink {
+  channelId: string
+  channelName: string
+  channelCode: string | null
+  externalProductId: string
+  externalSku?: string | null
+  isActive: boolean
+}
+
 export interface ProductItem {
   id: string
   sku: string
@@ -48,6 +57,7 @@ export interface ProductItem {
   barcodes?: ProductBarcode[]
   packingUnit?: PackingUnit
   photos?: ProductPhoto[]
+  channelLinks?: ProductChannelLink[]
 }
 
 export interface GetProductsResponse {
@@ -70,6 +80,7 @@ export interface GetProductResponse {
   barcodes?: ProductBarcode[]
   packingUnit?: PackingUnit
   photos?: ProductPhoto[]
+  channelLinks?: ProductChannelLink[]
 }
 
 export interface CreateProductRequest {

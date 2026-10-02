@@ -121,6 +121,7 @@ export interface ChannelItem {
   id: string
   systemChannelTemplateId?: string
   name: string
+  code: string | null
   isCustom: boolean
   isActive: boolean
   createdAt: string
@@ -134,6 +135,7 @@ export interface GetChannelsResponse {
 export interface CreateChannelRequest {
   systemChannelTemplateId?: string
   name: string
+  code?: string
   customApiUrl?: string
 }
 
