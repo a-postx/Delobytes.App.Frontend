@@ -306,7 +306,7 @@ const selectContentClass = 'z-[110] pointer-events-auto'
   <Card>
     <CardHeader>
       <CardTitle class="text-lg">Налоговые настройки</CardTitle>
-      <CardDescription>Версии ставки налога с датами начала действия.</CardDescription>
+      <CardDescription>Ставки налога с датами начала действия.</CardDescription>
     </CardHeader>
     <CardContent class="space-y-4">
       <div v-if="isLoading" class="flex justify-center py-6">
@@ -320,7 +320,7 @@ const selectContentClass = 'z-[110] pointer-events-auto'
 
         <div v-if="sortedItems.length === 0" class="rounded-lg border border-dashed border-border bg-card px-4 py-8 text-center">
           <p class="text-sm text-muted-foreground">
-            Налоговая настройка не задана — без неё налог в расчётах не учитывается.
+            Налоговые ставки не заданы — без них налог в расчётах не учитывается.
           </p>
         </div>
 
@@ -367,9 +367,9 @@ const selectContentClass = 'z-[110] pointer-events-auto'
       <DialogPortal>
         <DialogOverlay class="fixed inset-0 z-[99] bg-black/50" />
         <DialogContent :class="dialogContentClass">
-          <DialogTitle class="text-lg font-semibold">Новая ставка налога</DialogTitle>
+          <DialogTitle class="text-lg font-semibold">Новые ставки налогов</DialogTitle>
           <DialogDescription class="mt-1 text-sm text-muted-foreground">
-            Ставка указывается в процентах: 6 — это 6 %, а не доля 0,06.
+            Введите налоговый режим и применяемые ставки.
           </DialogDescription>
 
           <div class="mt-4 flex flex-col gap-3">
@@ -401,7 +401,7 @@ const selectContentClass = 'z-[110] pointer-events-auto'
                 min="0"
                 max="100"
                 step="1"
-                placeholder="6"
+                placeholder=""
               />
             </div>
 
