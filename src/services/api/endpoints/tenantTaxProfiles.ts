@@ -54,6 +54,8 @@ export interface CreateTenantTaxProfileResponse {
 export interface DeleteTenantTaxProfileResponse {
   found: boolean
   notLatest: boolean
+  /** Последняя версия уже наступила: могла попасть в отчёты, удалять нельзя. */
+  alreadyEffective: boolean
 }
 
 export const tenantTaxProfilesApi = {

@@ -106,6 +106,31 @@ const activeProfileId: ComputedRef<string | null> = computed(
   () => latestProfile.value?.id ?? null
 )
 
+/** Сегодня в ISO-формате (YYYY-MM-DD) — для сравнения с ValidFrom как со строками. */
+const todayIso: ComputedRef<string> = computed(() => today())
+
+/**
+ * Удалять можно только последнюю версию, которая ещё не вступила в силу: как только
+ * наступил её ValidFrom, она могла попасть в уже посчитанные отчёты, и удаление задним
+ * числом эти отчёты обесценит. Бэкенд проверяет то же самое по дате тенанта — здесь
+ * сравнение приблизительное (по часовому поясу браузера), окончательное решение
+ * всегда у бэкенда.
+ */
+const isDeletable = (item: TenantTaxProfileItem): boolean =>
+  item.id === activeProfileId.value && item.validFrom > todayIso.value
+
+const deleteDisabledReason = (item: TenantTaxProfileItem): string => {
+  if (item.id !== activeProfileId.value) {
+    return 'Удалить можно только последнюю версию'
+  }
+
+  if (item.validFrom <= todayIso.value) {
+    return 'Ставка уже вступила в силу и может быть использована в отчётах — удалить её больше нельзя'
+  }
+
+  return 'Удалить ставку'
+}
+
 const vatLabel = (vat: VatType): string =>
   VAT_TYPE_OPTIONS.find((option) => option.value === vat)?.label ?? '—'
 
@@ -192,6 +217,10 @@ const openCreate = (): void => {
 }
 
 const openDelete = (item: TenantTaxProfileItem): void => {
+  if (!isDeletable(item)) {
+    return
+  }
+
   deleteTarget.value = item
   deleteDialogOpen.value = true
 }
@@ -344,8 +373,8 @@ const selectContentClass = 'z-[110] pointer-events-auto'
               v-if="canEditTenantSettings"
               variant="ghost"
               size="sm"
-              :disabled="item.id !== activeProfileId"
-              :title="item.id !== activeProfileId ? 'Удалить можно только последнюю версию' : 'Удалить ставку'"
+              :disabled="!isDeletable(item)"
+              :title="deleteDisabledReason(item)"
               @click="openDelete(item)"
             >
               <Trash2 class="size-4" />

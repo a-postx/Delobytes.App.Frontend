@@ -148,6 +148,44 @@ const PROFILE_NEW: TenantTaxProfileItem = {
   createdAt: '2026-01-01T00:00:00+00:00',
 }
 
+/**
+ * Удаление зависит от сравнения ValidFrom с сегодняшней датой, поэтому фикстуры для
+ * тестов удаления вычисляются относительно текущего момента, а не фиксируются
+ * календарными датами: иначе тест стал бы зависеть от того, когда его запускают.
+ */
+const isoDateOffset = (days: number): string => {
+  const date = new Date()
+  date.setDate(date.getDate() + days)
+  return date.toISOString().slice(0, 10)
+}
+
+const PROFILE_FUTURE: TenantTaxProfileItem = {
+  id: '33333333-3333-3333-3333-333333333333',
+  regime: 'UsnIncome',
+  ratePercent: 8,
+  vat: 'Seven',
+  validFrom: isoDateOffset(5),
+  createdAt: new Date().toISOString(),
+}
+
+const PROFILE_EFFECTIVE_TODAY: TenantTaxProfileItem = {
+  id: '44444444-4444-4444-4444-444444444444',
+  regime: 'UsnIncome',
+  ratePercent: 6,
+  vat: 'None',
+  validFrom: isoDateOffset(0),
+  createdAt: new Date().toISOString(),
+}
+
+const PROFILE_EFFECTIVE_PAST: TenantTaxProfileItem = {
+  id: '55555555-5555-5555-5555-555555555555',
+  regime: 'UsnIncome',
+  ratePercent: 6,
+  vat: 'None',
+  validFrom: '2020-01-01',
+  createdAt: '2020-01-01T00:00:00+00:00',
+}
+
 const mockCanEdit = (canEdit: boolean): void => {
   vi.mocked(usePermissions).mockReturnValue({
     canEditTenantSettings: computed(() => canEdit),
@@ -177,7 +215,7 @@ describe('TaxProfileCard', () => {
     mockCanEdit(true)
     vi.mocked(tenantTaxProfilesApi.getAll).mockResolvedValue({ items: [] })
     vi.mocked(tenantTaxProfilesApi.create).mockResolvedValue({ id: 'new-id', conflict: false })
-    vi.mocked(tenantTaxProfilesApi.remove).mockResolvedValue({ found: true, notLatest: false })
+    vi.mocked(tenantTaxProfilesApi.remove).mockResolvedValue({ found: true, notLatest: false, alreadyEffective: false })
   })
 
   describe('render', () => {
@@ -240,7 +278,7 @@ describe('TaxProfileCard', () => {
       const wrapper = await mountCard()
 
       expect(wrapper.findAll('li')).toHaveLength(0)
-      expect(wrapper.text()).toContain('Налоговые ставки не заданы')
+      expect(wrapper.text()).toContain('Налоговая настройка не задана')
     })
   })
 
@@ -280,7 +318,7 @@ describe('TaxProfileCard', () => {
 
       const dialog = wrapper.find('[data-stub="dialog"]')
       expect(dialog.exists()).toBe(true)
-      expect(dialog.text()).toContain('Введите налоговый режим')
+      expect(dialog.text()).toContain('Ставка указывается в процентах')
       expect(dialog.find('input[type="date"]').element.value).toBe(
         new Date().toISOString().slice(0, 10)
       )
@@ -466,9 +504,9 @@ describe('TaxProfileCard', () => {
   })
 
   describe('deleting a version', () => {
-    it('allows deleting only the latest version', async () => {
+    it('allows deleting only the latest version that has not taken effect yet', async () => {
       vi.mocked(tenantTaxProfilesApi.getAll).mockResolvedValue({
-        items: [PROFILE_NEW, PROFILE_OLD],
+        items: [PROFILE_FUTURE, PROFILE_OLD],
       })
 
       const wrapper = await mountCard()
@@ -479,8 +517,42 @@ describe('TaxProfileCard', () => {
       expect(buttons[1][0].attributes('disabled')).toBeDefined()
     })
 
+    it('disables deleting the latest version once it has taken effect today', async () => {
+      vi.mocked(tenantTaxProfilesApi.getAll).mockResolvedValue({
+        items: [PROFILE_EFFECTIVE_TODAY],
+      })
+
+      const wrapper = await mountCard()
+      const button = wrapper.findAll('li')[0].findAll('button')[0]
+
+      expect(button.attributes('disabled')).toBeDefined()
+      expect(button.attributes('title')).toContain('уже вступила в силу')
+    })
+
+    it('disables deleting the latest version once it has taken effect in the past', async () => {
+      vi.mocked(tenantTaxProfilesApi.getAll).mockResolvedValue({
+        items: [PROFILE_EFFECTIVE_PAST],
+      })
+
+      const wrapper = await mountCard()
+      const button = wrapper.findAll('li')[0].findAll('button')[0]
+
+      expect(button.attributes('disabled')).toBeDefined()
+    })
+
+    it('explains with a distinct message why a non-latest version cannot be deleted', async () => {
+      vi.mocked(tenantTaxProfilesApi.getAll).mockResolvedValue({
+        items: [PROFILE_FUTURE, PROFILE_OLD],
+      })
+
+      const wrapper = await mountCard()
+      const notLatestButton = wrapper.findAll('li')[1].findAll('button')[0]
+
+      expect(notLatestButton.attributes('title')).toBe('Удалить можно только последнюю версию')
+    })
+
     it('requires confirmation before deleting', async () => {
-      vi.mocked(tenantTaxProfilesApi.getAll).mockResolvedValue({ items: [PROFILE_NEW] })
+      vi.mocked(tenantTaxProfilesApi.getAll).mockResolvedValue({ items: [PROFILE_FUTURE] })
 
       const wrapper = await mountCard()
 
@@ -492,7 +564,7 @@ describe('TaxProfileCard', () => {
     })
 
     it('removes the version after confirmation and reloads', async () => {
-      vi.mocked(tenantTaxProfilesApi.getAll).mockResolvedValue({ items: [PROFILE_NEW] })
+      vi.mocked(tenantTaxProfilesApi.getAll).mockResolvedValue({ items: [PROFILE_FUTURE] })
 
       const wrapper = await mountCard()
 
@@ -507,13 +579,13 @@ describe('TaxProfileCard', () => {
       await confirm!.trigger('click')
       await flushPromises()
 
-      expect(tenantTaxProfilesApi.remove).toHaveBeenCalledWith(PROFILE_NEW.id)
+      expect(tenantTaxProfilesApi.remove).toHaveBeenCalledWith(PROFILE_FUTURE.id)
       expect(toast.success).toHaveBeenCalledWith('Ставка удалена')
       expect(tenantTaxProfilesApi.getAll).toHaveBeenCalledTimes(2)
     })
 
     it('reports the backend refusal to delete a non-latest version', async () => {
-      vi.mocked(tenantTaxProfilesApi.getAll).mockResolvedValue({ items: [PROFILE_NEW] })
+      vi.mocked(tenantTaxProfilesApi.getAll).mockResolvedValue({ items: [PROFILE_FUTURE] })
       vi.mocked(tenantTaxProfilesApi.remove).mockRejectedValue(new Error('not latest'))
 
       const wrapper = await mountCard()
@@ -530,6 +602,29 @@ describe('TaxProfileCard', () => {
       await flushPromises()
 
       expect(toast.success).not.toHaveBeenCalled()
+    })
+
+    it('reports the backend refusal when the version has already become effective', async () => {
+      // Гонка: диалог открыт, пока ставка ещё не наступила, но к моменту подтверждения
+      // дата уже настала — бэкенд отказывает, фронтенд не должен считать это успехом.
+      vi.mocked(tenantTaxProfilesApi.getAll).mockResolvedValue({ items: [PROFILE_FUTURE] })
+      vi.mocked(tenantTaxProfilesApi.remove).mockRejectedValue(new Error('already effective'))
+
+      const wrapper = await mountCard()
+
+      await wrapper.findAll('li')[0].find('button').trigger('click')
+      await nextTick()
+
+      const confirm = wrapper
+        .find('[data-stub="alert-dialog"]')
+        .findAll('button')
+        .find((button) => button.text() === 'Удалить')
+
+      await confirm!.trigger('click')
+      await flushPromises()
+
+      expect(toast.success).not.toHaveBeenCalled()
+      expect(tenantTaxProfilesApi.getAll).toHaveBeenCalledTimes(1)
     })
   })
 })
