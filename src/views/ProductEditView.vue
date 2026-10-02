@@ -257,7 +257,7 @@ onMounted(() => {
           <Input
             id="name"
             v-model="form.name"
-            placeholder="Название товара"
+            placeholder=""
             class="mt-1"
             :disabled="!canWrite || isLinked"
           />
@@ -268,7 +268,7 @@ onMounted(() => {
           <Textarea
             id="description"
             v-model="form.description"
-            placeholder="Краткое описание"
+            placeholder=""
             :rows="4"
             class="mt-1"
             :disabled="!canWrite || isLinked"
@@ -306,7 +306,7 @@ onMounted(() => {
             <div v-if="canWrite && !isLinked" class="flex gap-2">
               <Input
                 v-model="newBarcode.value"
-                placeholder="Значение баркода"
+                placeholder=""
                 class="flex-1"
               />
               <Input
