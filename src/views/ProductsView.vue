@@ -432,7 +432,7 @@ const inputClass = 'mt-1'
             <TableHead class="w-14">Фото</TableHead>
             <TableHead>SKU</TableHead>
             <TableHead>Название</TableHead>
-            <TableHead>Артикул</TableHead>
+            <TableHead>Канал</TableHead>
             <TableHead>Баркоды</TableHead>
             <TableHead>Статус</TableHead>
             <TableHead>Создан</TableHead>
@@ -446,14 +446,14 @@ const inputClass = 'mt-1'
             class="hover:bg-muted/40 transition-colors"
           >
             <TableCell class="w-14 py-1.5">
-              <div class="size-10 rounded-md overflow-hidden border border-border bg-muted flex items-center justify-center flex-shrink-0">
-                <img
-                  v-if="item.photos && item.photos.length > 0"
-                  :src="item.photos[0].url"
-                  :alt="item.name"
-                  class="size-full object-cover"
-                  loading="lazy"
-                />
+              <div class="w-10 aspect-[3/4] rounded-md overflow-hidden border border-border bg-muted flex items-center justify-center flex-shrink-0">
+				<img
+					v-if="item.photos && item.photos.length > 0"
+					:src="item.photos[0].url"
+					:alt="item.name"
+					class="size-full object-contain"
+					loading="lazy"
+				/>
                 <span v-else class="text-muted-foreground text-xs leading-none select-none" aria-hidden="true">—</span>
               </div>
             </TableCell>
