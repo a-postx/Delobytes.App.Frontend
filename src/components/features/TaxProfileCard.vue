@@ -75,7 +75,7 @@ const deleteTarget: Ref<TenantTaxProfileItem | null> = ref(null)
 
 const form = ref<{
   regime: TaxRegime
-  ratePercent: string
+  ratePercent: string | number
   vat: VatType
   validFrom: string
 }>({
@@ -196,8 +196,21 @@ const openDelete = (item: TenantTaxProfileItem): void => {
   deleteDialogOpen.value = true
 }
 
-/** Ставка вводится в процентах: 6 — это 6 %, а не доля 0,06. */
-const parseRate = (value: string): number | null => {
+/**
+ * Ставка вводится в процентах: 6 — это 6 %, а не доля 0,06.
+ *
+ * Поле объявлено как type="number", поэтому v-model отдаёт уже число, а не строку:
+ * строковые методы к нему неприменимы. Обрабатываем оба варианта.
+ */
+const parseRate = (value: string | number): number | null => {
+  if (typeof value === 'number') {
+    if (!Number.isFinite(value) || value < 0 || value > 100) {
+      return null
+    }
+
+    return value
+  }
+
   const normalized: string = value.trim()
 
   if (normalized === '') {
@@ -278,6 +291,15 @@ const handleDelete = async (): Promise<void> => {
 const dialogContentClass = 'bg-popover text-popover-foreground fixed top-[50%] left-[50%] max-h-[90vh] w-[90vw] max-w-[480px] translate-x-[-50%] translate-y-[-50%] rounded-lg border shadow-lg p-6 focus:outline-none z-[100] overflow-y-auto'
 const fieldClass = 'flex flex-col gap-1'
 const inputClass = 'mt-1'
+
+/**
+ * Список Select рендерится в портал, то есть вне узла диалога. У него z-50, а оверлей
+ * и контент диалога — z-[99] и z-[100], поэтому список уходит под них. Вдобавок
+ * модальный диалог задаёт body { pointer-events: none } и возвращает их только
+ * контенту диалога — на портал это не распространяется, и пункты не кликаются.
+ * Поднимаем список выше диалога и явно включаем ему pointer-events.
+ */
+const selectContentClass = 'z-[110] pointer-events-auto'
 </script>
 
 <template>
@@ -357,7 +379,7 @@ const inputClass = 'mt-1'
                 <SelectTrigger class="mt-1 w-full">
                   <SelectValue placeholder="—" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent :class="selectContentClass">
                   <SelectItem
                     v-for="option in TAX_REGIME_OPTIONS"
                     :key="option.value"
@@ -378,7 +400,7 @@ const inputClass = 'mt-1'
                 inputmode="decimal"
                 min="0"
                 max="100"
-                step="0.01"
+                step="1"
                 placeholder="6"
               />
             </div>
@@ -389,7 +411,7 @@ const inputClass = 'mt-1'
                 <SelectTrigger class="mt-1 w-full">
                   <SelectValue placeholder="—" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent :class="selectContentClass">
                   <SelectItem
                     v-for="option in VAT_TYPE_OPTIONS"
                     :key="option.value"
