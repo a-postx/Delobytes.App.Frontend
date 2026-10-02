@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { channelDisplay, normalizeChannel } from '@/utils/channelBadges'
+import { channelDisplay, channelDisplayForLink, normalizeChannel } from '@/utils/channelBadges'
 
 describe('channelBadges', () => {
   it('returns display data for supported channel codes', () => {
@@ -21,5 +21,10 @@ describe('channelBadges', () => {
   it('uses the default display for an unknown or missing code', () => {
     expect(channelDisplay('custom')).toEqual({ prefix: '', variant: 'default' })
     expect(channelDisplay(null)).toEqual({ prefix: '', variant: 'default' })
+  })
+
+  it('uses the channel name when a linked product has no recognized code', () => {
+    expect(channelDisplayForLink(null, 'Wildberries')).toEqual({ prefix: 'ВБ', variant: 'marketplace-wb' })
+    expect(channelDisplayForLink('custom', 'Ozon')).toEqual({ prefix: 'ОЗ', variant: 'marketplace-oz' })
   })
 })

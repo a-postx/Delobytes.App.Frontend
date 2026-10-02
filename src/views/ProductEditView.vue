@@ -203,9 +203,9 @@ onMounted(() => {
     <!-- Скелетон загрузки -->
     <div v-if="isLoading" class="product-layout">
       <div class="flex flex-col gap-3">
-        <Skeleton class="w-full aspect-square rounded-lg" />
+        <Skeleton class="w-full aspect-[3/4] rounded-lg" />
         <div class="grid grid-cols-2 gap-3">
-          <Skeleton v-for="n in 4" :key="n" class="aspect-square rounded-md" />
+          <Skeleton v-for="n in 4" :key="n" class="aspect-[3/4] rounded-md" />
         </div>
       </div>
       <div class="flex flex-col gap-4">

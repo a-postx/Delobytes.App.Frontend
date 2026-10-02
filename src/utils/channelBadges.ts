@@ -35,3 +35,15 @@ export const channelDisplay = (channelCode?: string | null): ChannelDisplay => {
 
   return channelDisplays[normalizedCode] ?? { prefix: '', variant: 'default' }
 }
+
+export const channelDisplayForLink = (
+  channelCode?: string | null,
+  channelName?: string | null
+): ChannelDisplay => {
+  const codeDisplay = channelDisplay(channelCode)
+  if (codeDisplay.variant !== 'default') {
+    return codeDisplay
+  }
+
+  return channelDisplay(channelName)
+}

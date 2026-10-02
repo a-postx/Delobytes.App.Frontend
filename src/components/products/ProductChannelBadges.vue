@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Badge } from '@/components/ui/badge'
 import type { ProductChannelLink } from '@/types/products'
-import { channelDisplay } from '@/utils/channelBadges'
+import { channelDisplayForLink } from '@/utils/channelBadges'
 
 defineProps<{
   links: ProductChannelLink[]
@@ -13,11 +13,11 @@ defineProps<{
     <Badge
       v-for="link in links"
       :key="`${link.channelId}-${link.externalProductId}`"
-      :variant="channelDisplay(link.channelCode).variant"
+      :variant="channelDisplayForLink(link.channelCode, link.channelName).variant"
       :class="{ 'opacity-50': !link.isActive }"
       :title="link.isActive ? undefined : 'неактивно'"
     >
-      {{ channelDisplay(link.channelCode).prefix ? `${channelDisplay(link.channelCode).prefix} ${link.externalProductId}` : link.externalProductId }}
+      {{ channelDisplayForLink(link.channelCode, link.channelName).prefix ? `${channelDisplayForLink(link.channelCode, link.channelName).prefix} ${link.externalProductId}` : link.externalProductId }}
     </Badge>
   </div>
 </template>

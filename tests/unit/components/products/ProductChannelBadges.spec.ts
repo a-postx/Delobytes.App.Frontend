@@ -38,4 +38,21 @@ describe('ProductChannelBadges', () => {
     expect(badges[0].attributes('title')).toBe('неактивно')
     expect(badges[0].classes()).toContain('opacity-50')
   })
+
+  it('uses the marketplace color when only the channel name identifies it', () => {
+    const wrapper = mount(ProductChannelBadges, {
+      props: {
+        links: [{
+          channelId: 'channel-wb',
+          channelName: 'Wildberries',
+          channelCode: null,
+          externalProductId: '123456789',
+          isActive: true,
+        }],
+      },
+    })
+
+    expect(wrapper.text()).toContain('ВБ 123456789')
+    expect(wrapper.find('span').classes()).toContain('bg-purple-100')
+  })
 })

@@ -231,7 +231,7 @@ const handleImageError = (photoId: string): void => {
 .photo-main {
   position: relative;
   width: 100%;
-  aspect-ratio: 1;
+  aspect-ratio: 3 / 4;
   border-radius: var(--radius);
   overflow: hidden;
   border: 1px solid hsl(var(--border));
@@ -263,7 +263,7 @@ const handleImageError = (photoId: string): void => {
 /* Общие стили для всех тайлов */
 .photo-tile {
   position: relative;
-  aspect-ratio: 1;
+  aspect-ratio: 3 / 4;
   border-radius: calc(var(--radius) * 0.75);
   overflow: hidden;
   border: 1px solid hsl(var(--border));
@@ -293,7 +293,7 @@ const handleImageError = (photoId: string): void => {
 .photo-img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
   display: block;
 }
 
