@@ -1,6 +1,6 @@
 import { computed } from 'vue'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { flushPromises, shallowMount } from '@vue/test-utils'
+import { flushPromises, mount } from '@vue/test-utils'
 import { ProductStatus } from '@/types/products'
 
 vi.mock('@/services/api', () => ({
@@ -42,16 +42,9 @@ const productWithLink = {
   }],
 }
 
-const factory = () => shallowMount(ProductsView, {
+const factory = () => mount(ProductsView, {
   global: {
     stubs: {
-      Table: { template: '<table><slot /></table>' },
-      TableHeader: { template: '<thead><slot /></thead>' },
-      TableBody: { template: '<tbody><slot /></tbody>' },
-      TableRow: { template: '<tr><slot /></tr>' },
-      TableHead: { template: '<th><slot /></th>' },
-      TableCell: { template: '<td><slot /></td>' },
-
       ProductChannelBadges: {
         props: ['links'],
         template: '<div class="product-channel-badges">{{ links[0].externalProductId }}</div>',
