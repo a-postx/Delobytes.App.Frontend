@@ -240,7 +240,7 @@ describe('TaxProfileCard', () => {
       const wrapper = await mountCard()
 
       expect(wrapper.findAll('li')).toHaveLength(0)
-      expect(wrapper.text()).toContain('Налоговая настройка не задана')
+      expect(wrapper.text()).toContain('Налоговые ставки не заданы')
     })
   })
 
@@ -280,7 +280,7 @@ describe('TaxProfileCard', () => {
 
       const dialog = wrapper.find('[data-stub="dialog"]')
       expect(dialog.exists()).toBe(true)
-      expect(dialog.text()).toContain('Ставка указывается в процентах')
+      expect(dialog.text()).toContain('Введите налоговый режим')
       expect(dialog.find('input[type="date"]').element.value).toBe(
         new Date().toISOString().slice(0, 10)
       )
