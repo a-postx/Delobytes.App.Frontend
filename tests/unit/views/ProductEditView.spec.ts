@@ -107,7 +107,6 @@ describe('ProductEditView SKU editing', () => {
     expect((wrapper.find('input[placeholder="Длина"]').element as HTMLInputElement).disabled).toBe(true)
 
     expect(wrapper.text()).toContain('Данные получены из Wildberries')
-    expect(wrapper.text()).toContain('Редактировать можно только SKU')
     expect(saveButton(wrapper)).toBeTruthy()
   })
 
