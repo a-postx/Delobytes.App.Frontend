@@ -62,6 +62,7 @@ const factory = () => mount(ProductEditView, {
   global: {
     stubs: {
       ProductPhotoGallery: true,
+      ProductBomEditor: true,
       ProductChannelBadges: {
         props: ['links'],
         template: '<div class="product-channel-badges">{{ links.length }}</div>',
