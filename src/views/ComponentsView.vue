@@ -485,7 +485,7 @@ const selectClass = 'flex h-10 w-full rounded-md border border-input bg-backgrou
             <div>
               <DialogTitle class="text-lg font-semibold">Новая цена</DialogTitle>
               <DialogDescription class="text-sm text-muted-foreground mt-1">
-                Компонент «{{ priceTarget?.name }}»: текущая активная цена будет закрыта, создастся новая версия
+                Компонент «{{ priceTarget?.name }}»: текущая активная цена будет закрыта, вместо неё будет создана новая
               </DialogDescription>
             </div>
             <DialogClose as-child>

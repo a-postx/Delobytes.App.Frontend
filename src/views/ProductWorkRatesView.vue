@@ -168,12 +168,6 @@ const inputClass = 'mt-1'
       </Button>
     </div>
 
-    <!-- Info note -->
-    <div class="flex items-start gap-3 rounded-lg border border-info/30 bg-info/5 px-4 py-3 text-sm text-muted-foreground">
-      <Info class="size-4 mt-0.5 shrink-0 text-info" />
-      <p>Каждая запись — отдельная версия нормы. Новая запись не перезаписывает предыдущие, что сохраняет точность исторических расчётов себестоимости. Активная запись — с наибольшей датой ValidFrom ≤ даты расчёта.</p>
-    </div>
-
     <!-- Loading -->
     <div v-if="isLoading" class="rounded-xl border border-border bg-card overflow-hidden">
       <div class="p-4 flex flex-col gap-3">
@@ -301,7 +295,7 @@ const inputClass = 'mt-1'
         <AlertDialogContent class="bg-popover text-popover-foreground fixed top-[50%] left-[50%] max-w-[420px] w-[90vw] translate-x-[-50%] translate-y-[-50%] rounded-lg border shadow-lg p-6 z-[100]">
           <AlertDialogTitle class="text-lg font-semibold mb-2">Удалить запись?</AlertDialogTitle>
           <AlertDialogDescription class="text-sm text-muted-foreground mb-4">
-            Запись будет помечена как неактивная. Исторические расчёты останутся корректными.
+            Запись будет помечена как неактивная.
           </AlertDialogDescription>
           <div class="flex justify-end gap-2">
             <AlertDialogCancel as-child>

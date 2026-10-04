@@ -460,7 +460,7 @@ const inputClass = 'mt-1'
             <TableHead class="w-14">Фото</TableHead>
             <TableHead>SKU</TableHead>
             <TableHead>Название</TableHead>
-            <TableHead>Канал</TableHead>
+            <TableHead>Артикул</TableHead>
             <TableHead>Баркоды</TableHead>
             <TableHead>Статус</TableHead>
             <TableHead>Создан</TableHead>
