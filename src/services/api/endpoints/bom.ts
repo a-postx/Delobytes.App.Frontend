@@ -8,7 +8,6 @@ import type {
   CreateBomLineResponse,
   ProductCostResponse,
   GetProductCostHistoryResponse,
-  CaptureProductCostSnapshotResponse,
   GetProductCostsBatchResponse,
 } from '@/types/bom'
 
@@ -85,13 +84,6 @@ export const productCostApi = {
     const response = await axiosInstance.get<GetProductCostHistoryResponse>(
       `/api/catalogs/products/${productId}/cost/history`,
       { params: { skip, take } },
-    )
-    return response.data
-  },
-
-  captureSnapshot: async (productId: string): Promise<CaptureProductCostSnapshotResponse> => {
-    const response = await axiosInstance.post<CaptureProductCostSnapshotResponse>(
-      `/api/catalogs/products/${productId}/cost/snapshot`,
     )
     return response.data
   },

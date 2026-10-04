@@ -15,7 +15,6 @@ describe('ProductBomEditor BOM validation', () => {
   }
 
   const validateRows = (rows: EditableBomRow[]): string | null => {
-    if (rows.length === 0) return 'Добавьте хотя бы один компонент в состав'
     for (const row of rows) {
       if (!row.componentId) return 'Выберите компонент во всех строках состава'
       if (!row.quantity || Number(row.quantity) <= 0) return 'Количество должно быть больше нуля во всех строках'
@@ -25,8 +24,8 @@ describe('ProductBomEditor BOM validation', () => {
     return null
   }
 
-  it('rejects an empty BOM', () => {
-    expect(validateRows([])).toBe('Добавьте хотя бы один компонент в состав')
+  it('accepts an empty BOM', () => {
+    expect(validateRows([])).toBeNull()
   })
 
   it('rejects a row without a selected component', () => {

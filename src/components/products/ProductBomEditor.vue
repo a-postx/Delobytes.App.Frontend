@@ -7,7 +7,6 @@ import {
   Calculator,
   History,
   AlertTriangle,
-  Camera,
   RefreshCw,
 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
@@ -122,10 +121,6 @@ const removeRow = (key: string): void => {
 }
 
 const handleSaveBom = async (): Promise<void> => {
-  if (rows.value.length === 0) {
-    toast.error('Добавьте хотя бы один компонент в состав')
-    return
-  }
   for (const row of rows.value) {
     if (!row.componentId) {
       toast.error('Выберите компонент во всех строках состава')
@@ -163,7 +158,6 @@ const today = (): string => new Date().toISOString().slice(0, 10)
 
 const cost = ref<ProductCostResponse | null>(null)
 const isLoadingCost = ref<boolean>(true)
-const isCapturingSnapshot = ref<boolean>(false)
 const asOfDate = ref<string>(today())
 const historyDialogOpen = ref<boolean>(false)
 
@@ -182,22 +176,6 @@ const loadCost = async (): Promise<void> => {
 watch(asOfDate, () => {
   loadCost()
 })
-
-const handleCaptureSnapshot = async (): Promise<void> => {
-  isCapturingSnapshot.value = true
-  try {
-    const response = await productCostApi.captureSnapshot(props.productId)
-    if (response.found) {
-      toast.success('Снимок себестоимости зафиксирован')
-    } else {
-      toast.error('Товар не найден')
-    }
-  } catch {
-    toast.error('Не удалось зафиксировать снимок')
-  } finally {
-    isCapturingSnapshot.value = false
-  }
-}
 
 onMounted(async () => {
   isLoadingBom.value = true
@@ -332,12 +310,7 @@ const selectClass = 'flex h-9 w-full rounded-md border border-input bg-backgroun
           <Button variant="ghost" size="icon" class="size-9" :disabled="isLoadingCost" @click="loadCost" aria-label="Обновить">
             <RefreshCw class="size-4" :class="{ 'animate-spin': isLoadingCost }" />
           </Button>
-          <Button v-if="canWrite" variant="outline" size="sm" class="gap-2" :disabled="isCapturingSnapshot" @click="handleCaptureSnapshot">
-            <Spinner v-if="isCapturingSnapshot" class="size-4" />
-            <Camera v-else class="size-4" />
-            Зафиксировать снимок
-          </Button>
-        </div>
+          <Button variant="outline" size="sm" class="gap-2" @click="historyDialogOpen = true">
       </div>
 
       <div v-if="isLoadingCost" class="grid grid-cols-2 md:grid-cols-5 gap-3">

@@ -37,7 +37,6 @@ const isLoading = ref<boolean>(false)
 
 /** Машиночитаемая причина фиксации снимка (TriggerReason) → подпись для пользователя. */
 const triggerLabels: Record<string, string> = {
-  Manual: 'Вручную',
   BomChanged: 'Изменился состав',
   ComponentPriceChanged: 'Изменилась цена компонента',
   WorkRateChanged: 'Изменилась норма выработки',

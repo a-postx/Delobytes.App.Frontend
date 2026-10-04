@@ -127,10 +127,6 @@ export interface GetProductCostsBatchResponse {
   items: ProductCostSummary[]
 }
 
-export interface CaptureProductCostSnapshotResponse {
-  found: boolean
-}
-
 export interface ProductCostSnapshotDto {
   id: string
   productId: string
