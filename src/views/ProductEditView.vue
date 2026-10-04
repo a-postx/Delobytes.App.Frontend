@@ -11,6 +11,7 @@ import { Spinner } from '@/components/ui/spinner'
 import { Skeleton } from '@/components/ui/skeleton'
 import ProductPhotoGallery from '@/components/products/ProductPhotoGallery.vue'
 import ProductChannelBadges from '@/components/products/ProductChannelBadges.vue'
+import ProductBomEditor from '@/components/products/ProductBomEditor.vue'
 import { toast } from 'vue-sonner'
 import { catalogProductsApi } from '@/services/api'
 import { extractErrorMessage } from '@/composables/useApi'
@@ -257,7 +258,8 @@ onMounted(() => {
     </div>
 
     <!-- Основной контент -->
-    <div v-else class="product-layout">
+    <template v-else>
+    <div class="product-layout">
 
       <!-- Левая колонка: фотогалерея -->
       <div class="product-photos">
@@ -409,6 +411,9 @@ onMounted(() => {
 
       </div>
     </div>
+
+    <ProductBomEditor :product-id="productId" />
+    </template>
   </div>
 </template>
 

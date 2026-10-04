@@ -29,6 +29,7 @@ export {
   workRatesApi,
   productWorkRatesApi,
 } from './endpoints/catalogs'
+export { bomApi, productCostApi } from './endpoints/bom'
 export type {
   ChannelItem,
   GetChannelsResponse,

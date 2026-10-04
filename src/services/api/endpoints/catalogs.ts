@@ -241,6 +241,7 @@ export interface UpdateWorkRateRequest {
 export interface ProductWorkRateItem {
   id: string
   productId: string
+  workRateId: string
   assemblyRatePerDay: number
   validFrom: string
   isActive: boolean
@@ -253,6 +254,7 @@ export interface GetProductWorkRatesResponse {
 
 export interface CreateProductWorkRateRequest {
   productId: string
+  workRateId: string
   assemblyRatePerDay: number
   validFrom: string
 }

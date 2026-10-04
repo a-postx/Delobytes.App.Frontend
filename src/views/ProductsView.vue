@@ -48,21 +48,26 @@ import ProductStatusBadge from '@/components/products/ProductStatusBadge.vue'
 import ProductChannelBadges from '@/components/products/ProductChannelBadges.vue'
 import { channelDisplay, normalizeChannel } from '@/utils/channelBadges'
 import { toast } from 'vue-sonner'
-import { catalogProductsApi, integrationsApi } from '@/services/api'
+import { catalogProductsApi, integrationsApi, productCostApi } from '@/services/api'
 import type { ProductItem, CreateProductRequest, ProductBarcode, PackingUnit } from '@/types/products'
 import type { Connection } from '@/types'
+import type { ProductCostSummary } from '@/types/bom'
 import { ProductStatus } from '@/types/products'
 import { useCurrentUser } from '@/composables/useCurrentUser'
+import { useTenantMoney } from '@/composables/useTenantMoney'
 import { useRouter } from 'vue-router'
 import { X } from 'lucide-vue-next'
 
 const { canWrite } = useCurrentUser()
+const { formatMoney } = useTenantMoney()
 const router = useRouter()
 
 const items = ref<ProductItem[]>([])
 const isLoading = ref<boolean>(true)
 const connections = ref<Connection[]>([])
 const isLoadingConnections = ref<boolean>(false)
+const costByProductId = ref<Map<string, ProductCostSummary>>(new Map())
+const isLoadingCosts = ref<boolean>(false)
 
 const createDialogOpen = ref<boolean>(false)
 const deleteDialogOpen = ref<boolean>(false)
@@ -478,6 +483,19 @@ const inputClass = 'mt-1'
             </TableCell>
             <TableCell>
               <ProductStatusBadge :status="item.status" />
+            </TableCell>
+            <TableCell class="text-right tabular-nums">
+              <div v-if="costByProductId.has(item.id)" class="flex items-center justify-end gap-1.5">
+                <AlertTriangle
+                  v-if="!costByProductId.get(item.id)!.isComplete"
+                  class="size-3.5 text-warning shrink-0"
+                  aria-label="Расчёт неполный: не хватает данных по цене или норме выработки"
+                />
+                <span :class="{ 'text-muted-foreground': !costByProductId.get(item.id)!.isComplete }">
+                  {{ formatMoney(costByProductId.get(item.id)!.totalCost) }}
+                </span>
+              </div>
+              <span v-else class="text-muted-foreground text-sm">—</span>
             </TableCell>
             <TableCell class="text-muted-foreground text-sm">{{ formatDate(item.createdAt) }}</TableCell>
             <TableCell v-if="canWrite" class="text-right">

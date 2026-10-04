@@ -36,16 +36,19 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { toast } from 'vue-sonner'
-import { productWorkRatesApi, catalogProductsApi } from '@/services/api'
-import type { ProductWorkRateItem, CreateProductWorkRateRequest } from '@/services/api'
+import { productWorkRatesApi, catalogProductsApi, workRatesApi } from '@/services/api'
+import type { ProductWorkRateItem, CreateProductWorkRateRequest, WorkRateItem } from '@/services/api'
 import type { ProductItem } from '@/types/products'
 import { useCurrentUser } from '@/composables/useCurrentUser'
+import { useTenantMoney } from '@/composables/useTenantMoney'
 import { X } from 'lucide-vue-next'
 
 const { canWrite } = useCurrentUser()
+const { formatMoney } = useTenantMoney()
 
 const items = ref<ProductWorkRateItem[]>([])
 const products = ref<ProductItem[]>([])
+const workRates = ref<WorkRateItem[]>([])
 const isLoading = ref<boolean>(true)
 
 const createDialogOpen = ref<boolean>(false)
@@ -54,22 +57,32 @@ const deleteTarget = ref<ProductWorkRateItem | null>(null)
 const isSaving = ref<boolean>(false)
 const isDeleting = ref<boolean>(false)
 
-const form = ref({ productId: '', assemblyRatePerDay: 0, validFrom: '' })
+const form = ref({ productId: '', workRateId: '', assemblyRatePerDay: 0, validFrom: '' })
 
 const formatDate = (d: string): string =>
   new Date(d).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' })
 
 const productName = (id: string): string => products.value.find(p => p.id === id)?.name ?? id.slice(0, 8) + '...'
 
+const activeWorkRates = (): WorkRateItem[] => workRates.value.filter(r => r.isActive)
+
+const workRateLabel = (id: string): string => {
+  const rate = workRates.value.find(r => r.id === id)
+  if (!rate) return id.slice(0, 8) + '...'
+  return `${rate.name} (${formatMoney(rate.dailyWage)}/день)`
+}
+
 const loadData = async (): Promise<void> => {
   isLoading.value = true
   try {
-    const [ratesResp, productsResp] = await Promise.all([
+    const [ratesResp, productsResp, workRatesResp] = await Promise.all([
       productWorkRatesApi.getAll(),
       catalogProductsApi.getAll(),
+      workRatesApi.getAll(),
     ])
     items.value = ratesResp.items
     products.value = productsResp.items
+    workRates.value = workRatesResp.items
   } catch {
     toast.error('Не удалось загрузить данные')
   } finally {
@@ -82,6 +95,7 @@ onMounted(loadData)
 const openCreate = (): void => {
   form.value = {
     productId: products.value[0]?.id ?? '',
+    workRateId: activeWorkRates()[0]?.id ?? '',
     assemblyRatePerDay: 0,
     validFrom: new Date().toISOString().slice(0, 10),
   }
@@ -95,12 +109,14 @@ const openDelete = (item: ProductWorkRateItem): void => {
 
 const handleCreate = async (): Promise<void> => {
   if (!form.value.productId) { toast.error('Выберите товар'); return }
+  if (!form.value.workRateId) { toast.error('Выберите ставку работы'); return }
   if (form.value.assemblyRatePerDay <= 0) { toast.error('Укажите количество единиц в день'); return }
   if (!form.value.validFrom) { toast.error('Укажите дату начала действия'); return }
   isSaving.value = true
   try {
     const payload: CreateProductWorkRateRequest = {
       productId: form.value.productId,
+      workRateId: form.value.workRateId,
       assemblyRatePerDay: Number(form.value.assemblyRatePerDay),
       validFrom: form.value.validFrom,
     }
@@ -184,6 +200,7 @@ const inputClass = 'mt-1'
         <TableHeader>
           <TableRow class="border-b border-border">
             <TableHead>Товар</TableHead>
+            <TableHead>Ставка работы</TableHead>
             <TableHead class="text-right">Норма / день (шт.)</TableHead>
             <TableHead>Действует с</TableHead>
             <TableHead>Добавлена</TableHead>
@@ -197,6 +214,7 @@ const inputClass = 'mt-1'
             class="hover:bg-muted/40 transition-colors"
           >
             <TableCell class="font-medium">{{ productName(item.productId) }}</TableCell>
+            <TableCell class="text-muted-foreground">{{ workRateLabel(item.workRateId) }}</TableCell>
             <TableCell class="text-right tabular-nums font-medium">{{ item.assemblyRatePerDay }}</TableCell>
             <TableCell class="tabular-nums text-muted-foreground">{{ item.validFrom }}</TableCell>
             <TableCell class="tabular-nums text-muted-foreground text-sm">{{ formatDate(item.createdAt) }}</TableCell>
@@ -237,6 +255,22 @@ const inputClass = 'mt-1'
             </div>
 
             <div :class="fieldClass">
+              <Label>Ставка работы *</Label>
+              <select
+                v-model="form.workRateId"
+                class="mt-1 flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              >
+                <option v-if="activeWorkRates().length === 0" value="">Нет активных ставок</option>
+                <option v-for="r in activeWorkRates()" :key="r.id" :value="r.id">
+                  {{ r.name }} ({{ formatMoney(r.dailyWage) }}/день)
+                </option>
+              </select>
+              <p v-if="activeWorkRates().length === 0" class="text-xs text-destructive">
+                Сначала добавьте ставку работы в справочнике «Нормы выработки».
+              </p>
+            </div>
+
+            <div :class="fieldClass">
               <Label>Норма в день (шт.)</Label>
               <Input :class="inputClass" v-model.number="form.assemblyRatePerDay" type="number" min="1" placeholder="100" />
             </div>
@@ -251,7 +285,7 @@ const inputClass = 'mt-1'
             <DialogClose as-child>
               <Button variant="outline">Отмена</Button>
             </DialogClose>
-            <Button @click="handleCreate" :disabled="isSaving" class="gap-2">
+            <Button @click="handleCreate" :disabled="isSaving || !form.workRateId" class="gap-2">
               <Spinner v-if="isSaving" class="size-4" />
               Добавить
             </Button>
