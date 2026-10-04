@@ -311,6 +311,7 @@ const selectClass = 'flex h-9 w-full rounded-md border border-input bg-backgroun
             <RefreshCw class="size-4" :class="{ 'animate-spin': isLoadingCost }" />
           </Button>
           <Button variant="outline" size="sm" class="gap-2" @click="historyDialogOpen = true">
+		</div>
       </div>
 
       <div v-if="isLoadingCost" class="grid grid-cols-2 md:grid-cols-5 gap-3">
