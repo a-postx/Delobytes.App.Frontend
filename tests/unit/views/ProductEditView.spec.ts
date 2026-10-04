@@ -21,6 +21,10 @@ vi.mock('@/composables/useApi', () => ({
 vi.mock('vue-router', () => ({
   useRoute: () => ({ query: { productId: 'product-1' } }),
   useRouter: () => ({ push: vi.fn() }),
+  // The view registers a leave guard for unsaved changes through the shared composable, so the
+  // module mock has to expose the hook. Navigation itself is not under test here, and the stub
+  // simply never blocks the (nonexistent) transitions.
+  onBeforeRouteLeave: vi.fn(),
 }))
 vi.mock('vue-sonner', () => ({ toast: { error: vi.fn(), success: vi.fn() } }))
 
