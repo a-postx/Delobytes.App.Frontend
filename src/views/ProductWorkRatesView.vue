@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { Plus, Trash2, Gauge, Info } from 'lucide-vue-next'
+import { Plus, Trash2, Gauge } from 'lucide-vue-next'
 import {
   DialogClose,
   DialogContent,
