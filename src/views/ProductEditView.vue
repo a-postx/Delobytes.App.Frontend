@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Plus, Package, X as XIcon, ArrowLeft } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
@@ -18,7 +18,7 @@ import { extractErrorMessage } from '@/composables/useApi'
 import { channelDisplay, normalizeChannel } from '@/utils/channelBadges'
 import type { GetProductResponse, UpdateProductRequest, ProductBarcode, PackingUnit, ProductPhoto } from '@/types/products'
 import { useCurrentUser } from '@/composables/useCurrentUser'
-import { useUnsavedChangesGuard } from '@/composables/useUnsavedChangesGuard'
+import { markUnsavedChanges, useUnsavedChangesGuard } from '@/composables/useUnsavedChangesGuard'
 
 const route = useRoute()
 const router = useRouter()
@@ -98,7 +98,10 @@ const hasUnsavedFormChanges = computed<boolean>(() => {
   return formSnapshot() !== formBaseline.value
 })
 
-useUnsavedChangesGuard('product-form', hasUnsavedFormChanges, 'Есть несохранённые изменения в данных товара. Покинуть страницу без сохранения?')
+// Владелец страницы регистрирует хук ухода; секции только помечают свои правки,
+// поэтому на один уход приходится один вопрос, а не по одному от каждого блока.
+markUnsavedChanges('product-form', hasUnsavedFormChanges, 'Есть несохранённые изменения в данных товара. Покинуть страницу без сохранения?')
+useUnsavedChangesGuard('Есть несохранённые изменения. Покинуть страницу без сохранения?')
 
 const addBarcode = (): void => {
   if (!newBarcode.value.value.trim()) {
@@ -283,24 +286,18 @@ const handleCancel = (): void => {
       <!-- Форма данных товара -->
       <div class="flex flex-col gap-6">
         <div class="rounded-xl border border-border bg-card p-6 flex flex-col gap-4">
-          <div class="flex items-center justify-between mb-2">
-            <h2 class="text-lg font-bold">Основные данные</h2>
-            <Badge v-if="isLinked" variant="warning" class="gap-1.5">
-              <span class="size-1.5 rounded-full bg-warning animate-pulse"></span>
-              Синхронизируется с {{ linkedChannelMessage }}
-            </Badge>
-          </div>
+          <h2 class="text-lg font-bold">Основные данные</h2>
 
-          <p v-if="isLinked" class="text-sm text-muted-foreground -mt-2 mb-2">
-            Название, описание, баркоды и габариты обновляются автоматически при импорте с {{ linkedChannelMessage }}
+          <p v-if="isLinked" class="text-sm text-muted-foreground">
+            Данные получены из {{ linkedChannelMessage }}, редактировать можно только SKU.
           </p>
 
         <div class="flex flex-col gap-1">
-          <Label for="sku">SKU товара</Label>
+          <Label for="sku">SKU *</Label>
           <Input
             id="sku"
             v-model="form.sku"
-            placeholder="Уникальный артикул"
+            placeholder=""
             class="mt-1"
             :disabled="!canWrite"
           />

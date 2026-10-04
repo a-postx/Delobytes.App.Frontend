@@ -33,7 +33,7 @@ import { COMPONENT_CATEGORY_LABELS } from '@/types/bom'
 import { useCurrentUser } from '@/composables/useCurrentUser'
 import { useTenantMoney } from '@/composables/useTenantMoney'
 import { useBomChanges } from '@/composables/useBomChanges'
-import { useUnsavedChangesGuard } from '@/composables/useUnsavedChangesGuard'
+import { markUnsavedChanges } from '@/composables/useUnsavedChangesGuard'
 import ProductCostHistoryDialog from './ProductCostHistoryDialog.vue'
 import ProductBomPreviewDialog from './ProductBomPreviewDialog.vue'
 
@@ -141,9 +141,10 @@ const rowsComparable = computed(() =>
 
 const { hasUnsavedChanges } = useBomChanges(serverLinesComparable, rowsComparable)
 
-// Правки состава — такая же потеря данных, как и правки формы товара, поэтому предупреждение
-// при уходе общее на страницу, а не отдельное в этом компоненте.
-useUnsavedChangesGuard(
+// Хук ухода регистрирует владелец страницы (ProductEditView), здесь только помечаем секцию:
+// иначе оба компонента повесили бы свой onBeforeRouteLeave и пользователь получил бы
+// два вопроса подряд на один уход.
+markUnsavedChanges(
   'product-bom',
   hasUnsavedChanges,
   'Есть несохранённые изменения в составе товара. Покинуть страницу без сохранения?',
