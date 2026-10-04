@@ -1,4 +1,5 @@
 import { axiosInstance } from '../client'
+import type { ComponentCategory } from '@/types/bom'
 
 // ---------- Enums ----------
 
@@ -60,6 +61,7 @@ export interface ComponentItem {
   name: string
   description?: string
   unit: Unit
+  category: ComponentCategory
   activePrice: ComponentPriceDto | null
   isActive: boolean
   createdAt: string
@@ -73,6 +75,7 @@ export interface CreateComponentRequest {
   name: string
   description?: string
   unit: Unit
+  category?: ComponentCategory
   pricePerUnit: number
   supplierId?: string
   validFrom: string // YYYY-MM-DD
@@ -82,6 +85,7 @@ export interface UpdateComponentRequest {
   name: string
   description?: string
   unit: Unit
+  category?: ComponentCategory
 }
 
 export interface CreateComponentPriceRequest {

@@ -70,19 +70,18 @@ const categoryBadgeVariant: Record<ComponentCategory, 'secondary' | 'warning' | 
 const activeComponents = computed<ComponentItem[]>(() => allComponents.value.filter(c => c.isActive))
 
 /**
- * Карточка компонента для строки BOM. Категория достаётся из уже сохранённых строк
- * (бэкенд отдаёт её там через BomComponentDto) — справочник /api/catalogs/components
- * категорию не возвращает, поэтому для только что добавленной локально строки
- * категория неизвестна до сохранения и перезапроса состава.
+ * Карточка компонента для строки BOM. Справочник отдаёт актуальную категорию, поэтому сначала
+ * ищем там; серверная строка состава нужна как fallback для компонентов, деактивированных
+ * и выпавших из справочника.
  */
 const componentDisplay = (componentId: string): { name: string; unit: Unit; category: ComponentCategory | null } | null => {
+  const fromCatalog = allComponents.value.find(c => c.id === componentId)
+  if (fromCatalog) {
+    return { name: fromCatalog.name, unit: fromCatalog.unit, category: fromCatalog.category }
+  }
   const fromServer = serverLines.value.find(l => l.componentId === componentId)?.component
   if (fromServer) {
     return { name: fromServer.name, unit: fromServer.unit, category: fromServer.category }
-  }
-  const fromCatalog = allComponents.value.find(c => c.id === componentId)
-  if (fromCatalog) {
-    return { name: fromCatalog.name, unit: fromCatalog.unit, category: null }
   }
   return null
 }
@@ -278,7 +277,7 @@ const selectClass = 'flex h-9 w-full rounded-md border border-input bg-backgroun
                 >
                   {{ COMPONENT_CATEGORY_LABELS[componentDisplay(row.componentId)!.category as ComponentCategory] }}
                 </Badge>
-                <span v-else class="text-xs text-muted-foreground">после сохранения</span>
+                <span v-else class="text-xs text-muted-foreground">—</span>
               </TableCell>
               <TableCell class="text-right">
                 <Input

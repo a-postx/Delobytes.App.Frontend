@@ -131,6 +131,7 @@ describe('Catalogs API - Stage 7 & 8', () => {
             name: 'Component 1',
             description: 'Test component',
             unit: Unit.Piece,
+            category: 'Material',
             activePrice: {
               id: 'p1',
               pricePerUnit: 100,
@@ -159,6 +160,7 @@ describe('Catalogs API - Stage 7 & 8', () => {
         name: 'New Component',
         description: 'Description',
         unit: Unit.Kg,
+        category: 'Logistics',
         activePrice: {
           id: 'p2',
           pricePerUnit: 50,

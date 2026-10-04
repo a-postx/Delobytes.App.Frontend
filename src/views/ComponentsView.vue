@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
-import { Plus, Trash2, PackageOpen, Undo2, Tag } from 'lucide-vue-next'
+import { Plus, Trash2, PackageOpen, Pencil, Undo2, Tag } from 'lucide-vue-next'
 import {
   DialogClose,
   DialogContent,
@@ -44,7 +44,10 @@ import type {
   CreateComponentRequest,
   CreateComponentPriceRequest,
   SupplierItem,
+  UpdateComponentRequest,
 } from '@/services/api'
+import type { ComponentCategory } from '@/types/bom'
+import { COMPONENT_CATEGORY_LABELS } from '@/types/bom'
 import { useCurrentUser } from '@/composables/useCurrentUser'
 import { useApiCall } from '@/composables/useApiCall'
 import { useTenantMoney } from '@/composables/useTenantMoney'
@@ -57,10 +60,12 @@ const items = ref<ComponentItem[]>([])
 const suppliers = ref<SupplierItem[]>([])
 
 const createDialogOpen = ref<boolean>(false)
+const editDialogOpen = ref<boolean>(false)
 const priceDialogOpen = ref<boolean>(false)
 const deleteDialogOpen = ref<boolean>(false)
 const restoreDialogOpen = ref<boolean>(false)
 
+const editTarget = ref<ComponentItem | null>(null)
 const priceTarget = ref<ComponentItem | null>(null)
 const deleteTarget = ref<ComponentItem | null>(null)
 const restoreTarget = ref<ComponentItem | null>(null)
@@ -75,9 +80,17 @@ const form = ref({
   name: '',
   description: '',
   unit: Unit.Piece,
+  category: 'Material' as ComponentCategory,
   pricePerUnit: 0,
   supplierId: '' as string,
   validFrom: today(),
+})
+
+const editForm = ref({
+  name: '',
+  description: '',
+  unit: Unit.Piece,
+  category: 'Material' as ComponentCategory,
 })
 
 const priceForm = ref({
@@ -113,6 +126,20 @@ const unitOptions = [
 
 const unitLabel = (u: Unit): string => unitOptions.find(o => o.value === u)?.label ?? 'шт.'
 
+const categoryOptions = [
+  { value: 'Material' as ComponentCategory, label: COMPONENT_CATEGORY_LABELS.Material },
+  { value: 'Logistics' as ComponentCategory, label: COMPONENT_CATEGORY_LABELS.Logistics },
+  { value: 'Packaging' as ComponentCategory, label: COMPONENT_CATEGORY_LABELS.Packaging },
+]
+
+const categoryLabel = (c: ComponentCategory): string => COMPONENT_CATEGORY_LABELS[c] ?? COMPONENT_CATEGORY_LABELS.Material
+
+const categoryBadgeVariant: Record<ComponentCategory, 'secondary' | 'warning' | 'success'> = {
+  Material: 'secondary',
+  Logistics: 'warning',
+  Packaging: 'success',
+}
+
 const formatDate = (dateStr: string): string =>
   new Date(dateStr).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' })
 
@@ -129,6 +156,10 @@ const { loading: isLoading, execute: fetchData } = useApiCall({
 
 const { execute: createComponent } = useApiCall({
   fallbackMessage: 'Не удалось создать компонент',
+})
+
+const { execute: updateComponent } = useApiCall({
+  fallbackMessage: 'Не удалось обновить компонент',
 })
 
 const { execute: addComponentPrice } = useApiCall({
@@ -158,12 +189,31 @@ const loadData = async (): Promise<void> => {
 onMounted(loadData)
 
 const resetForm = (): void => {
-  form.value = { name: '', description: '', unit: Unit.Piece, pricePerUnit: 0, supplierId: '', validFrom: today() }
+  form.value = {
+    name: '',
+    description: '',
+    unit: Unit.Piece,
+    category: 'Material',
+    pricePerUnit: 0,
+    supplierId: '',
+    validFrom: today(),
+  }
 }
 
 const openCreate = (): void => {
   resetForm()
   createDialogOpen.value = true
+}
+
+const openEdit = (item: ComponentItem): void => {
+  editTarget.value = item
+  editForm.value = {
+    name: item.name,
+    description: item.description ?? '',
+    unit: item.unit,
+    category: item.category ?? 'Material',
+  }
+  editDialogOpen.value = true
 }
 
 const openNewPrice = (item: ComponentItem): void => {
@@ -196,6 +246,7 @@ const handleCreate = async (): Promise<void> => {
       name: form.value.name.trim(),
       description: form.value.description.trim() || undefined,
       unit: form.value.unit,
+      category: form.value.category,
       pricePerUnit: Number(form.value.pricePerUnit),
       supplierId: form.value.supplierId || undefined,
       validFrom: form.value.validFrom,
@@ -203,6 +254,31 @@ const handleCreate = async (): Promise<void> => {
     await createComponent(() => componentsApi.create(payload))
     toast.success('Компонент добавлен')
     createDialogOpen.value = false
+    await loadData()
+  } catch {
+    // Ошибка уже обработана в useApiCall
+  } finally {
+    isSaving.value = false
+  }
+}
+
+const handleUpdate = async (): Promise<void> => {
+  if (!editTarget.value) return
+  if (!editForm.value.name.trim()) {
+    toast.error('Введите название')
+    return
+  }
+  isSaving.value = true
+  try {
+    const payload: UpdateComponentRequest = {
+      name: editForm.value.name.trim(),
+      description: editForm.value.description.trim() || undefined,
+      unit: editForm.value.unit,
+      category: editForm.value.category,
+    }
+    await updateComponent(() => componentsApi.update(editTarget.value!.id, payload))
+    toast.success('Компонент обновлён')
+    editDialogOpen.value = false
     await loadData()
   } catch {
     // Ошибка уже обработана в useApiCall
@@ -318,12 +394,13 @@ const selectClass = 'flex h-10 w-full rounded-md border border-input bg-backgrou
           <TableRow class="border-b border-border">
             <TableHead>Название</TableHead>
             <TableHead>Единица</TableHead>
+            <TableHead>Категория</TableHead>
             <TableHead class="text-right">Цена/ед.</TableHead>
             <TableHead>Поставщик</TableHead>
             <TableHead>Действует с</TableHead>
             <TableHead>Статус</TableHead>
             <TableHead>Добавлен</TableHead>
-            <TableHead v-if="canWrite" class="w-24 text-right">Действия</TableHead>
+            <TableHead v-if="canWrite" class="w-32 text-right">Действия</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -337,6 +414,11 @@ const selectClass = 'flex h-10 w-full rounded-md border border-input bg-backgrou
               <p v-if="item.description" class="text-xs text-muted-foreground mt-0.5 font-normal">{{ item.description }}</p>
             </TableCell>
             <TableCell class="text-sm">{{ unitLabel(item.unit) }}</TableCell>
+            <TableCell>
+              <Badge :variant="categoryBadgeVariant[item.category] ?? 'secondary'">
+                {{ categoryLabel(item.category) }}
+              </Badge>
+            </TableCell>
             <TableCell class="text-right tabular-nums">{{ formatMoney(item.activePrice?.pricePerUnit ?? 0) }}</TableCell>
             <TableCell class="text-sm">
               {{ item.activePrice?.supplierName || '—' }}
@@ -352,6 +434,9 @@ const selectClass = 'flex h-10 w-full rounded-md border border-input bg-backgrou
             <TableCell class="text-sm text-muted-foreground tabular-nums">{{ formatDate(item.createdAt) }}</TableCell>
             <TableCell v-if="canWrite" class="text-right">
               <div class="flex items-center justify-end gap-1">
+                <Button variant="ghost" size="icon-sm" @click="openEdit(item)" title="Редактировать">
+                  <Pencil class="size-4" />
+                </Button>
                 <Button v-if="item.isActive" variant="ghost" size="icon-sm" @click="openNewPrice(item)" title="Новая цена">
                   <Tag class="size-4" />
                 </Button>
@@ -423,6 +508,19 @@ const selectClass = 'flex h-10 w-full rounded-md border border-input bg-backgrou
               </div>
 
               <div :class="fieldClass">
+                <Label for="create-category">Категория *</Label>
+                <select
+                  id="create-category"
+                  v-model="form.category"
+                  :class="selectClass"
+                >
+                  <option v-for="opt in categoryOptions" :key="opt.value" :value="opt.value">
+                    {{ opt.label }}
+                  </option>
+                </select>
+              </div>
+
+              <div :class="fieldClass">
                 <Label for="create-price">Цена за единицу *</Label>
                 <Input
                   id="create-price"
@@ -470,6 +568,88 @@ const selectClass = 'flex h-10 w-full rounded-md border border-input bg-backgrou
             <Button @click="handleCreate" :disabled="isSaving" class="gap-2">
               <Spinner v-if="isSaving" class="size-4" />
               Создать
+            </Button>
+          </div>
+        </DialogContent>
+      </DialogPortal>
+    </DialogRoot>
+
+    <!-- Edit Dialog -->
+    <DialogRoot v-model:open="editDialogOpen">
+      <DialogPortal>
+        <DialogOverlay class="bg-background/80 backdrop-blur-sm fixed inset-0 z-50" />
+        <DialogContent :class="dialogContentClass">
+          <div class="flex items-start justify-between mb-4">
+            <div>
+              <DialogTitle class="text-lg font-semibold">Редактировать компонент</DialogTitle>
+              <DialogDescription class="text-sm text-muted-foreground mt-1">
+                Изменение категории влияет на распределение затрат в последующих расчётах себестоимости
+              </DialogDescription>
+            </div>
+            <DialogClose as-child>
+              <Button variant="ghost" size="icon-sm">
+                <X class="size-4" />
+              </Button>
+            </DialogClose>
+          </div>
+
+          <div class="flex flex-col gap-4">
+            <div :class="fieldClass">
+              <Label for="edit-name">Название *</Label>
+              <Input
+                id="edit-name"
+                v-model="editForm.name"
+                placeholder=""
+                :class="inputClass"
+              />
+            </div>
+
+            <div :class="fieldClass">
+              <Label for="edit-description">Описание</Label>
+              <Input
+                id="edit-description"
+                v-model="editForm.description"
+                placeholder=""
+                :class="inputClass"
+              />
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+              <div :class="fieldClass">
+                <Label for="edit-unit">Единица измерения *</Label>
+                <select
+                  id="edit-unit"
+                  v-model.number="editForm.unit"
+                  :class="selectClass"
+                >
+                  <option v-for="opt in unitOptions" :key="opt.value" :value="opt.value">
+                    {{ opt.label }}
+                  </option>
+                </select>
+              </div>
+
+              <div :class="fieldClass">
+                <Label for="edit-category">Категория *</Label>
+                <select
+                  id="edit-category"
+                  v-model="editForm.category"
+                  :class="selectClass"
+                >
+                  <option v-for="opt in categoryOptions" :key="opt.value" :value="opt.value">
+                    {{ opt.label }}
+                  </option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex justify-end gap-2 mt-6">
+            <DialogClose as-child>
+              <Button variant="outline">Отмена</Button>
+            </DialogClose>
+            <Button @click="handleUpdate" :disabled="isSaving" class="gap-2">
+              <Spinner v-if="isSaving" class="size-4" />
+              Сохранить
             </Button>
           </div>
         </DialogContent>
