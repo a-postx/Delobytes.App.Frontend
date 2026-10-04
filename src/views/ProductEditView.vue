@@ -220,9 +220,6 @@ onMounted(() => {
           <Package class="size-5 text-primary" />
           Редактирование товара
         </h1>
-        <p class="text-sm text-muted-foreground">
-          {{ isLoading ? '' : form.sku }}
-        </p>
       </div>
     </div>
 
@@ -270,7 +267,7 @@ onMounted(() => {
       <div class="flex flex-col gap-4">
         <ProductChannelBadges v-if="product?.channelLinks?.length" :links="product.channelLinks" />
         <p v-if="isLinked" class="text-sm text-muted-foreground">
-          Данные получены из {{ linkedChannelMessage }} и синхронизируются с маркетплейсом. Редактировать можно только SKU.
+          Данные получены из {{ linkedChannelMessage }}, редактировать можно только SKU.
         </p>
 
         <div class="flex flex-col gap-1">
