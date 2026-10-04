@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Plus, Package, X as XIcon, ArrowLeft } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
@@ -18,6 +18,7 @@ import { extractErrorMessage } from '@/composables/useApi'
 import { channelDisplay, normalizeChannel } from '@/utils/channelBadges'
 import type { GetProductResponse, UpdateProductRequest, ProductBarcode, PackingUnit, ProductPhoto } from '@/types/products'
 import { useCurrentUser } from '@/composables/useCurrentUser'
+import { useUnsavedChangesGuard } from '@/composables/useUnsavedChangesGuard'
 
 const route = useRoute()
 const router = useRouter()
@@ -72,6 +73,33 @@ const getBarcodeVariant = (
   type?: string,
 ): 'default' | 'marketplace-wb' | 'marketplace-oz' | 'marketplace-ym' => channelDisplay(normalizeChannel(type)).variant
 
+/**
+ * Снимок загруженных с сервера значений. Любое расхождение с ним — несохранённая правка:
+ * сравнение по снимку надёжнее флага «поле тронули», потому что отмена правки вручную
+ * возвращает форму в исходное состояние и предупреждение при уходе исчезает.
+ */
+const formBaseline = ref<string>('')
+
+const formSnapshot = (): string =>
+  JSON.stringify({
+    sku: form.value.sku.trim(),
+    name: form.value.name.trim(),
+    description: form.value.description.trim(),
+    barcodes: form.value.barcodes.map(b => ({ value: b.value.trim(), type: b.type?.trim() ?? '', isDefault: b.isDefault })),
+    packingUnit: form.value.packingUnit,
+  })
+
+const hasUnsavedFormChanges = computed<boolean>(() => {
+  // До загрузки товара снимок пуст: считать незаполненную форму изменённой нельзя.
+  if (!formBaseline.value) {
+    return false
+  }
+
+  return formSnapshot() !== formBaseline.value
+})
+
+useUnsavedChangesGuard('product-form', hasUnsavedFormChanges, 'Есть несохранённые изменения в данных товара. Покинуть страницу без сохранения?')
+
 const addBarcode = (): void => {
   if (!newBarcode.value.value.trim()) {
     toast.error('Введите значение баркода')
@@ -117,6 +145,7 @@ const loadProduct = async (): Promise<void> => {
         : { lengthCm: '', widthCm: '', heightCm: '', weightKg: '' },
     }
     photos.value = response.photos ?? []
+    formBaseline.value = formSnapshot()
   } catch {
     toast.error('Не удалось загрузить данные товара')
     notFound.value = true
@@ -176,115 +205,109 @@ const handleSave = async (): Promise<void> => {
         form.value.packingUnit.heightCm
       ) {
         payload.packingUnit = {
-          lengthCm: parseFloat(form.value.packingUnit.lengthCm),
-          widthCm: parseFloat(form.value.packingUnit.widthCm),
-          heightCm: parseFloat(form.value.packingUnit.heightCm),
-          weightKg: form.value.packingUnit.weightKg
-            ? parseFloat(form.value.packingUnit.weightKg)
-            : undefined,
+          lengthCm: Number(form.value.packingUnit.lengthCm),
+          widthCm: Number(form.value.packingUnit.widthCm),
+          heightCm: Number(form.value.packingUnit.heightCm),
+          weightKg: form.value.packingUnit.weightKg ? Number(form.value.packingUnit.weightKg) : undefined,
         }
       }
     }
 
     await catalogProductsApi.update(productId.value, payload)
-    toast.success('Товар обновлён')
-    router.push('/catalogs/products')
+    toast.success('Данные товара сохранены')
+    await loadProduct()
   } catch (error: unknown) {
-    // Серверное сообщение содержит причину: занятый SKU приходит как 409
-    // catalog.product.sku_conflict, пустой — как 422 common.validation_failed.
-    toast.error(extractErrorMessage(error, 'Не удалось обновить товар'))
+    toast.error(extractErrorMessage(error) || 'Не удалось сохранить данные товара')
   } finally {
     isSaving.value = false
   }
 }
 
 const handleCancel = (): void => {
-  router.push('/catalogs/products')
+  router.push({ name: 'products' })
 }
 
-onMounted(() => {
-  loadProduct()
-})
 </script>
 
 <template>
-  <div class="flex flex-col gap-6 p-6 max-w-5xl mx-auto">
-
-    <!-- Шапка -->
-    <div class="flex items-center gap-3">
-      <Button variant="ghost" size="icon" class="size-9" @click="handleCancel" aria-label="Назад">
+  <div class="container mx-auto py-6 px-4 max-w-7xl">
+    <!-- Навигация назад -->
+    <div class="mb-6">
+      <Button variant="ghost" size="sm" class="gap-2 -ml-2" @click="handleCancel">
         <ArrowLeft class="size-4" />
+        Назад к каталогу
       </Button>
-      <div class="flex flex-col gap-0.5">
-        <h1 class="text-xl font-bold flex items-center gap-2">
-          <Package class="size-5 text-primary" />
-          Редактирование товара
-        </h1>
+    </div>
+
+    <!-- Заголовок страницы -->
+    <div v-if="isLoading" class="flex items-center gap-3 mb-6">
+      <Skeleton class="size-12 rounded-lg" />
+      <div class="flex flex-col gap-2 flex-1">
+        <Skeleton class="h-8 w-64 rounded-md" />
+        <Skeleton class="h-5 w-48 rounded-md" />
       </div>
     </div>
 
-    <!-- Скелетон загрузки -->
-    <div v-if="isLoading" class="product-layout">
-      <div class="flex flex-col gap-3">
-        <Skeleton class="w-full aspect-[3/4] rounded-lg" />
-        <div class="grid grid-cols-2 gap-3">
-          <Skeleton v-for="n in 4" :key="n" class="aspect-[3/4] rounded-md" />
-        </div>
-      </div>
-      <div class="flex flex-col gap-4">
-        <Skeleton v-for="n in 5" :key="n" class="h-10 w-full rounded-md" />
+    <div v-else-if="notFound" class="flex flex-col items-center justify-center gap-4 py-12">
+      <Package class="size-16 text-muted-foreground/40" />
+      <div class="text-center">
+        <h2 class="text-xl font-semibold mb-2">Товар не найден</h2>
+        <p class="text-sm text-muted-foreground mb-4">
+          Товар с указанным идентификатором не существует или был удалён
+        </p>
+        <Button variant="outline" @click="handleCancel">Вернуться к каталогу</Button>
       </div>
     </div>
 
-    <!-- Не найден -->
-    <div v-else-if="notFound" class="rounded-xl border border-border bg-card p-12">
-      <div class="flex flex-col items-center justify-center gap-3 text-center">
-        <div class="size-12 rounded-full bg-muted flex items-center justify-center">
-          <Package class="size-6 text-muted-foreground" />
+    <template v-else>
+    <div class="flex items-start gap-3 mb-6">
+      <div class="flex items-center justify-center size-12 rounded-lg bg-primary/10">
+        <Package class="size-6 text-primary" />
+      </div>
+      <div class="flex-1">
+        <h1 class="text-2xl font-bold">{{ product?.name || 'Редактирование товара' }}</h1>
+        <div class="flex items-center gap-2 mt-1">
+          <span class="text-sm text-muted-foreground">SKU: {{ product?.sku || '—' }}</span>
+          <ProductChannelBadges v-if="product?.channelLinks && product.channelLinks.length > 0" :links="product.channelLinks" />
         </div>
-        <div>
-          <h3 class="font-semibold">Товар не найден</h3>
-          <p class="text-sm text-muted-foreground mt-1">
-            Проверьте ссылку или вернитесь к списку товаров
-          </p>
-        </div>
-        <Button variant="outline" class="mt-2" @click="handleCancel">
-          К списку товаров
-        </Button>
       </div>
     </div>
 
     <!-- Основной контент -->
-    <template v-else>
     <div class="product-layout">
-
-      <!-- Левая колонка: фотогалерея -->
+      <!-- Фотографии товара -->
       <div class="product-photos">
-        <ProductPhotoGallery :photos="photos" />
+        <ProductPhotoGallery :photos="photos" :product-id="productId" />
       </div>
 
-      <!-- Правая колонка: форма -->
-      <div class="flex flex-col gap-4">
-        <ProductChannelBadges v-if="product?.channelLinks?.length" :links="product.channelLinks" />
-        <p v-if="isLinked" class="text-sm text-muted-foreground">
-          Данные получены из {{ linkedChannelMessage }}, редактировать можно только SKU.
-        </p>
+      <!-- Форма данных товара -->
+      <div class="flex flex-col gap-6">
+        <div class="rounded-xl border border-border bg-card p-6 flex flex-col gap-4">
+          <div class="flex items-center justify-between mb-2">
+            <h2 class="text-lg font-bold">Основные данные</h2>
+            <Badge v-if="isLinked" variant="warning" class="gap-1.5">
+              <span class="size-1.5 rounded-full bg-warning animate-pulse"></span>
+              Синхронизируется с {{ linkedChannelMessage }}
+            </Badge>
+          </div>
+
+          <p v-if="isLinked" class="text-sm text-muted-foreground -mt-2 mb-2">
+            Название, описание, баркоды и габариты обновляются автоматически при импорте с {{ linkedChannelMessage }}
+          </p>
 
         <div class="flex flex-col gap-1">
-          <Label for="sku">SKU *</Label>
+          <Label for="sku">SKU товара</Label>
           <Input
             id="sku"
             v-model="form.sku"
+            placeholder="Уникальный артикул"
             class="mt-1"
             :disabled="!canWrite"
           />
-          <p class="text-xs text-muted-foreground">
-            Внутренний артикул. Правка не влияет на сопоставление товара с карточкой маркетплейса.
-          </p>
         </div>
 
         <div class="flex flex-col gap-1">
-          <Label for="name">Название *</Label>
+          <Label for="name">Название</Label>
           <Input
             id="name"
             v-model="form.name"

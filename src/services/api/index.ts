@@ -31,6 +31,11 @@ export {
 } from './endpoints/catalogs'
 export { bomApi, productCostApi } from './endpoints/bom'
 export type {
+  PreviewProductBomCostLine,
+  PreviewProductBomCostRequest,
+  PreviewProductBomCostResponse,
+} from '@/types/bom'
+export type {
   ChannelItem,
   GetChannelsResponse,
   CreateChannelRequest,

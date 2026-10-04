@@ -9,6 +9,8 @@ import type {
   ProductCostResponse,
   GetProductCostHistoryResponse,
   GetProductCostsBatchResponse,
+  PreviewProductBomCostRequest,
+  PreviewProductBomCostResponse,
 } from '@/types/bom'
 
 /**
@@ -57,7 +59,7 @@ export const bomApi = {
  * Расчёт себестоимости товара. Single-эндпоинт расчёта лежит под
  * /api/catalogs/product-costs/{productId} (ProductCostsController), а не под
  * /api/catalogs/products/{id}/cost — текущая реализация бэкенда разводит
- * расчёт (ProductCostsController) и операции со снапшотами (ProductsController).
+ * расчёт (ProductCostsController) и операции со снимками (ProductsController).
  */
 export const productCostApi = {
   getCost: async (productId: string, asOf?: string): Promise<ProductCostResponse> => {
@@ -84,6 +86,22 @@ export const productCostApi = {
     const response = await axiosInstance.get<GetProductCostHistoryResponse>(
       `/api/catalogs/products/${productId}/cost/history`,
       { params: { skip, take } },
+    )
+    return response.data
+  },
+
+  /**
+   * Расчёт себестоимости по несохранённому черновику состава.
+   * Бэкенд считает по переданным строкам и ничего не записывает, поэтому
+   * состав товара в БД после вызова не меняется.
+   */
+  previewCost: async (
+    productId: string,
+    data: PreviewProductBomCostRequest,
+  ): Promise<PreviewProductBomCostResponse> => {
+    const response = await axiosInstance.post<PreviewProductBomCostResponse>(
+      `/api/catalogs/product-costs/${productId}/preview`,
+      data,
     )
     return response.data
   },

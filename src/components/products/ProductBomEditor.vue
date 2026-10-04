@@ -8,6 +8,8 @@ import {
   History,
   AlertTriangle,
   RefreshCw,
+  Eye,
+  AlertCircle,
 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -30,7 +32,10 @@ import type { BomLineItem, ProductCostResponse, ComponentCategory } from '@/type
 import { COMPONENT_CATEGORY_LABELS } from '@/types/bom'
 import { useCurrentUser } from '@/composables/useCurrentUser'
 import { useTenantMoney } from '@/composables/useTenantMoney'
+import { useBomChanges } from '@/composables/useBomChanges'
+import { useUnsavedChangesGuard } from '@/composables/useUnsavedChangesGuard'
 import ProductCostHistoryDialog from './ProductCostHistoryDialog.vue'
+import ProductBomPreviewDialog from './ProductBomPreviewDialog.vue'
 
 const props = defineProps<{ productId: string }>()
 
@@ -39,10 +44,14 @@ const { formatMoney } = useTenantMoney()
 
 // ---------- BOM state ----------
 
+/**
+ * Строка редактора. Количество — строка, потому что так его отдаёт v-model на input[type=number];
+ * к числу оно приводится при отправке и при сравнении с серверным составом.
+ */
 interface EditableBomRow {
   key: string
   componentId: string
-  quantity: number
+  quantity: number | string
 }
 
 const serverLines = ref<BomLineItem[]>([])
@@ -120,28 +129,77 @@ const removeRow = (key: string): void => {
   rows.value = rows.value.filter(r => r.key !== key)
 }
 
-const handleSaveBom = async (): Promise<void> => {
+// ---------- Отслеживание несохранённых изменений ----------
+
+const serverLinesComparable = computed(() =>
+  serverLines.value.map(line => ({ componentId: line.componentId, quantity: line.quantity })),
+)
+
+const rowsComparable = computed(() =>
+  rows.value.map(row => ({ componentId: row.componentId, quantity: row.quantity })),
+)
+
+const { hasUnsavedChanges } = useBomChanges(serverLinesComparable, rowsComparable)
+
+// Правки состава — такая же потеря данных, как и правки формы товара, поэтому предупреждение
+// при уходе общее на страницу, а не отдельное в этом компоненте.
+useUnsavedChangesGuard(
+  'product-bom',
+  hasUnsavedChanges,
+  'Есть несохранённые изменения в составе товара. Покинуть страницу без сохранения?',
+)
+
+// ---------- Превью изменений ----------
+
+const previewDialogOpen = ref<boolean>(false)
+
+const draftLines = computed(() =>
+  rows.value.map(row => ({ componentId: row.componentId, quantity: Number(row.quantity) })),
+)
+
+/**
+ * Проверяет черновик теми же правилами, что и сохранение.
+ * Иначе предпросмотр показал бы сумму для состава, который бэкенд потом не примет.
+ */
+const validateDraft = (): boolean => {
   for (const row of rows.value) {
     if (!row.componentId) {
       toast.error('Выберите компонент во всех строках состава')
-      return
+      return false
     }
     if (!row.quantity || Number(row.quantity) <= 0) {
       toast.error('Количество должно быть больше нуля во всех строках')
-      return
+      return false
     }
   }
+
   const ids = rows.value.map(r => r.componentId)
   if (new Set(ids).size !== ids.length) {
     toast.error('Один компонент нельзя указать в составе дважды')
+    return false
+  }
+
+  return true
+}
+
+const openPreview = (): void => {
+  if (!validateDraft()) {
+    return
+  }
+
+  previewDialogOpen.value = true
+}
+
+// ---------- Сохранение ----------
+
+const handleSaveBom = async (): Promise<void> => {
+  if (!validateDraft()) {
     return
   }
 
   isSavingBom.value = true
   try {
-    await bomApi.upsert(props.productId, {
-      lines: rows.value.map(r => ({ componentId: r.componentId, quantity: Number(r.quantity) })),
-    })
+    await bomApi.upsert(props.productId, { lines: draftLines.value })
     toast.success('Состав товара сохранён')
     await loadBom()
     await loadCost()
@@ -207,72 +265,111 @@ const selectClass = 'flex h-9 w-full rounded-md border border-input bg-backgroun
       </div>
       <Button variant="outline" size="sm" class="gap-2" @click="historyDialogOpen = true">
         <History class="size-4" />
-        История себестоимости
+        История
       </Button>
     </div>
 
-    <!-- BOM: загрузка -->
-    <div v-if="isLoadingBom" class="flex flex-col gap-3">
-      <Skeleton v-for="n in 3" :key="n" class="h-10 w-full rounded-lg" />
+    <!-- Индикатор несохранённых изменений -->
+    <div
+      v-if="hasUnsavedChanges"
+      class="flex flex-wrap items-center gap-3 rounded-lg border border-warning/40 bg-warning/10 px-4 py-3"
+    >
+      <AlertCircle class="size-5 text-warning shrink-0" />
+      <span class="text-sm font-medium text-foreground flex-1 min-w-0">
+        Есть несохранённые изменения в составе товара
+      </span>
+      <Button
+        v-if="canWrite"
+        variant="outline"
+        size="sm"
+        class="gap-2 shrink-0"
+        @click="openPreview"
+      >
+        <Eye class="size-4" />
+        Предпросмотр себестоимости
+      </Button>
     </div>
 
-    <!-- BOM: таблица состава -->
-    <div v-else class="flex flex-col gap-3">
-      <div v-if="rows.length === 0" class="flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-border py-10 text-center">
-        <Boxes class="size-8 text-muted-foreground/40" />
-        <p class="text-sm text-muted-foreground">Состав пока не задан</p>
+    <div class="border-t border-border" />
+
+    <!-- Таблица строк BOM -->
+    <div class="flex flex-col gap-4">
+      <div v-if="isLoadingBom" class="flex flex-col gap-3">
+        <Skeleton v-for="n in 3" :key="n" class="h-12 w-full rounded-lg" />
+      </div>
+
+      <div
+        v-else-if="rows.length === 0"
+        class="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-border py-12 text-center"
+      >
+        <Boxes class="size-10 text-muted-foreground/40" />
+        <div class="flex flex-col gap-1">
+          <p class="text-sm font-medium text-foreground">Состав товара не задан</p>
+          <p class="text-xs text-muted-foreground">Добавьте компоненты, чтобы описать единицу товара</p>
+        </div>
+        <Button
+          v-if="canWrite"
+          variant="outline"
+          size="sm"
+          class="gap-2 mt-2"
+          :disabled="activeComponents.length === 0"
+          @click="addRow"
+        >
+          <Plus class="size-4" />
+          Добавить первый компонент
+        </Button>
       </div>
 
       <div v-else class="rounded-lg border border-border overflow-hidden">
         <Table>
           <TableHeader>
             <TableRow class="border-b border-border">
+              <TableHead class="w-12">#</TableHead>
               <TableHead>Компонент</TableHead>
-              <TableHead>Категория</TableHead>
-              <TableHead class="w-32 text-right">Количество</TableHead>
-              <TableHead class="w-20">Ед. изм.</TableHead>
-              <TableHead v-if="canWrite" class="w-12 text-right">Удалить</TableHead>
+              <TableHead class="w-32">Категория</TableHead>
+              <TableHead class="w-36 text-right">Количество</TableHead>
+              <TableHead class="w-20 text-right">Ед. изм.</TableHead>
+              <TableHead v-if="canWrite" class="w-12"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            <TableRow v-for="row in rows" :key="row.key" class="hover:bg-muted/40 transition-colors">
+            <TableRow v-for="(row, idx) in rows" :key="row.key" class="hover:bg-muted/40 transition-colors">
+              <TableCell class="text-muted-foreground tabular-nums">{{ idx + 1 }}</TableCell>
               <TableCell>
-                <select
-                  v-model="row.componentId"
-                  :disabled="!canWrite"
-                  :class="selectClass"
-                >
+                <select v-if="canWrite" v-model="row.componentId" :class="selectClass">
                   <option value="" disabled>Выберите компонент</option>
-                  <option v-for="c in availableComponentsFor(row)" :key="c.id" :value="c.id">
-                    {{ c.name }}
+                  <option v-for="comp in availableComponentsFor(row)" :key="comp.id" :value="comp.id">
+                    {{ comp.name }}
                   </option>
                 </select>
+                <span v-else class="text-sm">{{ componentDisplay(row.componentId)?.name ?? 'Компонент недоступен' }}</span>
               </TableCell>
               <TableCell>
                 <Badge
                   v-if="componentDisplay(row.componentId)?.category"
-                  :variant="categoryBadgeVariant[componentDisplay(row.componentId)!.category as ComponentCategory]"
+                  :variant="categoryBadgeVariant[componentDisplay(row.componentId)!.category!]"
                 >
-                  {{ COMPONENT_CATEGORY_LABELS[componentDisplay(row.componentId)!.category as ComponentCategory] }}
+                  {{ COMPONENT_CATEGORY_LABELS[componentDisplay(row.componentId)!.category!] }}
                 </Badge>
                 <span v-else class="text-xs text-muted-foreground">—</span>
               </TableCell>
               <TableCell class="text-right">
                 <Input
-                  v-model.number="row.quantity"
+                  v-if="canWrite"
+                  v-model="row.quantity"
                   type="number"
+                  step="0.01"
                   min="0"
-                  step="0.001"
-                  class="text-right"
-                  :disabled="!canWrite"
+                  class="text-right tabular-nums"
                 />
+                <span v-else class="text-sm tabular-nums">{{ row.quantity }}</span>
               </TableCell>
-              <TableCell class="text-muted-foreground">
+              <TableCell class="text-right text-sm text-muted-foreground">
                 {{ componentDisplay(row.componentId)?.unit ? unitLabels[componentDisplay(row.componentId)!.unit] : '—' }}
               </TableCell>
               <TableCell v-if="canWrite" class="text-right">
-                <Button variant="ghost" size="icon" class="size-8 text-destructive hover:text-destructive" @click="removeRow(row.key)">
-                  <Trash2 class="size-4" />
+                <Button variant="ghost" size="icon" class="size-8" @click="removeRow(row.key)" aria-label="Удалить строку">
+                  <Trash2 class="size-4 text-destructive" />
                 </Button>
               </TableCell>
             </TableRow>
@@ -280,12 +377,18 @@ const selectClass = 'flex h-9 w-full rounded-md border border-input bg-backgroun
         </Table>
       </div>
 
-      <div v-if="canWrite" class="flex items-center justify-between">
-        <Button variant="outline" size="sm" class="gap-2" :disabled="activeComponents.length === 0" @click="addRow">
+      <div v-if="canWrite" class="flex items-center justify-between gap-3">
+        <Button
+          variant="outline"
+          size="sm"
+          class="gap-2"
+          :disabled="activeComponents.length === 0"
+          @click="addRow"
+        >
           <Plus class="size-4" />
           Добавить компонент
         </Button>
-        <Button size="sm" class="gap-2" :disabled="isSavingBom" @click="handleSaveBom">
+        <Button size="sm" class="gap-2" :disabled="isSavingBom || !hasUnsavedChanges" @click="handleSaveBom">
           <Spinner v-if="isSavingBom" class="size-4" />
           Сохранить состав
         </Button>
@@ -310,7 +413,7 @@ const selectClass = 'flex h-9 w-full rounded-md border border-input bg-backgroun
           <Button variant="ghost" size="icon" class="size-9" :disabled="isLoadingCost" @click="loadCost" aria-label="Обновить">
             <RefreshCw class="size-4" :class="{ 'animate-spin': isLoadingCost }" />
           </Button>
-		</div>
+        </div>
       </div>
 
       <div v-if="isLoadingCost" class="grid grid-cols-2 md:grid-cols-5 gap-3">
@@ -329,7 +432,7 @@ const selectClass = 'flex h-9 w-full rounded-md border border-input bg-backgroun
               Расчёт себестоимости неполный — показана сумма по доступным данным
             </p>
             <ul class="list-disc pl-4 text-muted-foreground">
-              <li v-for="(w, idx) in cost.warnings" :key="idx">{{ w.message }}</li>
+              <li v-for="(warning, idx) in cost.warnings" :key="idx">{{ warning.message }}</li>
             </ul>
           </div>
         </div>
@@ -389,5 +492,11 @@ const selectClass = 'flex h-9 w-full rounded-md border border-input bg-backgroun
     </div>
 
     <ProductCostHistoryDialog v-model:open="historyDialogOpen" :product-id="productId" />
+    <ProductBomPreviewDialog
+      v-model:open="previewDialogOpen"
+      :product-id="productId"
+      :draft-lines="draftLines"
+      :as-of-date="asOfDate"
+    />
   </div>
 </template>

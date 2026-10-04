@@ -147,3 +147,26 @@ export interface GetProductCostHistoryResponse {
   totalCount: number
   items: ProductCostSnapshotDto[]
 }
+
+// ---------- Draft cost preview ----------
+
+/**
+ * Черновик состава для расчёта себестоимости без сохранения.
+ * Отправляется в POST .../preview, бэкенд считает ту же самую себестоимость,
+ * что получилась бы после сохранения, но ничего не записывает в БД.
+ */
+export interface PreviewProductBomCostLine {
+  componentId: string
+  quantity: number
+}
+
+export interface PreviewProductBomCostRequest {
+  lines: PreviewProductBomCostLine[]
+  asOf?: string
+}
+
+/** Ответ предпросмотра: та же структура расчёта, что и у сохранённого состава. */
+export interface PreviewProductBomCostResponse {
+  found: boolean
+  preview: ProductCostResponse | null
+}
