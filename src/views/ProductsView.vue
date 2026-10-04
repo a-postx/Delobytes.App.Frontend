@@ -147,8 +147,31 @@ const loadItems = async (): Promise<void> => {
     items.value = resp.items
   } catch {
     toast.error('Не удалось загрузить товары')
+    return
   } finally {
     isLoading.value = false
+  }
+  await loadCosts()
+}
+
+/**
+ * Себестоимость — вспомогательная метрика: сбой батча не должен ломать список товаров,
+ * поэтому ошибка сети просто оставляет карту пустой (graceful degradation).
+ */
+const loadCosts = async (): Promise<void> => {
+  if (items.value.length === 0) {
+    costByProductId.value = new Map()
+    return
+  }
+  isLoadingCosts.value = true
+  try {
+    const resp = await productCostApi.getBatch(items.value.map(i => i.id))
+    costByProductId.value = new Map(resp.items.map(c => [c.productId, c]))
+  } catch (error) {
+    console.error('Failed to load product costs:', error)
+    costByProductId.value = new Map()
+  } finally {
+    isLoadingCosts.value = false
   }
 }
 
