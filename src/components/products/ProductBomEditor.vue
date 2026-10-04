@@ -310,7 +310,6 @@ const selectClass = 'flex h-9 w-full rounded-md border border-input bg-backgroun
           <Button variant="ghost" size="icon" class="size-9" :disabled="isLoadingCost" @click="loadCost" aria-label="Обновить">
             <RefreshCw class="size-4" :class="{ 'animate-spin': isLoadingCost }" />
           </Button>
-          <Button variant="outline" size="sm" class="gap-2" @click="historyDialogOpen = true" />
 		</div>
       </div>
 
