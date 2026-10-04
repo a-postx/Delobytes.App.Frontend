@@ -289,13 +289,13 @@ const inputClass = 'mt-1'
           </div>
 
           <DialogDescription class="text-sm text-muted-foreground mb-4">
-            Создайте новую версию ставки оплаты труда. После создания запись редактировать нельзя.
+            Создайте ставку оплаты труда, которая действует с определённой даты.
           </DialogDescription>
 
           <div class="flex flex-col gap-4">
             <div :class="fieldClass">
               <Label for="create-name">Название</Label>
-              <Input id="create-name" v-model="form.name" placeholder="Например: Базовая ставка Q1 2026" :class="inputClass" />
+              <Input id="create-name" v-model="form.name" placeholder="" :class="inputClass" />
             </div>
 
             <div :class="fieldClass">
