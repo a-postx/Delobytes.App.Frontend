@@ -344,9 +344,6 @@ onMounted(() => {
                     {{ getBarcodePrefix(barcode.type) }}
                   </span>{{ barcode.value }}
                 </Badge>
-                <span v-if="barcode.type" class="text-xs text-muted-foreground">
-                  {{ barcode.type }}
-                </span>
                 <Button
                   v-if="canWrite && !isLinked"
                   variant="ghost"
