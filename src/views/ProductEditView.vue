@@ -429,10 +429,9 @@ onMounted(() => {
 
       </div>
     </div>
-
-    <ProductBomEditor :product-id="productId" />
-    </template>
   </div>
+  <ProductBomEditor :product-id="productId" />
+  </template>
 </template>
 
 <style scoped>
