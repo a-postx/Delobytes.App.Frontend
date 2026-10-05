@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Plus, Package, X as XIcon, ArrowLeft } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
@@ -229,6 +229,10 @@ const handleSave = async (): Promise<void> => {
 const handleCancel = (): void => {
   router.push({ name: 'products' })
 }
+
+onMounted(() => {
+  loadProduct()
+})
 
 </script>
 
