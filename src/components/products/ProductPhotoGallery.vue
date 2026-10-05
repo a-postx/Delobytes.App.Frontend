@@ -1,18 +1,22 @@
 <script setup lang="ts">
 import { ref, computed, nextTick, watch, onBeforeUnmount } from 'vue'
-import { ChevronLeft, ChevronRight, X, ZoomIn, ImageOff } from 'lucide-vue-next'
+import { ChevronLeft, ChevronRight, X, ZoomIn, ImageOff, Images } from 'lucide-vue-next'
 import type { ProductPhoto } from '@/types/products'
 
 interface Props {
   photos: ProductPhoto[]
+  maxVisibleTiles?: number
 }
 
-const props = defineProps<Props>()
+const props = withDefaults(defineProps<Props>(), {
+  maxVisibleTiles: 5,
+})
 
 const lightboxOpen = ref<boolean>(false)
 const activeIndex = ref<number>(0)
 const loadErrors = ref<Set<string>>(new Set())
 const lightboxEl = ref<HTMLElement | null>(null)
+const thumbnailStripEl = ref<HTMLElement | null>(null)
 
 const largePhotos = computed<ProductPhoto[]>(() =>
   props.photos
@@ -20,15 +24,24 @@ const largePhotos = computed<ProductPhoto[]>(() =>
     .sort((a, b) => a.displayOrder - b.displayOrder)
 )
 
-// Первое фото — главное, остальные — вспомогательные
 const mainPhoto = computed<ProductPhoto | null>(() => largePhotos.value[0] ?? null)
-const restPhotos = computed<ProductPhoto[]>(() => largePhotos.value.slice(1))
+
+const visibleRestPhotos = computed<ProductPhoto[]>(() => {
+  const rest = largePhotos.value.slice(1)
+  return rest.slice(0, props.maxVisibleTiles)
+})
+
+const remainingCount = computed<number>(() => {
+  const rest = largePhotos.value.slice(1)
+  return Math.max(0, rest.length - props.maxVisibleTiles)
+})
 
 const openLightbox = (index: number): void => {
   activeIndex.value = index
   lightboxOpen.value = true
   nextTick(() => {
     lightboxEl.value?.focus()
+    scrollThumbnailIntoView(index)
   })
 }
 
@@ -38,10 +51,26 @@ const closeLightbox = (): void => {
 
 const prev = (): void => {
   activeIndex.value = (activeIndex.value - 1 + largePhotos.value.length) % largePhotos.value.length
+  nextTick(() => scrollThumbnailIntoView(activeIndex.value))
 }
 
 const next = (): void => {
   activeIndex.value = (activeIndex.value + 1) % largePhotos.value.length
+  nextTick(() => scrollThumbnailIntoView(activeIndex.value))
+}
+
+const scrollThumbnailIntoView = (index: number): void => {
+  if (!thumbnailStripEl.value) {
+    return
+  }
+
+  const thumbButton: HTMLElement | null = thumbnailStripEl.value.querySelector(
+    `[data-thumb-index="${index}"]`
+  )
+
+  if (thumbButton) {
+    thumbButton.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' })
+  }
 }
 
 const onLightboxKeydown = (e: KeyboardEvent): void => {
@@ -50,8 +79,6 @@ const onLightboxKeydown = (e: KeyboardEvent): void => {
   if (e.key === 'Escape') { e.preventDefault(); closeLightbox() }
 }
 
-// Прокручивается окно браузера, поэтому на время просмотра блокируем прокрутку body.
-// Ширину скроллбара компенсируем отступом, чтобы страница под оверлеем не сдвигалась.
 let isScrollLocked: boolean = false
 let prevBodyOverflow: string = ''
 let prevBodyPaddingRight: string = ''
@@ -91,7 +118,6 @@ watch(lightboxOpen, (isOpen: boolean): void => {
   }
 })
 
-// Уход со страницы при открытом лайтбоксе не должен оставить body заблокированным
 onBeforeUnmount(unlockScroll)
 
 const handleImageError = (photoId: string): void => {
@@ -102,7 +128,6 @@ const handleImageError = (photoId: string): void => {
 <template>
   <div v-if="largePhotos.length > 0" class="photo-gallery">
 
-    <!-- Главное фото — на всю ширину -->
     <button
       v-if="mainPhoto"
       class="photo-main"
@@ -127,10 +152,9 @@ const handleImageError = (photoId: string): void => {
       </template>
     </button>
 
-    <!-- Остальные фото — по два в строку -->
-    <div v-if="restPhotos.length > 0" class="photo-grid">
+    <div v-if="visibleRestPhotos.length > 0 || remainingCount > 0" class="photo-grid">
       <button
-        v-for="(photo, idx) in restPhotos"
+        v-for="(photo, idx) in visibleRestPhotos"
         :key="photo.id"
         class="photo-tile"
         type="button"
@@ -153,10 +177,21 @@ const handleImageError = (photoId: string): void => {
           </div>
         </template>
       </button>
+
+      <button
+        v-if="remainingCount > 0"
+        class="photo-tile photo-tile--more"
+        type="button"
+        :aria-label="`Показать все фото (ещё ${remainingCount})`"
+        @click.stop="openLightbox(maxVisibleTiles + 1)"
+      >
+        <div class="photo-more-overlay">
+          <Images class="size-5 mb-1" />
+          <span class="text-lg font-semibold">+{{ remainingCount }}</span>
+        </div>
+      </button>
     </div>
 
-    <!-- Лайтбокс вынесен в body: внутри страницы sticky-колонка создаёт свой контекст
-         наложения, и оверлей оказывался под сайдбаром и шапкой. -->
     <Teleport to="body">
       <div
         v-if="lightboxOpen"
@@ -188,12 +223,34 @@ const handleImageError = (photoId: string): void => {
           <ChevronLeft class="size-6" />
         </button>
 
-        <div class="lightbox-img-wrap" @click.stop>
-          <img
-            :src="largePhotos[activeIndex]?.url"
-            :alt="`Фото ${largePhotos[activeIndex]?.displayOrder}`"
-            class="lightbox-img"
-          />
+        <div class="lightbox-content">
+          <div class="lightbox-img-wrap" @click.stop>
+            <img
+              :src="largePhotos[activeIndex]?.url"
+              :alt="`Фото ${largePhotos[activeIndex]?.displayOrder}`"
+              class="lightbox-img"
+            />
+          </div>
+
+          <div v-if="largePhotos.length > 1" class="lightbox-thumbnails" ref="thumbnailStripEl">
+            <button
+              v-for="(photo, idx) in largePhotos"
+              :key="photo.id"
+              :data-thumb-index="idx"
+              class="lightbox-thumb"
+              :class="{ 'lightbox-thumb--active': idx === activeIndex }"
+              type="button"
+              :aria-label="`Перейти к фото ${photo.displayOrder}`"
+              :aria-current="idx === activeIndex ? 'true' : undefined"
+              @click.stop="openLightbox(idx)"
+            >
+              <img
+                :src="photo.url"
+                :alt="`Миниатюра ${photo.displayOrder}`"
+                class="lightbox-thumb-img"
+              />
+            </button>
+          </div>
         </div>
 
         <button
@@ -227,7 +284,6 @@ const handleImageError = (photoId: string): void => {
   gap: 6px;
 }
 
-/* Главное фото */
 .photo-main {
   position: relative;
   width: 100%;
@@ -253,14 +309,12 @@ const handleImageError = (photoId: string): void => {
   outline-offset: 2px;
 }
 
-/* Сетка вспомогательных фото: 2 колонки */
 .photo-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 6px;
 }
 
-/* Общие стили для всех тайлов */
 .photo-tile {
   position: relative;
   aspect-ratio: 3 / 4;
@@ -290,10 +344,27 @@ const handleImageError = (photoId: string): void => {
   transform: scale(0.97);
 }
 
+.photo-tile--more {
+  background: hsl(var(--muted) / 0.6);
+  backdrop-filter: blur(8px);
+}
+
+.photo-more-overlay {
+  position: absolute;
+  inset: 0;
+  background: hsl(var(--foreground) / 0.75);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: hsl(var(--background));
+  user-select: none;
+}
+
 .photo-img {
   width: 100%;
   height: 100%;
-  object-fit: contain;
+  object-fit: cover;
   display: block;
 }
 
@@ -322,7 +393,6 @@ const handleImageError = (photoId: string): void => {
   height: 100%;
 }
 
-/* Empty state */
 .photo-empty {
   display: flex;
   flex-direction: column;
@@ -335,12 +405,11 @@ const handleImageError = (photoId: string): void => {
   background: hsl(var(--muted) / 0.4);
 }
 
-/* Lightbox: на весь экран поверх сайдбара (z-10) и шапки (z-10) */
 .lightbox {
   position: fixed;
   inset: 0;
   z-index: 200;
-  background: hsl(0 0% 0% / 0.88);
+  background: hsl(0 0% 0% / 0.92);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -348,30 +417,95 @@ const handleImageError = (photoId: string): void => {
   overscroll-behavior: contain;
 }
 
-.lightbox-img-wrap {
+.lightbox-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
   max-width: calc(100vw - 128px);
   max-height: calc(100vh - 96px);
+}
+
+.lightbox-img-wrap {
+  flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
+  min-height: 0;
 }
 
 .lightbox-img {
   max-width: 100%;
-  max-height: calc(100vh - 96px);
+  max-height: calc(100vh - 200px);
   object-fit: contain;
   border-radius: var(--radius);
   user-select: none;
 }
 
+.lightbox-thumbnails {
+  display: flex;
+  gap: 8px;
+  padding: 8px;
+  background: hsl(0 0% 0% / 0.5);
+  border-radius: var(--radius);
+  overflow-x: auto;
+  max-width: 100%;
+  scrollbar-width: thin;
+  scrollbar-color: hsl(0 0% 40%) transparent;
+}
+
+.lightbox-thumbnails::-webkit-scrollbar {
+  height: 6px;
+}
+
+.lightbox-thumbnails::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.lightbox-thumbnails::-webkit-scrollbar-thumb {
+  background: hsl(0 0% 40%);
+  border-radius: 3px;
+}
+
+.lightbox-thumb {
+  position: relative;
+  width: 64px;
+  height: 80px;
+  flex-shrink: 0;
+  border-radius: calc(var(--radius) * 0.5);
+  overflow: hidden;
+  border: 2px solid transparent;
+  background: hsl(0 0% 20%);
+  cursor: pointer;
+  padding: 0;
+  transition: border-color 120ms ease, transform 120ms ease;
+}
+
+.lightbox-thumb:hover {
+  border-color: hsl(0 0% 60%);
+  transform: scale(1.05);
+}
+
+.lightbox-thumb--active {
+  border-color: hsl(var(--primary));
+}
+
+.lightbox-thumb-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
 .lightbox-close {
   position: absolute;
-  top: 12px;
-  right: 12px;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: hsl(0 0% 100% / 0.15);
+  top: 16px;
+  right: 16px;
+  z-index: 10;
+  width: 40px;
+  height: 40px;
+  border-radius: calc(var(--radius) * 0.75);
+  background: hsl(0 0% 0% / 0.6);
   border: 1px solid hsl(0 0% 100% / 0.2);
   color: #fff;
   display: flex;
@@ -379,10 +513,11 @@ const handleImageError = (photoId: string): void => {
   justify-content: center;
   cursor: pointer;
   transition: background 120ms ease;
+  padding: 0;
 }
 
 .lightbox-close:hover {
-  background: hsl(0 0% 100% / 0.28);
+  background: hsl(0 0% 0% / 0.8);
 }
 
 .lightbox-close:focus-visible {
@@ -394,10 +529,11 @@ const handleImageError = (photoId: string): void => {
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
-  width: 40px;
-  height: 40px;
+  z-index: 10;
+  width: 48px;
+  height: 48px;
   border-radius: 50%;
-  background: hsl(0 0% 100% / 0.15);
+  background: hsl(0 0% 0% / 0.6);
   border: 1px solid hsl(0 0% 100% / 0.2);
   color: #fff;
   display: flex;
@@ -405,10 +541,11 @@ const handleImageError = (photoId: string): void => {
   justify-content: center;
   cursor: pointer;
   transition: background 120ms ease;
+  padding: 0;
 }
 
 .lightbox-nav:hover {
-  background: hsl(0 0% 100% / 0.28);
+  background: hsl(0 0% 0% / 0.8);
 }
 
 .lightbox-nav:focus-visible {
@@ -416,45 +553,64 @@ const handleImageError = (photoId: string): void => {
   outline-offset: 2px;
 }
 
-.lightbox-nav--prev { left: 12px; }
-.lightbox-nav--next { right: 12px; }
+.lightbox-nav--prev {
+  left: 16px;
+}
 
-@media (max-width: 640px) {
-  .lightbox-img-wrap {
-    max-width: calc(100vw - 24px);
-  }
-
-  .lightbox-nav {
-    top: auto;
-    bottom: 12px;
-    transform: none;
-  }
-
-  .lightbox-nav--prev { left: 16px; }
-  .lightbox-nav--next { right: 16px; }
+.lightbox-nav--next {
+  right: 16px;
 }
 
 .lightbox-counter {
   position: absolute;
-  bottom: 12px;
+  bottom: 16px;
   left: 50%;
   transform: translateX(-50%);
+  padding: 8px 16px;
+  background: hsl(0 0% 0% / 0.6);
+  border: 1px solid hsl(0 0% 100% / 0.2);
+  border-radius: calc(var(--radius) * 1.5);
   color: #fff;
-  font-size: 13px;
-  background: hsl(0 0% 100% / 0.15);
-  padding: 3px 10px;
-  border-radius: 100px;
-  backdrop-filter: blur(4px);
-  pointer-events: none;
+  font-size: 14px;
+  font-weight: 500;
+  user-select: none;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .photo-main,
-  .photo-tile,
-  .photo-overlay,
-  .lightbox-close,
+@media (max-width: 768px) {
+  .lightbox-content {
+    max-width: calc(100vw - 24px);
+    max-height: calc(100vh - 48px);
+  }
+
+  .lightbox-img {
+    max-height: calc(100vh - 160px);
+  }
+
   .lightbox-nav {
-    transition: none;
+    width: 40px;
+    height: 40px;
+  }
+
+  .lightbox-nav--prev {
+    left: 8px;
+  }
+
+  .lightbox-nav--next {
+    right: 8px;
+  }
+
+  .lightbox-close {
+    top: 8px;
+    right: 8px;
+  }
+
+  .lightbox-counter {
+    bottom: 8px;
+  }
+
+  .lightbox-thumb {
+    width: 56px;
+    height: 70px;
   }
 }
 </style>

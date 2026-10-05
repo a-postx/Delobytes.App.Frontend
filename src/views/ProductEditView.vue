@@ -134,43 +134,30 @@ const loadProduct = async (): Promise<void> => {
 
     product.value = response
     form.value = {
-      sku: response.sku,
-      name: response.name,
+      sku: response.sku ?? '',
+      name: response.name ?? '',
       description: response.description ?? '',
-      barcodes: response.barcodes ? response.barcodes.map(b => ({ ...b })) : [],
-      packingUnit: response.packingUnit
-        ? {
-            lengthCm: response.packingUnit.lengthCm.toString(),
-            widthCm: response.packingUnit.widthCm.toString(),
-            heightCm: response.packingUnit.heightCm.toString(),
-            weightKg: response.packingUnit.weightKg?.toString() ?? '',
-          }
-        : { lengthCm: '', widthCm: '', heightCm: '', weightKg: '' },
+      barcodes: response.barcodes ?? [],
+      packingUnit: {
+        lengthCm: response.packingUnit?.lengthCm?.toString() ?? '',
+        widthCm: response.packingUnit?.widthCm?.toString() ?? '',
+        heightCm: response.packingUnit?.heightCm?.toString() ?? '',
+        weightKg: response.packingUnit?.weightKg?.toString() ?? '',
+      },
     }
+
     photos.value = response.photos ?? []
     formBaseline.value = formSnapshot()
-  } catch {
-    toast.error('Не удалось загрузить данные товара')
-    notFound.value = true
+  } catch (error: unknown) {
+    toast.error(extractErrorMessage(error, 'Не удалось загрузить товар'))
   } finally {
     isLoading.value = false
   }
 }
 
 const handleSave = async (): Promise<void> => {
-  const sku: string = form.value.sku.trim()
-
-  // Checked locally as well as by the backend: the field is the point of this form, and a
-  // round-trip that can only answer "не пусто" is wasted motion.
-  if (!sku) {
-    toast.error('Введите SKU')
-    return
-  }
-
-  // Для связанного товара остальные поля не редактируются, но подставляются в форму из
-  // ответа API — отправлять их нельзя, иначе локальная копия перезапишет данные импорта.
-  if (!isLinked.value && !form.value.name.trim()) {
-    toast.error('Введите название')
+  if (!form.value.sku.trim()) {
+    toast.error('SKU обязателен')
     return
   }
 
@@ -178,49 +165,28 @@ const handleSave = async (): Promise<void> => {
   try {
     const payload: UpdateProductRequest = {}
 
-    // Отправляем SKU только когда он изменился: у связанного товара бэкенд по изменению
-    // выставит UpdatedAt, и лишняя запись без правок исказила бы историю изменений.
-    if (sku !== (product.value?.sku ?? '')) {
-      payload.sku = sku
-    }
-
     if (!isLinked.value) {
       payload.name = form.value.name.trim()
-      payload.description = form.value.description.trim() || undefined
-
-      if (form.value.barcodes.length > 0) {
-        payload.barcodes = form.value.barcodes.map(b => {
-          const barcode: ProductBarcode = {
-            value: b.value.trim(),
-            type: b.type?.trim() || undefined,
-            isDefault: b.isDefault,
-          }
-          if (b.id) {
-            barcode.id = b.id
-          }
-          return barcode
-        })
+      payload.description = form.value.description.trim()
+      payload.barcodes = form.value.barcodes
+      payload.packingUnit = {
+        lengthCm: parseFloat(form.value.packingUnit.lengthCm) || 0,
+        widthCm: parseFloat(form.value.packingUnit.widthCm) || 0,
+        heightCm: parseFloat(form.value.packingUnit.heightCm) || 0,
+        weightKg: parseFloat(form.value.packingUnit.weightKg) || undefined,
       }
+    }
 
-      if (
-        form.value.packingUnit.lengthCm &&
-        form.value.packingUnit.widthCm &&
-        form.value.packingUnit.heightCm
-      ) {
-        payload.packingUnit = {
-          lengthCm: Number(form.value.packingUnit.lengthCm),
-          widthCm: Number(form.value.packingUnit.widthCm),
-          heightCm: Number(form.value.packingUnit.heightCm),
-          weightKg: form.value.packingUnit.weightKg ? Number(form.value.packingUnit.weightKg) : undefined,
-        }
-      }
+    const baselineSku = JSON.parse(formBaseline.value).sku
+    if (form.value.sku.trim() !== baselineSku) {
+      payload.sku = form.value.sku.trim()
     }
 
     await catalogProductsApi.update(productId.value, payload)
-    toast.success('Данные товара сохранены')
-    await loadProduct()
+    toast.success('Товар обновлён')
+    formBaseline.value = formSnapshot()
   } catch (error: unknown) {
-    toast.error(extractErrorMessage(error) || 'Не удалось сохранить данные товара')
+    toast.error(extractErrorMessage(error, 'Не удалось сохранить товар'))
   } finally {
     isSaving.value = false
   }
@@ -233,12 +199,11 @@ const handleCancel = (): void => {
 onMounted(() => {
   loadProduct()
 })
-
 </script>
 
 <template>
   <div class="container mx-auto py-6 px-4 max-w-7xl">
-    <!-- Навигация назад -->
+
     <div class="mb-6">
       <Button variant="ghost" size="sm" class="gap-2 -ml-2" @click="handleCancel">
         <ArrowLeft class="size-4" />
@@ -246,7 +211,6 @@ onMounted(() => {
       </Button>
     </div>
 
-    <!-- Заголовок страницы -->
     <div v-if="isLoading" class="flex items-center gap-3 mb-6">
       <Skeleton class="size-12 rounded-lg" />
       <div class="flex flex-col gap-2 flex-1">
@@ -260,179 +224,176 @@ onMounted(() => {
       <div class="text-center">
         <h2 class="text-xl font-semibold mb-2">Товар не найден</h2>
         <p class="text-sm text-muted-foreground mb-4">
-          Товар с указанным идентификатором не существует или был удалён
+          Товар с таким идентификатором не существует или был удалён.
         </p>
         <Button variant="outline" @click="handleCancel">Вернуться к каталогу</Button>
       </div>
     </div>
 
-    <template v-else>
-    <div class="flex items-start gap-3 mb-6">
-      <div class="flex items-center justify-center size-12 rounded-lg bg-primary/10">
-        <Package class="size-6 text-primary" />
-      </div>
-      <div class="flex-1">
-        <h1 class="text-2xl font-bold">{{ product?.name || 'Редактирование товара' }}</h1>
-        <div class="flex items-center gap-2 mt-1">
-          <span class="text-sm text-muted-foreground">SKU: {{ product?.sku || '—' }}</span>
-          <ProductChannelBadges v-if="product?.channelLinks && product.channelLinks.length > 0" :links="product.channelLinks" />
+    <div v-else class="flex flex-col gap-6">
+      <div class="flex items-start gap-3">
+        <div class="flex items-center justify-center size-12 rounded-lg bg-primary/10">
+          <Package class="size-6 text-primary" />
+        </div>
+        <div class="flex-1">
+          <h1 class="text-2xl font-bold">{{ product?.name || 'Редактирование товара' }}</h1>
+          <div class="flex items-center gap-2 mt-1">
+            <span class="text-sm text-muted-foreground">SKU: {{ product?.sku || '—' }}</span>
+            <ProductChannelBadges v-if="product?.channelLinks && product.channelLinks.length > 0" :links="product.channelLinks" />
+          </div>
         </div>
       </div>
-    </div>
 
-    <!-- Основной контент -->
-    <div class="product-layout">
-      <!-- Фотографии товара -->
-      <div class="product-photos">
-        <ProductPhotoGallery :photos="photos" :product-id="productId" />
-      </div>
-
-      <!-- Форма данных товара -->
-      <div class="flex flex-col gap-6">
-        <div class="rounded-xl border border-border bg-card p-6 flex flex-col gap-4">
-          <h2 class="text-lg font-bold">Основные данные</h2>
-
-          <p v-if="isLinked" class="text-sm text-muted-foreground">
-            Данные получены из {{ linkedChannelMessage }}, редактировать можно только SKU.
-          </p>
-
-        <div class="flex flex-col gap-1">
-          <Label for="sku">SKU *</Label>
-          <Input
-            id="sku"
-            v-model="form.sku"
-            placeholder=""
-            class="mt-1"
-            :disabled="!canWrite"
-          />
+      <div class="product-layout">
+        <div class="product-photos">
+          <ProductPhotoGallery :photos="photos" :product-id="productId" />
         </div>
 
-        <div class="flex flex-col gap-1">
-          <Label for="name">Название</Label>
-          <Input
-            id="name"
-            v-model="form.name"
-            placeholder=""
-            class="mt-1"
-            :disabled="!canWrite || isLinked"
-          />
-        </div>
+        <div class="flex flex-col gap-6">
+          <div class="rounded-xl border border-border bg-card p-6 flex flex-col gap-4">
+            <h2 class="text-lg font-bold">Основные данные</h2>
 
-        <div class="flex flex-col gap-1">
-          <Label for="description">Описание</Label>
-          <Textarea
-            id="description"
-            v-model="form.description"
-            placeholder=""
-            :rows="4"
-            class="mt-1"
-            :disabled="!canWrite || isLinked"
-          />
-        </div>
+            <p v-if="isLinked" class="text-sm text-muted-foreground">
+              Данные получены из {{ linkedChannelMessage }}, редактировать можно только SKU.
+            </p>
 
-        <div class="flex flex-col gap-1">
-          <Label>Баркоды товара</Label>
-          <div class="flex flex-col gap-2 mt-1">
-            <div v-if="form.barcodes.length > 0" class="flex flex-col gap-2 mb-2">
-              <div
-                v-for="(barcode, idx) in form.barcodes"
-                :key="idx"
-                class="flex items-center gap-2 p-2 bg-muted rounded-md"
-              >
-                <Badge :variant="getBarcodeVariant(barcode.type)" class="flex-shrink-0">
-                  <span v-if="getBarcodePrefix(barcode.type)" class="font-semibold mr-1">
-                    {{ getBarcodePrefix(barcode.type) }}
-                  </span>{{ barcode.value }}
-                </Badge>
-                <Button
-                  v-if="canWrite && !isLinked"
-                  variant="ghost"
-                  size="icon"
-                  class="size-6 ml-auto"
-                  @click="removeBarcode(idx)"
-                >
-                  <XIcon class="size-3" />
-                </Button>
+            <div class="flex flex-col gap-1">
+              <Label for="sku">SKU *</Label>
+              <Input
+                id="sku"
+                v-model="form.sku"
+                placeholder=""
+                class="mt-1"
+                :disabled="!canWrite"
+              />
+            </div>
+
+            <div class="flex flex-col gap-1">
+              <Label for="name">Название</Label>
+              <Input
+                id="name"
+                v-model="form.name"
+                placeholder=""
+                class="mt-1"
+                :disabled="!canWrite || isLinked"
+              />
+            </div>
+
+            <div class="flex flex-col gap-1">
+              <Label for="description">Описание</Label>
+              <Textarea
+                id="description"
+                v-model="form.description"
+                placeholder=""
+                :rows="4"
+                class="mt-1"
+                :disabled="!canWrite || isLinked"
+              />
+            </div>
+
+            <div class="flex flex-col gap-1">
+              <Label>Баркоды товара</Label>
+              <div class="flex flex-col gap-2 mt-1">
+                <div v-if="form.barcodes.length > 0" class="flex flex-col gap-2 mb-2">
+                  <div
+                    v-for="(barcode, idx) in form.barcodes"
+                    :key="idx"
+                    class="flex items-center gap-2 p-2 bg-muted rounded-md"
+                  >
+                    <Badge :variant="getBarcodeVariant(barcode.type)" class="flex-shrink-0">
+                      <span v-if="getBarcodePrefix(barcode.type)" class="font-semibold mr-1">
+                        {{ getBarcodePrefix(barcode.type) }}
+                      </span>{{ barcode.value }}
+                    </Badge>
+                    <Button
+                      v-if="canWrite && !isLinked"
+                      variant="ghost"
+                      size="icon"
+                      class="size-6 ml-auto"
+                      @click="removeBarcode(idx)"
+                    >
+                      <XIcon class="size-3" />
+                    </Button>
+                  </div>
+                </div>
+                <div v-if="canWrite && !isLinked" class="flex gap-2">
+                  <Input
+                    v-model="newBarcode.value"
+                    placeholder=""
+                    class="flex-1"
+                  />
+                  <Input
+                    v-model="newBarcode.type"
+                    placeholder="Тип (опц.)"
+                    class="w-32"
+                  />
+                  <Button variant="outline" size="sm" @click="addBarcode">
+                    <Plus class="size-4" />
+                  </Button>
+                </div>
               </div>
             </div>
-            <div v-if="canWrite && !isLinked" class="flex gap-2">
-              <Input
-                v-model="newBarcode.value"
-                placeholder=""
-                class="flex-1"
-              />
-              <Input
-                v-model="newBarcode.type"
-                placeholder="Тип (опц.)"
-                class="w-32"
-              />
-              <Button variant="outline" size="sm" @click="addBarcode">
-                <Plus class="size-4" />
+
+            <div class="flex flex-col gap-1">
+              <Label>Габариты упаковки (см, кг)</Label>
+              <div class="flex gap-2 mt-1">
+                <Input
+                  v-model="form.packingUnit.lengthCm"
+                  placeholder="Длина"
+                  type="number"
+                  step="0.01"
+                  :disabled="!canWrite || isLinked"
+                />
+                <Input
+                  v-model="form.packingUnit.widthCm"
+                  placeholder="Ширина"
+                  type="number"
+                  step="0.01"
+                  :disabled="!canWrite || isLinked"
+                />
+                <Input
+                  v-model="form.packingUnit.heightCm"
+                  placeholder="Высота"
+                  type="number"
+                  step="0.01"
+                  :disabled="!canWrite || isLinked"
+                />
+              </div>
+              <div class="flex gap-2 mt-2">
+                <Input
+                  v-model="form.packingUnit.weightKg"
+                  placeholder="Вес"
+                  type="number"
+                  step="0.01"
+                  class="w-full"
+                  :disabled="!canWrite || isLinked"
+                />
+              </div>
+            </div>
+
+            <div v-if="canWrite" class="flex gap-3 pt-2">
+              <Button @click="handleSave" :disabled="isSaving" class="flex-1">
+                <Spinner v-if="isSaving" class="mr-2" />
+                {{ isSaving ? 'Сохранение...' : 'Сохранить' }}
+              </Button>
+              <Button variant="outline" :disabled="isSaving" @click="handleCancel">
+                Отмена
               </Button>
             </div>
+
+            <div v-else class="pt-2">
+              <Button variant="outline" @click="handleCancel">
+                Назад к списку
+              </Button>
+            </div>
+
           </div>
         </div>
-
-        <div class="flex flex-col gap-1">
-          <Label>Габариты упаковки (см, кг)</Label>
-          <div class="flex gap-2 mt-1">
-            <Input
-              v-model="form.packingUnit.lengthCm"
-              placeholder="Длина"
-              type="number"
-              step="0.01"
-              :disabled="!canWrite || isLinked"
-            />
-            <Input
-              v-model="form.packingUnit.widthCm"
-              placeholder="Ширина"
-              type="number"
-              step="0.01"
-              :disabled="!canWrite || isLinked"
-            />
-            <Input
-              v-model="form.packingUnit.heightCm"
-              placeholder="Высота"
-              type="number"
-              step="0.01"
-              :disabled="!canWrite || isLinked"
-            />
-          </div>
-          <div class="flex gap-2 mt-2">
-            <Input
-              v-model="form.packingUnit.weightKg"
-              placeholder="Вес"
-              type="number"
-              step="0.01"
-              class="w-full"
-              :disabled="!canWrite || isLinked"
-            />
-          </div>
-        </div>
-
-        <!-- Кнопки действий -->
-        <div v-if="canWrite" class="flex gap-3 pt-2">
-          <Button @click="handleSave" :disabled="isSaving" class="flex-1">
-            <Spinner v-if="isSaving" class="mr-2" />
-            {{ isSaving ? 'Сохранение...' : 'Сохранить' }}
-          </Button>
-          <Button variant="outline" :disabled="isSaving" @click="handleCancel">
-            Отмена
-          </Button>
-        </div>
-
-        <div v-else class="pt-2">
-          <Button variant="outline" @click="handleCancel">
-            Назад к списку
-          </Button>
-        </div>
-
       </div>
+
+      <ProductBomEditor :product-id="productId" />
     </div>
-  </div>
-  <ProductBomEditor :product-id="productId" />
   </template>
-  </div>
 </template>
 
 <style scoped>
