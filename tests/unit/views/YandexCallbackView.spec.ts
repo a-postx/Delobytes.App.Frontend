@@ -25,6 +25,7 @@ function buildRouter() {
       { path: '/auth/yandex/callback', component: YandexCallbackView },
       { path: '/', component: { template: '<div>Home</div>' } },
       { path: '/setup-tenant', component: { template: '<div>Setup</div>' } },
+      { path: '/invite', name: 'accept-invitation', component: { template: '<div>Invite</div>' } },
       { path: '/login', component: { template: '<div>Login</div>' } },
     ],
   })
@@ -209,6 +210,113 @@ describe('YandexCallbackView', () => {
     expect(localStorage.getItem('accessToken')).toBe('temporary_token_yandex')
     expect(router.currentRoute.value.path).toBe('/setup-tenant')
   })
+
+  // ── Pending invitation beats tenant setup ─────────────────────────────────
+  //
+  // Регрессия: приглашённый пользователь, зашедший через Яндекс ID, попадал
+  // на экран создания собственного пространства вместо вступления в чужое.
+  // Токен приглашения приоритетнее флага requiresTenantSetup.
+
+  it('при отложенном приглашении уходит на /invite, а не на /setup-tenant', async () => {
+    const postMock = vi.fn().mockResolvedValue({
+      accessToken: 'temporary_token_yandex',
+      userId: 'invited-user',
+      tenantId: null,
+      requiresTenantSetup: true,
+    })
+    useApiMock = () => ({ post: postMock })
+
+    sessionStorage.setItem('yandex_oauth_state', 'st')
+    sessionStorage.setItem('pendingInvitationToken', 'invite-token-42')
+    setQueryParams({ code: 'code', state: 'st' })
+
+    const { router } = await mountView()
+    await flushPromises()
+
+    expect(router.currentRoute.value.path).toBe('/invite')
+    expect(router.currentRoute.value.query.token).toBe('invite-token-42')
+  })
+
+  it('приглашение имеет приоритет и когда бэкенд тенант не запрашивает', async () => {
+    const postMock = vi.fn().mockResolvedValue({
+      accessToken: 'jwt',
+      userId: 'existing-user',
+      tenantId: 'tenant-own',
+      requiresTenantSetup: false,
+    })
+    useApiMock = () => ({ post: postMock })
+
+    const fetchMock = vi.fn().mockResolvedValue(undefined)
+    useCurrentUserMock = () => ({ fetchCurrentUser: fetchMock })
+
+    sessionStorage.setItem('yandex_oauth_state', 'st')
+    sessionStorage.setItem('pendingInvitationToken', 'second-tenant-token')
+    setQueryParams({ code: 'code', state: 'st' })
+
+    const { router } = await mountView()
+    await flushPromises()
+
+    // Приглашение во второе пространство не должно теряться на главной.
+    expect(router.currentRoute.value.path).toBe('/invite')
+    expect(router.currentRoute.value.query.token).toBe('second-tenant-token')
+  })
+
+  it('забирает токен приглашения, чтобы он не сработал повторно', async () => {
+    const postMock = vi.fn().mockResolvedValue({
+      accessToken: 'temporary_token_yandex',
+      userId: 'invited-user',
+      requiresTenantSetup: true,
+    })
+    useApiMock = () => ({ post: postMock })
+
+    sessionStorage.setItem('yandex_oauth_state', 'st')
+    sessionStorage.setItem('pendingInvitationToken', 'invite-token-42')
+    setQueryParams({ code: 'code', state: 'st' })
+
+    await mountView()
+    await flushPromises()
+
+    expect(sessionStorage.getItem('pendingInvitationToken')).toBeNull()
+  })
+
+  it('не трогает tenantId в localStorage, когда уходит по приглашению', async () => {
+    const postMock = vi.fn().mockResolvedValue({
+      accessToken: 'temporary_token_yandex',
+      userId: 'invited-user',
+      tenantId: null,
+      requiresTenantSetup: true,
+    })
+    useApiMock = () => ({ post: postMock })
+
+    sessionStorage.setItem('yandex_oauth_state', 'st')
+    sessionStorage.setItem('pendingInvitationToken', 'invite-token-42')
+    setQueryParams({ code: 'code', state: 'st' })
+
+    await mountView()
+    await flushPromises()
+
+    // Пустой tenantId не должен попасть в хранилище: иначе соседние экраны
+    // прочитают его как настоящий и запросят данные несуществующего тенанта.
+    expect(localStorage.getItem('tenantId')).toBeNull()
+  })
+
+  it('без приглашения по-прежнему создаёт тенант, а не уходит на /invite', async () => {
+    const postMock = vi.fn().mockResolvedValue({
+      accessToken: 'temporary_token_yandex',
+      userId: 'user-new',
+      requiresTenantSetup: true,
+    })
+    useApiMock = () => ({ post: postMock })
+
+    sessionStorage.setItem('yandex_oauth_state', 'st')
+    setQueryParams({ code: 'code', state: 'st' })
+
+    const { router } = await mountView()
+    await flushPromises()
+
+    expect(router.currentRoute.value.path).toBe('/setup-tenant')
+  })
+
 
   // ── API error ─────────────────────────────────────────────────────────────
 

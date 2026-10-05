@@ -25,6 +25,7 @@ function buildRouter() {
       { path: '/auth/google/callback', component: GoogleCallbackView },
       { path: '/', component: { template: '<div>Home</div>' } },
       { path: '/setup-tenant', component: { template: '<div>Setup</div>' } },
+      { path: '/invite', name: 'accept-invitation', component: { template: '<div>Invite</div>' } },
       { path: '/login', component: { template: '<div>Login</div>' } },
     ],
   })
@@ -218,6 +219,110 @@ describe('GoogleCallbackView', () => {
     expect(localStorage.getItem('accessToken')).toBe('temporary_token_google')
     expect(router.currentRoute.value.path).toBe('/setup-tenant')
   })
+
+  // ── Pending invitation beats tenant setup ─────────────────────────────────
+  //
+  // Та же регрессия, что и в YandexCallbackView: приглашённый через Google ID
+  // пользователь не должен вместо вступления в чужое пространство получать
+  // предложение создать своё.
+
+  it('при отложенном приглашении уходит на /invite, а не на /setup-tenant', async () => {
+    const postMock = vi.fn().mockResolvedValue({
+      accessToken: 'temporary_token_google',
+      userId: 'invited-user-g',
+      tenantId: null,
+      requiresTenantSetup: true,
+    })
+    useApiMock = () => ({ post: postMock })
+
+    sessionStorage.setItem('google_oauth_state', 'st')
+    sessionStorage.setItem('pendingInvitationToken', 'invite-token-google')
+    setQueryParams({ code: 'code', state: 'st' })
+
+    const { router } = await mountView()
+    await flushPromises()
+
+    expect(router.currentRoute.value.path).toBe('/invite')
+    expect(router.currentRoute.value.query.token).toBe('invite-token-google')
+  })
+
+  it('приглашение имеет приоритет и когда бэкенд тенант не запрашивает', async () => {
+    const postMock = vi.fn().mockResolvedValue({
+      accessToken: 'google-jwt',
+      userId: 'existing-user-g',
+      tenantId: 'tenant-own',
+      requiresTenantSetup: false,
+    })
+    useApiMock = () => ({ post: postMock })
+
+    const fetchMock = vi.fn().mockResolvedValue(undefined)
+    useCurrentUserMock = () => ({ fetchCurrentUser: fetchMock })
+
+    sessionStorage.setItem('google_oauth_state', 'st')
+    sessionStorage.setItem('pendingInvitationToken', 'second-tenant-token-g')
+    setQueryParams({ code: 'code', state: 'st' })
+
+    const { router } = await mountView()
+    await flushPromises()
+
+    expect(router.currentRoute.value.path).toBe('/invite')
+    expect(router.currentRoute.value.query.token).toBe('second-tenant-token-g')
+  })
+
+  it('забирает токен приглашения, чтобы он не сработал повторно', async () => {
+    const postMock = vi.fn().mockResolvedValue({
+      accessToken: 'temporary_token_google',
+      userId: 'invited-user-g',
+      requiresTenantSetup: true,
+    })
+    useApiMock = () => ({ post: postMock })
+
+    sessionStorage.setItem('google_oauth_state', 'st')
+    sessionStorage.setItem('pendingInvitationToken', 'invite-token-google')
+    setQueryParams({ code: 'code', state: 'st' })
+
+    await mountView()
+    await flushPromises()
+
+    expect(sessionStorage.getItem('pendingInvitationToken')).toBeNull()
+  })
+
+  it('не трогает tenantId в localStorage, когда уходит по приглашению', async () => {
+    const postMock = vi.fn().mockResolvedValue({
+      accessToken: 'temporary_token_google',
+      userId: 'invited-user-g',
+      tenantId: null,
+      requiresTenantSetup: true,
+    })
+    useApiMock = () => ({ post: postMock })
+
+    sessionStorage.setItem('google_oauth_state', 'st')
+    sessionStorage.setItem('pendingInvitationToken', 'invite-token-google')
+    setQueryParams({ code: 'code', state: 'st' })
+
+    await mountView()
+    await flushPromises()
+
+    expect(localStorage.getItem('tenantId')).toBeNull()
+  })
+
+  it('без приглашения по-прежнему создаёт тенант, а не уходит на /invite', async () => {
+    const postMock = vi.fn().mockResolvedValue({
+      accessToken: 'temporary_token_google',
+      userId: 'user-new-g',
+      requiresTenantSetup: true,
+    })
+    useApiMock = () => ({ post: postMock })
+
+    sessionStorage.setItem('google_oauth_state', 'st')
+    setQueryParams({ code: 'code', state: 'st' })
+
+    const { router } = await mountView()
+    await flushPromises()
+
+    expect(router.currentRoute.value.path).toBe('/setup-tenant')
+  })
+
 
   // ── API error ─────────────────────────────────────────────────────────────
 

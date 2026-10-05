@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { useApi } from '@/composables/useApi'
 import { useCurrentUser } from '@/composables/useCurrentUser'
 import { consumeRedirect } from '@/utils/redirect'
+import { readPendingInvitationToken } from '@/utils/pendingInvitation'
 import { Spinner } from '@/components/ui/spinner'
 
 const router = useRouter()
@@ -55,6 +56,15 @@ onMounted(async () => {
     // Always save the access token, even for tenant setup flow
     localStorage.setItem('accessToken', response.accessToken)
     localStorage.setItem('userId', response.userId)
+
+    // Отложенное приглашение важнее отсутствия тенанта: пользователь попадёт
+    // в чужое пространство, а не получит предложение создать своё.
+    const pendingInvitationToken: string | null = readPendingInvitationToken()
+
+    if (pendingInvitationToken) {
+      router.replace({ name: 'accept-invitation', query: { token: pendingInvitationToken } })
+      return
+    }
 
     if (response.requiresTenantSetup) {
       router.push('/setup-tenant')

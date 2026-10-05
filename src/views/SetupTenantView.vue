@@ -3,6 +3,7 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useApi, extractErrorMessage } from '@/composables/useApi'
 import { resolveRedirectTarget, DEFAULT_REDIRECT } from '@/utils/redirect'
+import { readPendingInvitationToken } from '@/utils/pendingInvitation'
 import CreateTenantForm from '@/components/auth/CreateTenantForm.vue'
 
 const router = useRouter()
@@ -23,6 +24,16 @@ onMounted(() => {
 
   if (!token) {
     router.push('/login')
+    return
+  }
+
+  // Тот же инвариант, что и в callback'ах, но уже на уровне экрана: если токен
+  // приглашения пережил вход, создавать своё пространство нельзя — пользователя
+  // ждут в чужом.
+  const pendingInvitationToken: string | null = readPendingInvitationToken()
+
+  if (pendingInvitationToken) {
+    router.replace({ name: 'accept-invitation', query: { token: pendingInvitationToken } })
   }
 })
 

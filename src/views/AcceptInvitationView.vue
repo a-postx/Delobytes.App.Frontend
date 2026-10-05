@@ -3,6 +3,7 @@ import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { tenantApi } from '@/services/api'
 import { useCurrentUser } from '@/composables/useCurrentUser'
+import { PENDING_INVITATION_KEY } from '@/utils/pendingInvitation'
 import { Spinner } from '@/components/ui/spinner'
 
 const router = useRouter()
@@ -22,8 +23,9 @@ onMounted(async () => {
   const accessToken: string | null = localStorage.getItem('accessToken')
 
   if (!accessToken) {
-    // Сохраняем токен и отправляем на логин; после входа LoginView подхватит токен
-    sessionStorage.setItem('pendingInvitationToken', token)
+    // Сохраняем токен и отправляем на логин; после входа любой способ
+    // аутентификации подхватит его и вернёт пользователя к приглашению.
+    sessionStorage.setItem(PENDING_INVITATION_KEY, token)
     router.push('/login')
     return
   }

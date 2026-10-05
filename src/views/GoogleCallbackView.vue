@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { useApi } from '@/composables/useApi'
 import { useCurrentUser } from '@/composables/useCurrentUser'
 import { consumeRedirect } from '@/utils/redirect'
+import { readPendingInvitationToken } from '@/utils/pendingInvitation'
 import { Spinner } from '@/components/ui/spinner'
 
 const router = useRouter()
@@ -52,6 +53,14 @@ onMounted(async () => {
     // Always save the access token, even for tenant setup flow
     localStorage.setItem('accessToken', response.accessToken)
     localStorage.setItem('userId', response.userId)
+
+    // То же правило, что и в YandexCallbackView: приглашение важнее создания тенанта.
+    const pendingInvitationToken: string | null = readPendingInvitationToken()
+
+    if (pendingInvitationToken) {
+      router.replace({ name: 'accept-invitation', query: { token: pendingInvitationToken } })
+      return
+    }
 
     if (response.requiresTenantSetup) {
       router.push('/setup-tenant')

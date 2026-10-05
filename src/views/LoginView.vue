@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useApi } from '@/composables/useApi'
 import { useCurrentUser } from '@/composables/useCurrentUser'
 import { resolveRedirectTarget, rememberRedirect } from '@/utils/redirect'
+import { readPendingInvitationToken } from '@/utils/pendingInvitation'
 import LoginForm from '@/components/auth/LoginForm.vue'
 
 const route = useRoute()
@@ -45,11 +46,10 @@ const handleLogin = async () => {
 
       await fetchCurrentUser()
 
-      const pendingToken: string | null = sessionStorage.getItem('pendingInvitationToken')
+      const pendingToken: string | null = readPendingInvitationToken()
       if (pendingToken) {
         // Приглашение важнее исходного адреса: пользователя ждут в пространстве.
-        sessionStorage.removeItem('pendingInvitationToken')
-        router.push(`/invite?token=${pendingToken}`)
+        router.push({ name: 'accept-invitation', query: { token: pendingToken } })
       } else {
         goAfterLogin(resolveRedirectTarget(route.query.redirect))
       }
