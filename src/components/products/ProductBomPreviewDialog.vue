@@ -226,15 +226,6 @@ watch(open, (isOpen) => {
             </ul>
           </div>
 
-          <!-- Напоминание, что состав ещё не сохранён -->
-          <div class="flex items-start gap-3 rounded-lg border border-border bg-muted/30 px-4 py-3 text-sm">
-            <Info class="size-4 mt-0.5 shrink-0 text-muted-foreground" />
-            <p class="text-muted-foreground">
-              Предпросмотр ничего не сохраняет. Чтобы применить изменения, нажмите
-              «Сохранить состав».
-            </p>
-          </div>
-
           <div class="flex justify-end gap-3 mt-4">
             <Button variant="outline" @click="open = false">Закрыть</Button>
           </div>
