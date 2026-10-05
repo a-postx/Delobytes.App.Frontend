@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, computed, watch } from 'vue'
+import { ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Plus, Package, X as XIcon, ArrowLeft } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
