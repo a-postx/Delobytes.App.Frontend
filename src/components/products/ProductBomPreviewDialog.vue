@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
-import { Eye, X, TrendingUp, TrendingDown, Minus, Info } from 'lucide-vue-next'
+import { Eye, X, TrendingUp, TrendingDown, Minus } from 'lucide-vue-next'
 import {
   DialogClose,
   DialogContent,
