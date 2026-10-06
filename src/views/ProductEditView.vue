@@ -389,8 +389,8 @@ onMounted(() => {
 
           </div>
         </div>
-    </div>
-
+      </div>
+	</div>
     <ProductBomEditor :product-id="productId" />
   </div>
 </template>
