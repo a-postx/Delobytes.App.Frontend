@@ -180,12 +180,15 @@ describe('WorkRatesView logic', () => {
   })
 
   describe('restore operation', () => {
-    it('should prepare update payload for restore', () => {
+    it('should prepare update payload for restore including name', () => {
+      const restoreTarget = { name: 'Standard Rate' }
       const updatePayload = {
+        name: restoreTarget.name,
         isActive: true
       }
 
       expect(updatePayload.isActive).toBe(true)
+      expect(updatePayload.name).toBe('Standard Rate')
     })
 
     it('should set isActive to true on restore', () => {
@@ -194,16 +197,145 @@ describe('WorkRatesView logic', () => {
         name: 'Inactive Rate',
         dailyWage: 2000,
         validFrom: '2024-01-01',
+        activeVersion: null as { id: string; dailyWage: number; validFrom: string } | null,
         isActive: false,
         createdAt: '2024-01-01'
       }
 
       const updatePayload = {
+        name: restoreTarget.name,
         isActive: true
       }
 
       expect(updatePayload.isActive).toBe(true)
       expect(restoreTarget.isActive).toBe(false)
+    })
+  })
+
+  describe('activeVersion fallback for table display', () => {
+    const mockItem = {
+      id: '1',
+      name: 'Standard Rate',
+      dailyWage: 1800,
+      validFrom: '2023-01-01',
+      activeVersion: { id: 'v1', dailyWage: 2200, validFrom: '2024-03-01' } as { id: string; dailyWage: number; validFrom: string } | null,
+      isActive: true,
+      createdAt: '2024-01-01'
+    }
+
+    it('should prefer activeVersion.dailyWage over top-level dailyWage', () => {
+      const wage = mockItem.activeVersion?.dailyWage ?? mockItem.dailyWage
+      expect(wage).toBe(2200)
+    })
+
+    it('should prefer activeVersion.validFrom over top-level validFrom', () => {
+      const validFrom = mockItem.activeVersion?.validFrom ?? mockItem.validFrom
+      expect(validFrom).toBe('2024-03-01')
+    })
+
+    it('should fall back to top-level fields when activeVersion is null', () => {
+      const itemWithoutVersion = { ...mockItem, activeVersion: null }
+      const wage = itemWithoutVersion.activeVersion?.dailyWage ?? itemWithoutVersion.dailyWage
+      const validFrom = itemWithoutVersion.activeVersion?.validFrom ?? itemWithoutVersion.validFrom
+      expect(wage).toBe(1800)
+      expect(validFrom).toBe('2023-01-01')
+    })
+  })
+
+  describe('edit form validation', () => {
+    it('should validate required name field for edit', () => {
+      const editForm = { name: '' }
+      const isValid = editForm.name.trim() !== ''
+      expect(isValid).toBe(false)
+    })
+
+    it('should accept valid edit name', () => {
+      const editForm = { name: 'Renamed Rate' }
+      const isValid = editForm.name.trim() !== ''
+      expect(isValid).toBe(true)
+    })
+
+    it('should build update payload with name and isActive', () => {
+      const editTarget = { name: 'Old Name', isActive: true }
+      const editForm = { name: 'New Name' }
+
+      const payload = {
+        name: editForm.name.trim(),
+        isActive: editTarget.isActive
+      }
+
+      expect(payload).toEqual({ name: 'New Name', isActive: true })
+    })
+  })
+
+  describe('new version date validation', () => {
+    const today = (): string => new Date().toISOString().slice(0, 10)
+
+    const isVersionDateInPast = (validFrom: string): boolean => {
+      if (!validFrom) return false
+      return validFrom < today()
+    }
+
+    it('should detect past date', () => {
+      expect(isVersionDateInPast('2020-01-01')).toBe(true)
+    })
+
+    it('should allow today date', () => {
+      expect(isVersionDateInPast(today())).toBe(false)
+    })
+
+    it('should allow future date', () => {
+      expect(isVersionDateInPast('2099-12-31')).toBe(false)
+    })
+
+    it('should handle empty date', () => {
+      expect(isVersionDateInPast('')).toBe(false)
+    })
+  })
+
+  describe('new version form validation and conversion', () => {
+    it('should validate wage greater than zero', () => {
+      const versionForm = { dailyWage: 0, validFrom: '2024-01-01' }
+      const isValid = Number(versionForm.dailyWage) > 0
+      expect(isValid).toBe(false)
+    })
+
+    it('should accept valid wage', () => {
+      const versionForm = { dailyWage: 2500, validFrom: '2024-01-01' }
+      const isValid = Number(versionForm.dailyWage) > 0
+      expect(isValid).toBe(true)
+    })
+
+    it('should validate required validFrom for new version', () => {
+      const versionForm = { dailyWage: 2500, validFrom: '' }
+      const isValid = versionForm.validFrom !== ''
+      expect(isValid).toBe(false)
+    })
+
+    it('should build createVersion payload', () => {
+      const versionForm = { dailyWage: 3000, validFrom: '2024-06-01' }
+
+      const payload = {
+        dailyWage: Number(versionForm.dailyWage),
+        validFrom: versionForm.validFrom
+      }
+
+      expect(payload).toEqual({ dailyWage: 3000, validFrom: '2024-06-01' })
+    })
+
+    it('should pre-fill new version wage from activeVersion', () => {
+      const item = {
+        activeVersion: { id: 'v1', dailyWage: 1900, validFrom: '2024-01-01' } as { id: string; dailyWage: number; validFrom: string } | null
+      }
+
+      const prefilledWage = item.activeVersion?.dailyWage ?? 0
+      expect(prefilledWage).toBe(1900)
+    })
+
+    it('should pre-fill new version wage with zero when there is no activeVersion', () => {
+      const item = { activeVersion: null as { id: string; dailyWage: number; validFrom: string } | null }
+      const prefilledWage = item.activeVersion?.dailyWage ?? 0
+      expect(prefilledWage).toBe(0)
     })
   })
 })

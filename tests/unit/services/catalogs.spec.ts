@@ -12,6 +12,8 @@ import {
   type CostTypeItem,
   type ProductChannelCostItem,
   type WorkRateItem,
+  type UpdateWorkRateRequest,
+  type CreateWorkRateVersionRequest,
   type ProductWorkRateItem
 } from '@/services/api'
 import { axiosInstance } from '@/services/api/client'
@@ -398,6 +400,11 @@ describe('Catalogs API - Stage 7 & 8', () => {
             name: 'Standard Rate',
             dailyWage: 2000,
             validFrom: '2024-01-01',
+            activeVersion: {
+              id: 'v1',
+              dailyWage: 2000,
+              validFrom: '2024-01-01'
+            },
             isActive: true,
             createdAt: '2024-01-01T00:00:00Z'
           }
@@ -411,6 +418,7 @@ describe('Catalogs API - Stage 7 & 8', () => {
       expect(axiosInstance.get).toHaveBeenCalledWith('/api/catalogs/work-rates')
       expect(result).toEqual(mockResponse)
       expect(result.items[0].dailyWage).toBe(2000)
+      expect(result.items[0].activeVersion?.dailyWage).toBe(2000)
     })
 
     it('should create a work rate', async () => {
@@ -419,6 +427,11 @@ describe('Catalogs API - Stage 7 & 8', () => {
         name: 'Premium Rate',
         dailyWage: 3000,
         validFrom: '2024-02-01',
+        activeVersion: {
+          id: 'v2',
+          dailyWage: 3000,
+          validFrom: '2024-02-01'
+        },
         isActive: true,
         createdAt: '2024-02-01T00:00:00Z'
       }
@@ -440,7 +453,8 @@ describe('Catalogs API - Stage 7 & 8', () => {
 
     it('should update a work rate', async () => {
       const rateId = '1'
-      const updatePayload = {
+      const updatePayload: UpdateWorkRateRequest = {
+        name: 'Standard Rate (updated)',
         isActive: false
       }
 
@@ -451,6 +465,23 @@ describe('Catalogs API - Stage 7 & 8', () => {
       expect(axiosInstance.put).toHaveBeenCalledWith(
         `/api/catalogs/work-rates/${rateId}`,
         updatePayload
+      )
+    })
+
+    it('should create a new version for a work rate', async () => {
+      const rateId = '1'
+      const versionPayload: CreateWorkRateVersionRequest = {
+        dailyWage: 2500,
+        validFrom: '2024-09-01'
+      }
+
+      vi.mocked(axiosInstance.post).mockResolvedValue({ data: undefined })
+
+      await workRatesApi.createVersion(rateId, versionPayload)
+
+      expect(axiosInstance.post).toHaveBeenCalledWith(
+        `/api/catalogs/work-rates/${rateId}/versions`,
+        versionPayload
       )
     })
 

@@ -217,11 +217,21 @@ export interface UpsertProductChannelCostRequest {
 
 // ---------- Work Rates ----------
 
+export interface WorkRateVersionDto {
+  id: string
+  dailyWage: number
+  validFrom: string // YYYY-MM-DD
+}
+
 export interface WorkRateItem {
   id: string
   name: string
+  /** Сохранено для обратной совместимости: берётся из activeVersion, 0 при её отсутствии. */
   dailyWage: number
+  /** Сохранено для обратной совместимости: берётся из activeVersion, пусто при её отсутствии. */
   validFrom: string
+  /** Текущая активная версия ставки или null, если активной версии нет. */
+  activeVersion: WorkRateVersionDto | null
   isActive: boolean
   createdAt: string
 }
@@ -237,7 +247,13 @@ export interface CreateWorkRateRequest {
 }
 
 export interface UpdateWorkRateRequest {
+  name: string
   isActive: boolean
+}
+
+export interface CreateWorkRateVersionRequest {
+  dailyWage: number
+  validFrom: string // YYYY-MM-DD
 }
 
 // ---------- Product Work Rates ----------
@@ -429,6 +445,10 @@ export const workRatesApi = {
 
   update: async (id: string, data: UpdateWorkRateRequest): Promise<void> => {
     await axiosInstance.put(`/api/catalogs/work-rates/${id}`, data)
+  },
+
+  createVersion: async (id: string, data: CreateWorkRateVersionRequest): Promise<void> => {
+    await axiosInstance.post(`/api/catalogs/work-rates/${id}/versions`, data)
   },
 
   delete: async (id: string): Promise<void> => {

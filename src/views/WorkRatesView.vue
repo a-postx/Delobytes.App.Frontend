@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
-import { Plus, Trash2, Hammer, Undo2 } from 'lucide-vue-next'
+import { Plus, Trash2, Hammer, Undo2, Pencil, Tag } from 'lucide-vue-next'
 import {
   DialogClose,
   DialogContent,
@@ -39,7 +39,12 @@ import {
 import { StatusFilter } from '@/components/ui/status-filter'
 import { toast } from 'vue-sonner'
 import { workRatesApi } from '@/services/api'
-import type { WorkRateItem, CreateWorkRateRequest, UpdateWorkRateRequest } from '@/services/api'
+import type {
+  WorkRateItem,
+  CreateWorkRateRequest,
+  UpdateWorkRateRequest,
+  CreateWorkRateVersionRequest,
+} from '@/services/api'
 import { useCurrentUser } from '@/composables/useCurrentUser'
 import { useApiCall } from '@/composables/useApiCall'
 import { useTenantMoney } from '@/composables/useTenantMoney'
@@ -50,9 +55,13 @@ const { formatMoney } = useTenantMoney()
 
 const items = ref<WorkRateItem[]>([])
 const createDialogOpen = ref<boolean>(false)
+const editDialogOpen = ref<boolean>(false)
+const priceDialogOpen = ref<boolean>(false)
 const deleteDialogOpen = ref<boolean>(false)
 const restoreDialogOpen = ref<boolean>(false)
 
+const editTarget = ref<WorkRateItem | null>(null)
+const priceTarget = ref<WorkRateItem | null>(null)
 const deleteTarget = ref<WorkRateItem | null>(null)
 const restoreTarget = ref<WorkRateItem | null>(null)
 const isSaving = ref<boolean>(false)
@@ -60,7 +69,13 @@ const isDeleting = ref<boolean>(false)
 
 const statusFilter = ref<'all' | 'active' | 'inactive'>('active')
 
+const today = (): string => new Date().toISOString().slice(0, 10)
+
 const form = ref({ name: '', dailyWage: 0, validFrom: '' })
+
+const editForm = ref({ name: '' })
+
+const versionForm = ref({ dailyWage: 0, validFrom: today() })
 
 const activeCount = computed(() => items.value.filter(i => i.isActive).length)
 const inactiveCount = computed(() => items.value.filter(i => !i.isActive).length)
@@ -76,6 +91,11 @@ const filteredItems = computed(() => {
   if (statusFilter.value === 'all') return items.value
   if (statusFilter.value === 'active') return items.value.filter(i => i.isActive)
   return items.value.filter(i => !i.isActive)
+})
+
+const isVersionDateInPast = computed<boolean>(() => {
+  if (!versionForm.value.validFrom) return false
+  return versionForm.value.validFrom < today()
 })
 
 const formatDate = (d: string): string =>
@@ -94,7 +114,11 @@ const { execute: deleteWorkRate } = useApiCall({
 })
 
 const { execute: updateWorkRate } = useApiCall({
-  fallbackMessage: 'Не удалось восстановить ставку работ',
+  fallbackMessage: 'Не удалось обновить ставку работ',
+})
+
+const { execute: addWorkRateVersion } = useApiCall({
+  fallbackMessage: 'Не удалось добавить новую ставку',
 })
 
 const loadItems = async (): Promise<void> => {
@@ -107,8 +131,23 @@ const loadItems = async (): Promise<void> => {
 onMounted(loadItems)
 
 const openCreate = (): void => {
-  form.value = { name: '', dailyWage: 0, validFrom: new Date().toISOString().slice(0, 10) }
+  form.value = { name: '', dailyWage: 0, validFrom: today() }
   createDialogOpen.value = true
+}
+
+const openEdit = (item: WorkRateItem): void => {
+  editTarget.value = item
+  editForm.value = { name: item.name }
+  editDialogOpen.value = true
+}
+
+const openNewVersion = (item: WorkRateItem): void => {
+  priceTarget.value = item
+  versionForm.value = {
+    dailyWage: item.activeVersion?.dailyWage ?? 0,
+    validFrom: today(),
+  }
+  priceDialogOpen.value = true
 }
 
 const openDelete = (item: WorkRateItem): void => {
@@ -142,6 +181,56 @@ const handleCreate = async (): Promise<void> => {
   }
 }
 
+const handleUpdate = async (): Promise<void> => {
+  if (!editTarget.value) return
+  if (!editForm.value.name.trim()) {
+    toast.error('Введите название')
+    return
+  }
+  isSaving.value = true
+  try {
+    const payload: UpdateWorkRateRequest = {
+      name: editForm.value.name.trim(),
+      isActive: editTarget.value.isActive,
+    }
+    await updateWorkRate(() => workRatesApi.update(editTarget.value!.id, payload))
+    toast.success('Ставка работ обновлена')
+    editDialogOpen.value = false
+    await loadItems()
+  } catch {
+    // Ошибка уже обработана в useApiCall
+  } finally {
+    isSaving.value = false
+  }
+}
+
+const handleCreateVersion = async (): Promise<void> => {
+  if (!priceTarget.value) return
+  if (Number(versionForm.value.dailyWage) <= 0) {
+    toast.error('Укажите ставку больше нуля')
+    return
+  }
+  if (!versionForm.value.validFrom) {
+    toast.error('Укажите дату начала действия')
+    return
+  }
+  isSaving.value = true
+  try {
+    const payload: CreateWorkRateVersionRequest = {
+      dailyWage: Number(versionForm.value.dailyWage),
+      validFrom: versionForm.value.validFrom,
+    }
+    await addWorkRateVersion(() => workRatesApi.createVersion(priceTarget.value!.id, payload))
+    toast.success('Новая ставка добавлена')
+    priceDialogOpen.value = false
+    await loadItems()
+  } catch {
+    // Ошибка уже обработана в useApiCall
+  } finally {
+    isSaving.value = false
+  }
+}
+
 const handleDelete = async (): Promise<void> => {
   if (!deleteTarget.value) return
   isDeleting.value = true
@@ -162,6 +251,7 @@ const handleRestore = async (): Promise<void> => {
   isSaving.value = true
   try {
     const payload: UpdateWorkRateRequest = {
+      name: restoreTarget.value.name,
       isActive: true,
     }
     await updateWorkRate(() => workRatesApi.update(restoreTarget.value!.id, payload))
@@ -241,8 +331,8 @@ const inputClass = 'mt-1'
             class="hover:bg-muted/40 transition-colors"
           >
             <TableCell class="font-medium">{{ item.name }}</TableCell>
-            <TableCell class="text-right tabular-nums">{{ formatMoney(item.dailyWage) }}</TableCell>
-            <TableCell class="tabular-nums text-muted-foreground">{{ item.validFrom }}</TableCell>
+            <TableCell class="text-right tabular-nums">{{ formatMoney(item.activeVersion?.dailyWage ?? item.dailyWage) }}</TableCell>
+            <TableCell class="tabular-nums text-muted-foreground">{{ item.activeVersion?.validFrom ?? item.validFrom }}</TableCell>
             <TableCell>
               <Badge :variant="item.isActive ? 'success' : 'warning'">
                 {{ item.isActive ? 'Активна' : 'Неактивна' }}
@@ -251,6 +341,12 @@ const inputClass = 'mt-1'
             <TableCell class="text-muted-foreground text-sm">{{ formatDate(item.createdAt) }}</TableCell>
             <TableCell v-if="canWrite" class="text-right">
               <div class="flex items-center justify-end gap-1">
+                <Button variant="ghost" size="icon-sm" @click="openEdit(item)" title="Редактировать">
+                  <Pencil class="size-4" />
+                </Button>
+                <Button v-if="item.isActive" variant="ghost" size="icon-sm" @click="openNewVersion(item)" title="Новая ставка">
+                  <Tag class="size-4" />
+                </Button>
                 <button
                   v-if="item.isActive"
                   @click="openDelete(item)"
@@ -312,6 +408,97 @@ const inputClass = 'mt-1'
               <Button @click="handleCreate" :disabled="isSaving" class="flex-1">
                 <Spinner v-if="isSaving" class="size-4 mr-2" />
                 {{ isSaving ? 'Создание...' : 'Создать' }}
+              </Button>
+              <DialogClose as-child>
+                <Button variant="outline" :disabled="isSaving">Отмена</Button>
+              </DialogClose>
+            </div>
+          </div>
+        </DialogContent>
+      </DialogPortal>
+    </DialogRoot>
+
+    <!-- Edit Dialog -->
+    <DialogRoot v-model:open="editDialogOpen">
+      <DialogPortal>
+        <DialogOverlay class="bg-background/80 backdrop-blur-sm fixed inset-0 z-50" />
+        <DialogContent :class="dialogContentClass">
+          <div class="flex items-center justify-between mb-4">
+            <DialogTitle class="text-lg font-semibold">Редактировать ставку работ</DialogTitle>
+            <DialogClose as-child>
+              <button class="p-1 hover:bg-muted rounded-md transition-colors">
+                <X class="size-4" />
+              </button>
+            </DialogClose>
+          </div>
+
+          <DialogDescription class="text-sm text-muted-foreground mb-4">
+            Изменение названия не влияет на действующую дневную ставку — для этого используйте «Новая ставка».
+          </DialogDescription>
+
+          <div class="flex flex-col gap-4">
+            <div :class="fieldClass">
+              <Label for="edit-name">Название</Label>
+              <Input id="edit-name" v-model="editForm.name" placeholder="" :class="inputClass" />
+            </div>
+
+            <div class="flex gap-2 mt-2">
+              <Button @click="handleUpdate" :disabled="isSaving" class="flex-1">
+                <Spinner v-if="isSaving" class="size-4 mr-2" />
+                {{ isSaving ? 'Сохранение...' : 'Сохранить' }}
+              </Button>
+              <DialogClose as-child>
+                <Button variant="outline" :disabled="isSaving">Отмена</Button>
+              </DialogClose>
+            </div>
+          </div>
+        </DialogContent>
+      </DialogPortal>
+    </DialogRoot>
+
+    <!-- New Version Dialog -->
+    <DialogRoot v-model:open="priceDialogOpen">
+      <DialogPortal>
+        <DialogOverlay class="bg-background/80 backdrop-blur-sm fixed inset-0 z-50" />
+        <DialogContent :class="dialogContentClass">
+          <div class="flex items-center justify-between mb-4">
+            <DialogTitle class="text-lg font-semibold">Новая ставка</DialogTitle>
+            <DialogClose as-child>
+              <button class="p-1 hover:bg-muted rounded-md transition-colors">
+                <X class="size-4" />
+              </button>
+            </DialogClose>
+          </div>
+
+          <DialogDescription class="text-sm text-muted-foreground mb-4">
+            Ставка «{{ priceTarget?.name }}»: новая дневная ставка будет действовать с указанной даты, прежняя версия закроется.
+          </DialogDescription>
+
+          <div class="flex flex-col gap-4">
+            <div :class="fieldClass">
+              <Label for="version-wage">Дневная ставка (руб.)</Label>
+              <Input
+                id="version-wage"
+                v-model.number="versionForm.dailyWage"
+                type="number"
+                step="0.01"
+                min="0"
+                :class="inputClass"
+              />
+            </div>
+
+            <div :class="fieldClass">
+              <Label for="version-validFrom">Действует с</Label>
+              <Input id="version-validFrom" v-model="versionForm.validFrom" type="date" :class="inputClass" />
+              <p v-if="isVersionDateInPast" class="text-xs text-amber-600 mt-1">
+                Дата в прошлом изменит стоимость работ в прошлых расчётах
+              </p>
+            </div>
+
+            <div class="flex gap-2 mt-2">
+              <Button @click="handleCreateVersion" :disabled="isSaving" class="flex-1">
+                <Spinner v-if="isSaving" class="size-4 mr-2" />
+                {{ isSaving ? 'Сохранение...' : 'Сохранить' }}
               </Button>
               <DialogClose as-child>
                 <Button variant="outline" :disabled="isSaving">Отмена</Button>
