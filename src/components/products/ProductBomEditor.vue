@@ -670,12 +670,12 @@ const selectClass = 'flex h-9 w-full rounded-md border border-input bg-backgroun
             <span class="text-xs text-muted-foreground">Работа</span>
             <span class="text-base font-semibold tabular-nums">{{ formatMoney(savedCost.laborCost) }}</span>
             <div class="mt-1 pt-2 border-t border-border/60 flex flex-col gap-1">
-              <span class="text-xs text-muted-foreground">Из нормы выработки, состав не влияет</span>
+              <span class="text-xs text-muted-foreground">Из</span>
               <router-link
                 to="/catalogs/product-work-rates"
                 class="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
               >
-                Нормы выработки
+                нормы выработки
                 <ArrowRight class="size-3" />
               </router-link>
             </div>
