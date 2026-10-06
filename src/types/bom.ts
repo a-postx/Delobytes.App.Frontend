@@ -165,8 +165,33 @@ export interface PreviewProductBomCostRequest {
   asOf?: string
 }
 
-/** Ответ предпросмотра: та же структура расчёта, что и у сохранённого состава. */
+/**
+ * Свёрнутая сводка по сохранённому составу на ту же дату, что и черновик.
+ * Намеренно не ProductCostResponse: база сравнения нужна только для сопоставления
+ * с черновиком, а не для построчного отображения, поэтому строки состава в неё не попадают.
+ */
+export interface PreviewProductBomCostBaseline {
+  materialCost: number
+  logisticsCost: number
+  packagingCost: number
+  laborCost: number
+  totalCost: number
+  isComplete: boolean
+}
+
+/** Разница между черновиком и сохранённым составом на одну и ту же дату. */
+export interface PreviewProductBomCostDelta {
+  materialDelta: number
+  logisticsDelta: number
+  packagingDelta: number
+  laborDelta: number
+  totalDelta: number
+}
+
+/** Ответ предпросмотра: расчёт черновика плюс база сравнения и дельта, посчитанные одним запросом. */
 export interface PreviewProductBomCostResponse {
   found: boolean
   preview: ProductCostResponse | null
+  baseline: PreviewProductBomCostBaseline | null
+  delta: PreviewProductBomCostDelta | null
 }

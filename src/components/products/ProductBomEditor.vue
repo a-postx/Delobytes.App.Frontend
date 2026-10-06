@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
+import type { Component, ComputedRef } from 'vue'
 import {
   Boxes,
   Plus,
@@ -8,8 +9,12 @@ import {
   History,
   AlertTriangle,
   RefreshCw,
-  Eye,
   AlertCircle,
+  ArrowRight,
+  Minus,
+  Pencil,
+  TrendingDown,
+  TrendingUp,
 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -28,14 +33,21 @@ import {
 import { toast } from 'vue-sonner'
 import { componentsApi, bomApi, productCostApi, Unit } from '@/services/api'
 import type { ComponentItem } from '@/services/api'
-import type { BomLineItem, ProductCostResponse, ComponentCategory } from '@/types/bom'
+import type {
+  BomLineItem,
+  ProductCostResponse,
+  ComponentCategory,
+  CostWarningDto,
+  PreviewProductBomCostDelta,
+  PreviewProductBomCostLine,
+} from '@/types/bom'
 import { COMPONENT_CATEGORY_LABELS } from '@/types/bom'
 import { useCurrentUser } from '@/composables/useCurrentUser'
 import { useTenantMoney } from '@/composables/useTenantMoney'
 import { useBomChanges } from '@/composables/useBomChanges'
 import { markUnsavedChanges } from '@/composables/useUnsavedChangesGuard'
+import { useBomCostPreview } from '@/composables/useBomCostPreview'
 import ProductCostHistoryDialog from './ProductCostHistoryDialog.vue'
-import ProductBomPreviewDialog from './ProductBomPreviewDialog.vue'
 
 const props = defineProps<{ productId: string }>()
 
@@ -150,11 +162,9 @@ markUnsavedChanges(
   'Есть несохранённые изменения в составе товара. Покинуть страницу без сохранения?',
 )
 
-// ---------- Превью изменений ----------
+// ---------- Черновик состава ----------
 
-const previewDialogOpen = ref<boolean>(false)
-
-const draftLines = computed(() =>
+const draftLines = computed<PreviewProductBomCostLine[]>(() =>
   rows.value.map(row => ({ componentId: row.componentId, quantity: Number(row.quantity) })),
 )
 
@@ -183,14 +193,6 @@ const validateDraft = (): boolean => {
   return true
 }
 
-const openPreview = (): void => {
-  if (!validateDraft()) {
-    return
-  }
-
-  previewDialogOpen.value = true
-}
-
 // ---------- Сохранение ----------
 
 const handleSaveBom = async (): Promise<void> => {
@@ -204,6 +206,7 @@ const handleSaveBom = async (): Promise<void> => {
     toast.success('Состав товара сохранён')
     await loadBom()
     await loadCost()
+    resetPreview()
   } catch {
     toast.error('Не удалось сохранить состав товара')
   } finally {
@@ -235,6 +238,92 @@ const loadCost = async (): Promise<void> => {
 watch(asOfDate, () => {
   loadCost()
 })
+
+// ---------- Живой предпросмотр ----------
+
+/**
+ * Передаём черновик только при реальных правках: иначе каждая загрузка состава с сервера
+ * запускала бы лишний расчёт с тем же составом.
+ */
+const previewDraftLines = computed<PreviewProductBomCostLine[] | null>(() =>
+  hasUnsavedChanges.value ? draftLines.value : null,
+)
+
+const {
+  baseline: previewBaseline,
+  preview,
+  delta,
+  isPreviewLoading,
+  hasPreview,
+  reset: resetPreview,
+} = useBomCostPreview(
+  computed<string>(() => props.productId),
+  asOfDate,
+  previewDraftLines,
+)
+
+type CostTotals = Pick<ProductCostResponse, 'materialCost' | 'logisticsCost' | 'packagingCost' | 'laborCost' | 'totalCost'>
+
+interface IncompleteSource {
+  isComplete: boolean
+  warnings: CostWarningDto[]
+}
+
+const isDraftPreviewActive: ComputedRef<boolean> = computed<boolean>(
+  () => hasUnsavedChanges.value && hasPreview.value,
+)
+
+const draftCost: ComputedRef<ProductCostResponse | null> = computed<ProductCostResponse | null>(
+  () => (isDraftPreviewActive.value ? preview.value : null),
+)
+
+const draftDelta: ComputedRef<PreviewProductBomCostDelta | null> = computed<PreviewProductBomCostDelta | null>(
+  () => (isDraftPreviewActive.value ? delta.value : null),
+)
+
+/**
+ * «Было» при несохранённых правках берём из базы сравнения, посчитанной на сервере в том же
+ * снимке, что и дельта. `cost` загружен при открытии и мог устареть, если состав меняли параллельно,
+ * тогда разница «было → стало» не сходилась бы.
+ */
+const savedCost: ComputedRef<CostTotals | null> = computed<CostTotals | null>(
+  () => (hasUnsavedChanges.value && previewBaseline.value ? previewBaseline.value : cost.value),
+)
+
+const incompleteSource: ComputedRef<IncompleteSource | null> = computed<IncompleteSource | null>(() => {
+  if (isDraftPreviewActive.value && draftCost.value) {
+    return { isComplete: draftCost.value.isComplete, warnings: draftCost.value.warnings }
+  }
+  if (cost.value) {
+    return { isComplete: cost.value.isComplete, warnings: cost.value.warnings }
+  }
+  return null
+})
+
+/** Округление до копеек: без него погрешность float даст «+0,00 ₽» с жёлтым бейджем. */
+const roundMoney = (value: number): number => Math.round(value * 100) / 100
+
+interface DeltaPresentation {
+  variant: 'success' | 'warning' | 'secondary'
+  icon: Component
+}
+
+/** Рост себестоимости — предупреждение, снижение — успех, без изменений — нейтральный. */
+const deltaPresentation = (value: number): DeltaPresentation => {
+  const rounded: number = roundMoney(value)
+  if (rounded < 0) {
+    return { variant: 'success', icon: TrendingDown }
+  }
+  if (rounded > 0) {
+    return { variant: 'warning', icon: TrendingUp }
+  }
+  return { variant: 'secondary', icon: Minus }
+}
+
+const deltaText = (value: number): string => {
+  const rounded: number = roundMoney(value)
+  return `${rounded > 0 ? '+' : ''}${formatMoney(rounded)}`
+}
 
 onMounted(async () => {
   isLoadingBom.value = true
@@ -279,16 +368,6 @@ const selectClass = 'flex h-9 w-full rounded-md border border-input bg-backgroun
       <span class="text-sm font-medium text-foreground flex-1 min-w-0">
         Есть несохранённые изменения в составе товара
       </span>
-      <Button
-        v-if="canWrite"
-        variant="outline"
-        size="sm"
-        class="gap-2 shrink-0"
-        @click="openPreview"
-      >
-        <Eye class="size-4" />
-        Предпросмотр себестоимости
-      </Button>
     </div>
 
     <div class="border-t border-border" />
@@ -422,9 +501,9 @@ const selectClass = 'flex h-9 w-full rounded-md border border-input bg-backgroun
       </div>
 
       <template v-else-if="cost">
-        <!-- Предупреждение о неполном расчёте -->
+        <!-- Предупреждение о неполном расчёте: при черновике берём его, иначе сохранённый состав -->
         <div
-          v-if="!cost.isComplete"
+          v-if="incompleteSource && !incompleteSource.isComplete"
           class="flex items-start gap-3 rounded-lg border border-warning/30 bg-warning/5 px-4 py-3 text-sm"
         >
           <AlertTriangle class="size-4 mt-0.5 shrink-0 text-warning" />
@@ -433,32 +512,122 @@ const selectClass = 'flex h-9 w-full rounded-md border border-input bg-backgroun
               Расчёт себестоимости неполный — показана сумма по доступным данным
             </p>
             <ul class="list-disc pl-4 text-muted-foreground">
-              <li v-for="(warning, idx) in cost.warnings" :key="idx">{{ warning.message }}</li>
+              <li v-for="(warning, idx) in incompleteSource.warnings" :key="idx">{{ warning.message }}</li>
             </ul>
           </div>
         </div>
 
-        <!-- Карточки по статьям затрат -->
-        <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
+        <!-- Пояснение: без него значение «после» легко принять за уже сохранённое -->
+        <div v-if="hasUnsavedChanges" class="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+          <Badge variant="secondary" class="gap-1">
+            <Pencil class="size-3" />
+            Черновик
+          </Badge>
+          <span>Значения после «→» предварительные: они зафиксируются после сохранения состава</span>
+        </div>
+
+        <!-- Карточки по статьям затрат: «было» видно всегда, «стало» — только при несохранённом черновике -->
+        <div v-if="savedCost" class="grid grid-cols-2 md:grid-cols-5 gap-3">
+          <!-- Материалы -->
           <div class="rounded-lg border border-border bg-background p-3 flex flex-col gap-1">
             <span class="text-xs text-muted-foreground">Материалы</span>
-            <span class="text-base font-semibold tabular-nums">{{ formatMoney(cost.materialCost) }}</span>
+            <span class="text-base font-semibold tabular-nums">{{ formatMoney(savedCost.materialCost) }}</span>
+            <div v-if="hasUnsavedChanges" class="mt-1 pt-2 border-t border-border/60">
+              <span v-if="isPreviewLoading" class="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Spinner class="size-3" />
+                Пересчёт…
+              </span>
+              <div v-else-if="draftCost && draftDelta" class="flex flex-wrap items-center gap-1.5 text-xs">
+                <ArrowRight class="size-3 text-muted-foreground" />
+                <span class="font-medium tabular-nums">{{ formatMoney(draftCost.materialCost) }}</span>
+                <Badge :variant="deltaPresentation(draftDelta.materialDelta).variant" class="gap-1">
+                  <component :is="deltaPresentation(draftDelta.materialDelta).icon" class="size-3" />
+                  {{ deltaText(draftDelta.materialDelta) }}
+                </Badge>
+              </div>
+              <span v-else class="text-xs text-muted-foreground">Расчёт недоступен — проверьте строки состава</span>
+            </div>
           </div>
+          <!-- Логистика -->
           <div class="rounded-lg border border-border bg-background p-3 flex flex-col gap-1">
             <span class="text-xs text-muted-foreground">Логистика</span>
-            <span class="text-base font-semibold tabular-nums">{{ formatMoney(cost.logisticsCost) }}</span>
+            <span class="text-base font-semibold tabular-nums">{{ formatMoney(savedCost.logisticsCost) }}</span>
+            <div v-if="hasUnsavedChanges" class="mt-1 pt-2 border-t border-border/60">
+              <span v-if="isPreviewLoading" class="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Spinner class="size-3" />
+                Пересчёт…
+              </span>
+              <div v-else-if="draftCost && draftDelta" class="flex flex-wrap items-center gap-1.5 text-xs">
+                <ArrowRight class="size-3 text-muted-foreground" />
+                <span class="font-medium tabular-nums">{{ formatMoney(draftCost.logisticsCost) }}</span>
+                <Badge :variant="deltaPresentation(draftDelta.logisticsDelta).variant" class="gap-1">
+                  <component :is="deltaPresentation(draftDelta.logisticsDelta).icon" class="size-3" />
+                  {{ deltaText(draftDelta.logisticsDelta) }}
+                </Badge>
+              </div>
+              <span v-else class="text-xs text-muted-foreground">Расчёт недоступен — проверьте строки состава</span>
+            </div>
           </div>
+          <!-- Упаковка -->
           <div class="rounded-lg border border-border bg-background p-3 flex flex-col gap-1">
             <span class="text-xs text-muted-foreground">Упаковка</span>
-            <span class="text-base font-semibold tabular-nums">{{ formatMoney(cost.packagingCost) }}</span>
+            <span class="text-base font-semibold tabular-nums">{{ formatMoney(savedCost.packagingCost) }}</span>
+            <div v-if="hasUnsavedChanges" class="mt-1 pt-2 border-t border-border/60">
+              <span v-if="isPreviewLoading" class="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Spinner class="size-3" />
+                Пересчёт…
+              </span>
+              <div v-else-if="draftCost && draftDelta" class="flex flex-wrap items-center gap-1.5 text-xs">
+                <ArrowRight class="size-3 text-muted-foreground" />
+                <span class="font-medium tabular-nums">{{ formatMoney(draftCost.packagingCost) }}</span>
+                <Badge :variant="deltaPresentation(draftDelta.packagingDelta).variant" class="gap-1">
+                  <component :is="deltaPresentation(draftDelta.packagingDelta).icon" class="size-3" />
+                  {{ deltaText(draftDelta.packagingDelta) }}
+                </Badge>
+              </div>
+              <span v-else class="text-xs text-muted-foreground">Расчёт недоступен — проверьте строки состава</span>
+            </div>
           </div>
+          <!-- Работа: дельта не показываем, состав на неё не влияет -->
           <div class="rounded-lg border border-border bg-background p-3 flex flex-col gap-1">
             <span class="text-xs text-muted-foreground">Работа</span>
-            <span class="text-base font-semibold tabular-nums">{{ formatMoney(cost.laborCost) }}</span>
+            <span class="text-base font-semibold tabular-nums">{{ formatMoney(savedCost.laborCost) }}</span>
+            <div class="mt-1 pt-2 border-t border-border/60 flex flex-col gap-1">
+              <span class="text-xs text-muted-foreground">Из нормы выработки, состав не влияет</span>
+              <router-link
+                to="/catalogs/product-work-rates"
+                class="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+              >
+                Нормы выработки
+                <ArrowRight class="size-3" />
+              </router-link>
+            </div>
           </div>
-          <div class="rounded-lg border border-primary/40 bg-primary/5 p-3 flex flex-col gap-1">
+
+          <!-- Итого -->
+          <div
+            class="rounded-lg border p-3 flex flex-col gap-1"
+            :class="hasUnsavedChanges
+              ? 'border-primary bg-primary/10 ring-1 ring-primary/30'
+              : 'border-primary/40 bg-primary/5'"
+          >
             <span class="text-xs text-muted-foreground">Итого</span>
-            <span class="text-base font-bold tabular-nums text-primary">{{ formatMoney(cost.totalCost) }}</span>
+            <span class="text-base font-bold tabular-nums text-primary">{{ formatMoney(savedCost.totalCost) }}</span>
+            <div v-if="hasUnsavedChanges" class="mt-1 pt-2 border-t border-primary/20">
+              <span v-if="isPreviewLoading" class="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Spinner class="size-3" />
+                Пересчёт…
+              </span>
+              <div v-else-if="draftCost && draftDelta" class="flex flex-wrap items-center gap-1.5 text-xs">
+                <ArrowRight class="size-3 text-muted-foreground" />
+                <span class="font-semibold tabular-nums">{{ formatMoney(draftCost.totalCost) }}</span>
+                <Badge :variant="deltaPresentation(draftDelta.totalDelta).variant" class="gap-1">
+                  <component :is="deltaPresentation(draftDelta.totalDelta).icon" class="size-3" />
+                  {{ deltaText(draftDelta.totalDelta) }}
+                </Badge>
+              </div>
+              <span v-else class="text-xs text-muted-foreground">Расчёт недоступен — проверьте строки состава</span>
+            </div>
           </div>
         </div>
 
@@ -493,11 +662,5 @@ const selectClass = 'flex h-9 w-full rounded-md border border-input bg-backgroun
     </div>
 
     <ProductCostHistoryDialog v-model:open="historyDialogOpen" :product-id="productId" />
-    <ProductBomPreviewDialog
-      v-model:open="previewDialogOpen"
-      :product-id="productId"
-      :draft-lines="draftLines"
-      :as-of-date="asOfDate"
-    />
   </div>
 </template>

@@ -93,15 +93,21 @@ export const productCostApi = {
   /**
    * Расчёт себестоимости по несохранённому черновику состава.
    * Бэкенд считает по переданным строкам и ничего не записывает, поэтому
-   * состав товара в БД после вызова не меняется.
+   * состав товара в БД после вызова не меняется. Ответ также содержит базу
+   * сравнения (сохранённый состав) и дельту — расчёт идёт одним запросом.
+   *
+   * signal нужен живому предпросмотру (useBomCostPreview), чтобы отменять
+   * устаревший запрос при следующем нажатии клавиши; без него поведение не меняется.
    */
   previewCost: async (
     productId: string,
     data: PreviewProductBomCostRequest,
+    signal?: AbortSignal,
   ): Promise<PreviewProductBomCostResponse> => {
     const response = await axiosInstance.post<PreviewProductBomCostResponse>(
       `/api/catalogs/product-costs/${productId}/preview`,
       data,
+      { signal },
     )
     return response.data
   },

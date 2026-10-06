@@ -34,6 +34,8 @@ export type {
   PreviewProductBomCostLine,
   PreviewProductBomCostRequest,
   PreviewProductBomCostResponse,
+  PreviewProductBomCostBaseline,
+  PreviewProductBomCostDelta,
 } from '@/types/bom'
 export type {
   ChannelItem,
