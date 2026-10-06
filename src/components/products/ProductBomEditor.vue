@@ -112,14 +112,18 @@ const availableComponentsFor = (row: EditableBomRow): ComponentItem[] => {
   return activeComponents.value.filter(c => !usedElsewhere.has(c.id) || c.id === row.componentId)
 }
 
-const loadBom = async (): Promise<void> => {
-  const resp = await bomApi.getByProduct(props.productId)
-  serverLines.value = resp.items
-  rows.value = resp.items.map(line => ({
+/** Строки API → строки редактора. Общий маппинг для загрузки состава и отмены правок. */
+const toEditableRows = (lines: BomLineItem[]): EditableBomRow[] =>
+  lines.map(line => ({
     key: line.id,
     componentId: line.componentId,
     quantity: line.quantity,
   }))
+
+const loadBom = async (): Promise<void> => {
+  const resp = await bomApi.getByProduct(props.productId)
+  serverLines.value = resp.items
+  rows.value = toEditableRows(resp.items)
 }
 
 const loadComponents = async (): Promise<void> => {
@@ -137,8 +141,50 @@ const addRow = (): void => {
   })
 }
 
+/**
+ * Снимок удалённой строки. Позицию берём до удаления: из таблицы строку уже не восстановить.
+ * Отдельного состояния в компоненте нет — снимок живёт в замыкании toast, который его показывает.
+ */
+interface RemovedBomRow {
+  row: EditableBomRow
+  index: number
+}
+
 const removeRow = (key: string): void => {
+  const index: number = rows.value.findIndex(r => r.key === key)
+  if (index === -1) {
+    return
+  }
+
+  // Копия строки, а не ссылка: исходный объект после удаления остаётся только здесь.
+  const removed: RemovedBomRow = { row: { ...rows.value[index] }, index }
+  const name: string | undefined = componentDisplay(removed.row.componentId)?.name
+
   rows.value = rows.value.filter(r => r.key !== key)
+
+  toast(
+    name ? `Компонент «${name}» удалён из состава` : 'Компонент удалён из состава',
+    {
+      // 8 секунд вместо стандартных 4: отмена удаления — осознанное действие,
+      // за это время пользователь успевает заметить пропажу строки и вернуть её.
+      duration: 8000,
+      action: {
+        label: 'Отменить',
+        onClick: (): void => restoreRow(removed),
+      },
+    },
+  )
+}
+
+/** Возврат удалённой строки на прежнее место с прежним количеством. */
+const restoreRow = (removed: RemovedBomRow): void => {
+  if (rows.value.some(r => r.key === removed.row.key)) {
+    return
+  }
+
+  const restored: EditableBomRow[] = [...rows.value]
+  restored.splice(removed.index, 0, { ...removed.row })
+  rows.value = restored
 }
 
 // ---------- Отслеживание несохранённых изменений ----------
@@ -191,6 +237,17 @@ const validateDraft = (): boolean => {
   }
 
   return true
+}
+
+/**
+ * Отмена правок: строки возвращаются к сохранённому составу.
+ * Массив заменяется целиком, а не правится на месте — иначе useBomChanges не увидит
+ * новое значение и секция останется помеченной как изменённая.
+ */
+const resetDraftChanges = (): void => {
+  rows.value = toEditableRows(serverLines.value)
+  resetPreview()
+  toast.info('Правки отменены — состав возвращён к сохранённому')
 }
 
 // ---------- Сохранение ----------
@@ -359,15 +416,39 @@ const selectClass = 'flex h-9 w-full rounded-md border border-input bg-backgroun
       </Button>
     </div>
 
-    <!-- Индикатор несохранённых изменений -->
+    <!-- Панель несохранённых изменений: единственная точка сохранения секции -->
     <div
       v-if="hasUnsavedChanges"
-      class="flex flex-wrap items-center gap-3 rounded-lg border border-warning/40 bg-warning/10 px-4 py-3"
+      class="flex flex-wrap items-center gap-x-4 gap-y-3 rounded-lg border border-warning/40 bg-warning/10 px-4 py-3"
     >
       <AlertCircle class="size-5 text-warning shrink-0" />
-      <span class="text-sm font-medium text-foreground flex-1 min-w-0">
-        Есть несохранённые изменения в составе товара
-      </span>
+      <div class="flex flex-col gap-1 flex-1 min-w-0">
+        <span class="text-sm font-medium text-foreground">
+          Есть несохранённые изменения в составе товара
+        </span>
+        <!-- Что произойдёт после сохранения: ответ заранее, до нажатия кнопки -->
+        <span v-if="isPreviewLoading" class="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+          <Spinner class="size-3" />
+          Пересчёт итога…
+        </span>
+        <span v-else-if="savedCost && draftCost && draftDelta" class="flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
+          Итого: <span class="tabular-nums">{{ formatMoney(savedCost.totalCost) }}</span>
+          <ArrowRight class="size-3 shrink-0" />
+          <span class="font-medium tabular-nums text-foreground">{{ formatMoney(draftCost.totalCost) }}</span>
+          <Badge :variant="deltaPresentation(draftDelta.totalDelta).variant">
+            {{ deltaText(draftDelta.totalDelta) }}
+          </Badge>
+        </span>
+      </div>
+      <div v-if="canWrite" class="flex items-center gap-2 shrink-0">
+        <Button variant="outline" size="sm" :disabled="isSavingBom" @click="resetDraftChanges">
+          Отменить правки
+        </Button>
+        <Button size="sm" class="gap-2" :disabled="isSavingBom" @click="handleSaveBom">
+          <Spinner v-if="isSavingBom" class="size-4" />
+          Сохранить состав
+        </Button>
+      </div>
     </div>
 
     <div class="border-t border-border" />
@@ -457,7 +538,7 @@ const selectClass = 'flex h-9 w-full rounded-md border border-input bg-backgroun
         </Table>
       </div>
 
-      <div v-if="canWrite" class="flex items-center justify-between gap-3">
+      <div v-if="canWrite" class="flex flex-wrap items-center gap-3">
         <Button
           variant="outline"
           size="sm"
@@ -467,10 +548,6 @@ const selectClass = 'flex h-9 w-full rounded-md border border-input bg-backgroun
         >
           <Plus class="size-4" />
           Добавить компонент
-        </Button>
-        <Button size="sm" class="gap-2" :disabled="isSavingBom || !hasUnsavedChanges" @click="handleSaveBom">
-          <Spinner v-if="isSavingBom" class="size-4" />
-          Сохранить состав
         </Button>
       </div>
       <p v-if="canWrite && activeComponents.length === 0" class="text-xs text-muted-foreground">
