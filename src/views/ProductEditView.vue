@@ -390,8 +390,8 @@ onMounted(() => {
           </div>
         </div>
       </div>
+	  <ProductBomEditor :product-id="productId" />
 	</div>
-    <ProductBomEditor :product-id="productId" />
   </div>
 </template>
 
