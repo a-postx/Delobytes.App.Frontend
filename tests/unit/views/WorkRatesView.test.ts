@@ -230,11 +230,21 @@ describe('WorkRatesView', () => {
           Label: defineComponent({ template: '<label><slot /></label>' }),
           Spinner: defineComponent({ template: '<span>Loading...</span>' }),
           Skeleton: defineComponent({ template: '<div>Skeleton</div>' }),
-          StatusFilter: defineComponent({ template: '<div><slot /></div>' }),
+          // ИЗМЕНЕНО: управляемый стаб — эмитит update:modelValue, иначе фильтр не переключить из теста.
+          StatusFilter: defineComponent({
+            props: ['modelValue', 'options'],
+            emits: ['update:modelValue'],
+            template:
+              '<div><button v-for="option in options" :key="option.value" :data-filter-value="option.value" @click="$emit(\'update:modelValue\', option.value)">{{ option.label }}</button></div>',
+          }),
           'Icon-Hammer': defineComponent({ template: '<span>Icon</span>' }),
         },
       },
     })
+    await flushPromises()
+
+    // ИЗМЕНЕНО: статус-фильтр по умолчанию «Активные», поэтому неактивная строка ещё не отрисована.
+    await wrapper.find('[data-filter-value="all"]').trigger('click')
     await flushPromises()
 
     const editButtons = wrapper.findAll('[title="Редактировать"]')
@@ -352,6 +362,15 @@ describe('WorkRatesView', () => {
           Skeleton: defineComponent({ template: '<div>Skeleton</div>' }),
           StatusFilter: defineComponent({ template: '<div><slot /></div>' }),
           'Icon-Hammer': defineComponent({ template: '<span>Icon</span>' }),
+          // ИЗМЕНЕНО: стабы диалогов отсутствовали — reka-ui телепортирует содержимое в body,
+          // поэтому #version-wage не находился.
+          DialogRoot: defineComponent({ props: ['open'], emits: ['update:open'], template: '<div v-if="open"><slot /></div>' }),
+          DialogPortal: defineComponent({ template: '<div><slot /></div>' }),
+          DialogOverlay: defineComponent({ template: '<div />' }),
+          DialogContent: defineComponent({ template: '<div><slot /></div>' }),
+          DialogTitle: defineComponent({ template: '<h2><slot /></h2>' }),
+          DialogDescription: defineComponent({ template: '<p><slot /></p>' }),
+          DialogClose: defineComponent({ template: '<button type="button"><slot /></button>' }),
         },
       },
     })
