@@ -175,7 +175,25 @@ describe('ProductBomEditor — отмена удаления строки', () =
 
     expect(tableRows(wrapper)).toHaveLength(3)
     expect(quantities(wrapper)).toEqual(['2', '5', '1'])
-    // Строка снова в черновике — состав отличается от сохранённого, требуется сохранение
+    // Удаление было единственной правкой, поэтому отмена возвращает черновик в исходное
+    // состояние: состав снова совпадает с сохранённым и сохранять нечего — панель скрыта
+    expect(wrapper.text()).not.toContain('Есть несохранённые изменения в составе товара')
+    expect(bomApi.upsert).not.toHaveBeenCalled()
+  })
+
+  it('после отмены удаления прочие правки по-прежнему требуют сохранения', async () => {
+    const wrapper = await mountEditor()
+
+    // Правка количества до удаления: отмена возвращает строку, но состав всё ещё
+    // отличается от сохранённого, поэтому панель сохранения остаётся на месте
+    await tableRows(wrapper)[0].find('input[type="number"]').setValue('7')
+    await removeSecondRow(wrapper)
+
+    const [, options] = toastFn.mock.calls[0] as unknown as [string, { action: { onClick: () => void } }]
+    options.action.onClick()
+    await flushPromises()
+
+    expect(quantities(wrapper)).toEqual(['7', '5', '1'])
     expect(wrapper.text()).toContain('Есть несохранённые изменения в составе товара')
     expect(bomApi.upsert).not.toHaveBeenCalled()
   })
