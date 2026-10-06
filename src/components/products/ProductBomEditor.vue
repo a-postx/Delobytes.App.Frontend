@@ -669,13 +669,12 @@ const selectClass = 'flex h-9 w-full rounded-md border border-input bg-backgroun
           <div class="rounded-lg border border-border bg-background p-3 flex flex-col gap-1">
             <span class="text-xs text-muted-foreground">Работа</span>
             <span class="text-base font-semibold tabular-nums">{{ formatMoney(savedCost.laborCost) }}</span>
-            <div class="mt-1 pt-2 border-t border-border/60 flex flex-col gap-1">
+            <div class="mt-1 pt-2 border-t border-border/60 flex flex-row items-center gap-1">
               <span class="text-xs text-muted-foreground">Из</span>
               <router-link
                 to="/catalogs/product-work-rates"
                 class="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
-              >
-                нормы выработки
+              > нормы выработки
                 <ArrowRight class="size-3" />
               </router-link>
             </div>
