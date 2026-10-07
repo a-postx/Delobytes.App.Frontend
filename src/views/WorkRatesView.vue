@@ -433,7 +433,7 @@ const inputClass = 'mt-1'
           </div>
 
           <DialogDescription class="text-sm text-muted-foreground mb-4">
-            Изменение названия не влияет на действующую дневную ставку — для этого используйте «Новая ставка».
+            Укажите новое название.
           </DialogDescription>
 
           <div class="flex flex-col gap-4">
