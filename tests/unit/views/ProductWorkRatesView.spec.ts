@@ -91,4 +91,75 @@ describe('ProductWorkRatesView form validation', () => {
       expect(label).toBe('unknown-...')
     })
   })
+
+  /**
+   * Логика диалога "Изменить" (UpdateProductWorkRate): норма — целое положительное число,
+   * дата обязательна и должна быть строго позже дат всех остальных версий этого же товара.
+   * Другие версии берутся из уже загруженного списка items, без дополнительного запроса.
+   */
+  describe('edit dialog validation', () => {
+    interface EditFormState {
+      workRateId: string
+      assemblyRatePerDay: number
+      validFrom: string
+    }
+
+    const isPositiveInteger = (value: number): boolean => Number.isInteger(value) && value > 0
+
+    const mockItems = [
+      { id: 'rate-1', productId: 'product-1', workRateId: 'wr-1', assemblyRatePerDay: 100, validFrom: '2024-01-01', isActive: false, createdAt: '2024-01-01' },
+      { id: 'rate-2', productId: 'product-1', workRateId: 'wr-1', assemblyRatePerDay: 120, validFrom: '2024-02-01', isActive: true, createdAt: '2024-02-01' },
+      { id: 'rate-3', productId: 'product-2', workRateId: 'wr-2', assemblyRatePerDay: 80, validFrom: '2024-01-15', isActive: true, createdAt: '2024-01-15' },
+    ]
+
+    const otherVersionsOf = (productId: string, excludeId: string | null): typeof mockItems =>
+      mockItems.filter(i => i.productId === productId && i.id !== excludeId)
+
+    const validateEdit = (editTargetId: string, productId: string, form: EditFormState): string | null => {
+      if (!form.workRateId) return 'Выберите ставку работы'
+      if (!isPositiveInteger(form.assemblyRatePerDay)) return 'Укажите количество единиц в день целым числом больше нуля'
+      if (!form.validFrom) return 'Укажите дату начала действия'
+      const others = otherVersionsOf(productId, editTargetId)
+      const isNotLatest = others.some(o => form.validFrom <= o.validFrom)
+      if (isNotLatest) return 'Дата начала действия должна быть позже даты всех остальных версий этого товара'
+      return null
+    }
+
+    it('rejects a non-positive assembly rate', () => {
+      const result = validateEdit('rate-2', 'product-1', { workRateId: 'wr-1', assemblyRatePerDay: 0, validFrom: '2024-03-01' })
+      expect(result).toBe('Укажите количество единиц в день целым числом больше нуля')
+    })
+
+    it('rejects a fractional assembly rate', () => {
+      const result = validateEdit('rate-2', 'product-1', { workRateId: 'wr-1', assemblyRatePerDay: 100.5, validFrom: '2024-03-01' })
+      expect(result).toBe('Укажите количество единиц в день целым числом больше нуля')
+    })
+
+    it('rejects an empty validFrom date', () => {
+      const result = validateEdit('rate-2', 'product-1', { workRateId: 'wr-1', assemblyRatePerDay: 100, validFrom: '' })
+      expect(result).toBe('Укажите дату начала действия')
+    })
+
+    it('rejects a date that is not later than another version of the same product (earlier date)', () => {
+      // rate-1 (2024-01-01 версия) правится датой раньше, чем активная rate-2 (2024-02-01)
+      const result = validateEdit('rate-1', 'product-1', { workRateId: 'wr-1', assemblyRatePerDay: 100, validFrom: '2024-01-15' })
+      expect(result).toBe('Дата начала действия должна быть позже даты всех остальных версий этого товара')
+    })
+
+    it('rejects a duplicate validFrom date shared with another version of the same product', () => {
+      const result = validateEdit('rate-1', 'product-1', { workRateId: 'wr-1', assemblyRatePerDay: 100, validFrom: '2024-02-01' })
+      expect(result).toBe('Дата начала действия должна быть позже даты всех остальных версий этого товара')
+    })
+
+    it('accepts a date strictly later than every other version of the same product', () => {
+      const result = validateEdit('rate-2', 'product-1', { workRateId: 'wr-1', assemblyRatePerDay: 150, validFrom: '2024-03-01' })
+      expect(result).toBeNull()
+    })
+
+    it('ignores versions belonging to a different product', () => {
+      // product-2 имеет версию от 2024-01-15, но она не должна блокировать правку версии product-1
+      const result = validateEdit('rate-2', 'product-1', { workRateId: 'wr-1', assemblyRatePerDay: 150, validFrom: '2024-01-16' })
+      expect(result).toBeNull()
+    })
+  })
 })

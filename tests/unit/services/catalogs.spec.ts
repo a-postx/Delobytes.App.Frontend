@@ -579,5 +579,23 @@ describe('Catalogs API - Stage 7 & 8', () => {
 
       expect(axiosInstance.delete).toHaveBeenCalledWith(`/api/catalogs/product-work-rates/${rateId}`)
     })
+
+    it('should correct an existing product work rate in place via PUT', async () => {
+      const rateId = '1'
+      const updatePayload = {
+        workRateId: 'rate-2',
+        assemblyRatePerDay: 120,
+        validFrom: '2024-03-01'
+      }
+
+      vi.mocked(axiosInstance.put).mockResolvedValue({ data: undefined })
+
+      await productWorkRatesApi.update(rateId, updatePayload)
+
+      expect(axiosInstance.put).toHaveBeenCalledWith(
+        `/api/catalogs/product-work-rates/${rateId}`,
+        updatePayload
+      )
+    })
   })
 })

@@ -266,6 +266,7 @@ export interface ProductWorkRateItem {
   validFrom: string
   isActive: boolean
   createdAt: string
+  updatedAt?: string | null
 }
 
 export interface GetProductWorkRatesResponse {
@@ -274,6 +275,17 @@ export interface GetProductWorkRatesResponse {
 
 export interface CreateProductWorkRateRequest {
   productId: string
+  workRateId: string
+  assemblyRatePerDay: number
+  validFrom: string
+}
+
+/**
+ * Корректировка существующей (активной) версии нормы на месте, без создания новой записи.
+ * Серверный ответ не содержит токен конкурентности — оптимистическая блокировка через xmin
+ * целиком на стороне бэкенда и в контракт не выносится (см. ТЗ, раздел про RowVersion).
+ */
+export interface UpdateProductWorkRateRequest {
   workRateId: string
   assemblyRatePerDay: number
   validFrom: string
@@ -477,6 +489,11 @@ export const productWorkRatesApi = {
       data,
     )
     return response.data
+  },
+
+  /** Исправляет активную версию на месте (PUT), не создавая новую запись истории. */
+  update: async (id: string, data: UpdateProductWorkRateRequest): Promise<void> => {
+    await axiosInstance.put(`/api/catalogs/product-work-rates/${id}`, data)
   },
 
   delete: async (id: string): Promise<void> => {

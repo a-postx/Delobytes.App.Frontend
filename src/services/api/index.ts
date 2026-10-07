@@ -73,5 +73,6 @@ export type {
   ProductWorkRateItem,
   GetProductWorkRatesResponse,
   CreateProductWorkRateRequest,
+  UpdateProductWorkRateRequest,
 } from './endpoints/catalogs'
 export { Unit } from './endpoints/catalogs'
