@@ -35,6 +35,8 @@ interface Props {
 const props = withDefaults(defineProps<Props>(), {
   selectable: true,
   isLoading: false,
+  emptyTitle: DATA_GRID_EMPTY_TITLE,
+  emptyDescription: DATA_GRID_EMPTY_DESCRIPTION,
   showPageSizeSelector: true,
 })
 
