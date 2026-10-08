@@ -9,16 +9,13 @@ interface FilterOption {
 
 defineProps<{
   options: FilterOption[]
-  label?: string
 }>()
 
 const modelValue = defineModel<string>({ required: true })
 </script>
 
 <template>
-  <div class="flex items-center gap-2 px-1">
-    <span class="text-sm text-muted-foreground">{{ label ?? 'Показать' }}:</span>
-    
+  <div class="flex items-center px-1">
     <ToggleGroup 
       v-model="modelValue"
       type="single"
