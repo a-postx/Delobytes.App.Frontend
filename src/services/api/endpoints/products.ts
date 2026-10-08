@@ -43,6 +43,9 @@ export const catalogProductsApi = {
       if (params.includeCounts !== undefined) {
         query.includeCounts = params.includeCounts
       }
+      if (params.search !== undefined) {
+        query.search = params.search
+      }
     }
     const response = await axiosInstance.get<GetProductsResponse>('/api/catalogs/products', {
       params: query,

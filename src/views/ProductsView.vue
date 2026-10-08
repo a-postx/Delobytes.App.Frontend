@@ -35,6 +35,7 @@ import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Spinner } from '@/components/ui/spinner'
 import { StatusFilter } from '@/components/ui/status-filter'
+import { SearchInput } from '@/components/ui/search-input'
 import {
   DataGrid,
   type ColumnDef,
@@ -75,6 +76,13 @@ const isDeleting = ref<boolean>(false)
 const deletingProductIds = ref<Set<string>>(new Set())
 
 const statusFilter = ref<'all' | 'active' | 'archived'>('active')
+const searchQuery = ref<string>('')
+
+/**
+ * Поиск уходит на сервер, поэтому запрос отправляем только после паузы в наборе:
+ * иначе каждая буква названия — отдельный запрос к каталогу.
+ */
+const SEARCH_DEBOUNCE_MS = 300
 
 /**
  * Состояние грида принадлежит странице, потому что сортировку и нарезку на страницы
@@ -150,6 +158,7 @@ const form = ref<FormData>(emptyForm())
 const newBarcode = ref({ value: '', type: '', isDefault: false })
 
 let pollingInterval: number | null = null
+let searchDebounceTimer: ReturnType<typeof setTimeout> | null = null
 
 const filterOptions = computed(() => [
   { value: 'active', label: 'Активные', count: statusCounts.value.active },
@@ -352,7 +361,7 @@ const renderActions = (item: ProductItem): unknown => {
 }
 
 /**
- * Загружает одну страницу: фильтр по статусу, порядок и смещение считает сервер.
+ * Загружает одну страницу: фильтр по статусу, поиск, порядок и смещение считает сервер.
  * Счётчики вкладок приходят тем же ответом, поэтому второго запроса на «Все» больше нет.
  */
 const loadItems = async (): Promise<void> => {
@@ -367,6 +376,7 @@ const loadItems = async (): Promise<void> => {
         sortBy: toProductSortKey(sort?.id),
         sortDir: sort?.desc ? 'desc' : 'asc',
         includeCounts: true,
+        search: searchQuery.value.trim() || undefined,
       },
     )
     items.value = resp.items
@@ -469,16 +479,41 @@ watch(statusFilter, () => {
   loadItems()
 })
 
-watch([() => pagination.value.pageIndex, () => pagination.value.pageSize], () => {
-  rowSelection.value = {}
-  loadItems()
-})
+watch(
+  [() => pagination.value.pageIndex, () => pagination.value.pageSize],
+  ([pageIndex, pageSize], [previousPageIndex, previousPageSize]) => {
+    // Сброс страницы при новом поиске не должен сам грузить данные: за это отвечает
+    // debounce поиска, иначе на каждый введённый символ уходило бы два одинаковых запроса.
+    if (pageIndex === previousPageIndex && pageSize === previousPageSize) {
+      return
+    }
+    rowSelection.value = {}
+    loadItems()
+  },
+)
 
 watch(sorting, () => {
   rowSelection.value = {}
   pagination.value = { ...pagination.value, pageIndex: 0 }
   loadItems()
 }, { deep: true })
+
+/**
+ * Поиск меняет набор строк, поэтому выделение и страница сбрасываются сразу, а запрос уходит
+ * после паузы в наборе. Смена вкладки и сортировки строку поиска не трогает: она не часть
+ * их состояния.
+ */
+watch(searchQuery, () => {
+  rowSelection.value = {}
+  pagination.value = { ...pagination.value, pageIndex: 0 }
+  if (searchDebounceTimer !== null) {
+    clearTimeout(searchDebounceTimer)
+  }
+  searchDebounceTimer = setTimeout(() => {
+    searchDebounceTimer = null
+    loadItems()
+  }, SEARCH_DEBOUNCE_MS)
+})
 
 onMounted(() => {
   loadItems()
@@ -487,6 +522,10 @@ onMounted(() => {
 
 onUnmounted(() => {
   stopPolling()
+  if (searchDebounceTimer !== null) {
+    clearTimeout(searchDebounceTimer)
+    searchDebounceTimer = null
+  }
 })
 
 const openCreate = (): void => {
@@ -643,7 +682,14 @@ const inputClass = 'mt-1'
       </Button>
     </div>
 
-    <StatusFilter v-model="statusFilter" :options="filterOptions" />
+    <div class="flex flex-wrap items-center gap-2">
+      <SearchInput
+        v-model="searchQuery"
+        placeholder="Поиск по названию или SKU"
+        class="w-full sm:w-80"
+      />
+      <StatusFilter v-model="statusFilter" :options="filterOptions" />
+    </div>
 
     <DataGrid
       v-model:pagination="pagination"
@@ -662,12 +708,22 @@ const inputClass = 'mt-1'
             <Package class="size-6 text-muted-foreground" />
           </div>
           <div>
-            <h3 class="font-semibold">Нет товаров</h3>
+            <h3 class="font-semibold">
+              {{ searchQuery.trim() ? 'Ничего не найдено по запросу' : 'Нет товаров' }}
+            </h3>
             <p class="text-sm text-muted-foreground">
-              {{ statusFilter === 'active' ? 'Добавьте первый товар' : 'В этом разделе пока ничего нет' }}
+              <template v-if="searchQuery.trim()">
+                Измените запрос или очистите поле поиска
+              </template>
+              <template v-else>
+                {{ statusFilter === 'active' ? 'Добавьте первый товар' : 'В этом разделе пока ничего нет' }}
+              </template>
             </p>
           </div>
-          <div v-if="canWrite && statusFilter === 'active'" class="flex flex-col sm:flex-row gap-2 mt-2">
+          <div
+            v-if="canWrite && statusFilter === 'active' && !searchQuery.trim()"
+            class="flex flex-col sm:flex-row gap-2 mt-2"
+          >
             <Button @click="openCreate" variant="outline" class="gap-2">
               <Plus class="size-4" />
               Добавить товар

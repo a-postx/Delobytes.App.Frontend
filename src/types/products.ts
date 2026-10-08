@@ -106,6 +106,8 @@ export interface GetProductsParams {
   sortBy?: ProductSortKey
   sortDir?: 'asc' | 'desc'
   includeCounts?: boolean
+  /** Регистронезависимая подстрока по `Name` и `Sku`. Пустое значение бэкенд игнорирует. */
+  search?: string
 }
 
 export interface GetProductResponse {

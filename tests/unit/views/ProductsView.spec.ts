@@ -299,3 +299,188 @@ describe('ProductsView channel links', () => {
     expect(wrapper.find('tbody [data-slot="dropdown-menu-trigger"]').exists()).toBe(true)
   })
 })
+
+/**
+ * Поиск по названию и SKU.
+ *
+ * Ввод уходит на сервер, поэтому проверяем три вещи: запрос отправляется только после паузы
+ * (а не на каждую букву), обрезка пробелов делает пустой запрос обычным списком, а сама строка
+ * поиска живёт отдельно от вкладок и сортировки и не сбрасывается вместе с ними.
+ */
+describe('ProductsView search', () => {
+  const searchField = (wrapper: VueWrapper) =>
+    wrapper.find('[data-slot="search-input"]')
+
+  beforeEach(() => {
+    vi.useFakeTimers()
+    vi.clearAllMocks()
+    canWrite.value = true
+    getConnections.mockResolvedValue([])
+    getProducts.mockResolvedValue(response([product()]))
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('sends the trimmed search to the server after the debounce', async () => {
+    const wrapper = factory()
+    await flushPromises()
+    expect(getProducts).toHaveBeenCalledTimes(1)
+
+    await searchField(wrapper).setValue('  носки  ')
+    expect(getProducts).toHaveBeenCalledTimes(1)
+
+    await vi.advanceTimersByTimeAsync(300)
+    await flushPromises()
+
+    expect(getProducts).toHaveBeenCalledTimes(2)
+    expect(lastCall()[1]).toMatchObject({ search: 'носки' })
+  })
+
+  it('sends the search together with the active status and sort', async () => {
+    const wrapper = factory()
+    await flushPromises()
+
+    await searchField(wrapper).setValue('SKU-42')
+    await vi.advanceTimersByTimeAsync(300)
+    await flushPromises()
+
+    expect(lastCall()[0]).toBe(ProductStatus.Active)
+    expect(lastCall()[1]).toMatchObject({
+      page: 1,
+      pageSize: 25,
+      sortBy: 'updatedAt',
+      sortDir: 'desc',
+      includeCounts: true,
+      search: 'SKU-42',
+    })
+  })
+
+  it('sends one request for a burst of keystrokes', async () => {
+    const wrapper = factory()
+    await flushPromises()
+
+    const field = searchField(wrapper)
+    await field.setValue('н')
+    await vi.advanceTimersByTimeAsync(100)
+    await field.setValue('но')
+    await vi.advanceTimersByTimeAsync(100)
+    await field.setValue('нос')
+    await vi.advanceTimersByTimeAsync(300)
+    await flushPromises()
+
+    expect(getProducts).toHaveBeenCalledTimes(2)
+    expect(lastCall()[1]).toMatchObject({ search: 'нос' })
+  })
+
+  it('drops the search for an empty string', async () => {
+    const wrapper = factory()
+    await flushPromises()
+
+    await searchField(wrapper).setValue('носки')
+    await vi.advanceTimersByTimeAsync(300)
+    await flushPromises()
+    expect(lastCall()[1]).toMatchObject({ search: 'носки' })
+
+    await searchField(wrapper).setValue('')
+    await vi.advanceTimersByTimeAsync(300)
+    await flushPromises()
+
+    expect(lastCall()[1].search).toBeUndefined()
+  })
+
+  it('drops the search for a whitespace-only string', async () => {
+    const wrapper = factory()
+    await flushPromises()
+
+    await searchField(wrapper).setValue('   ')
+    await vi.advanceTimersByTimeAsync(300)
+    await flushPromises()
+
+    expect(lastCall()[1].search).toBeUndefined()
+  })
+
+  it('resets the page to the first one when the search changes', async () => {
+    getProducts.mockResolvedValue(response([product()], { totalCount: 60 }))
+
+    const wrapper = factory()
+    await flushPromises()
+
+    await wrapper.find('[aria-label="Следующая страница"]').trigger('click')
+    await flushPromises()
+    expect(lastCall()[1]).toMatchObject({ page: 2 })
+
+    await searchField(wrapper).setValue('носки')
+    await vi.advanceTimersByTimeAsync(300)
+    await flushPromises()
+
+    expect(lastCall()[1]).toMatchObject({ page: 1, search: 'носки' })
+  })
+
+  it('clears the row selection when the search changes', async () => {
+    getProducts.mockResolvedValue(response([product()], { totalCount: 60 }))
+
+    const wrapper = factory()
+    await flushPromises()
+
+    await wrapper.find('tbody button[role="checkbox"]').trigger('click')
+    await flushPromises()
+    expect(wrapper.text()).toContain('1 из 60 выбрано')
+
+    await searchField(wrapper).setValue('носки')
+    await vi.advanceTimersByTimeAsync(300)
+    await flushPromises()
+
+    expect(wrapper.text()).not.toContain('1 из 60 выбрано')
+  })
+
+  it('keeps the typed search when a status tab is switched', async () => {
+    const wrapper = factory()
+    await flushPromises()
+
+    await searchField(wrapper).setValue('носки')
+    await vi.advanceTimersByTimeAsync(300)
+    await flushPromises()
+
+    const allTab = wrapper.findAll('button').find(button => button.text().includes('Все'))
+    await allTab?.trigger('click')
+    await flushPromises()
+
+    expect(searchField(wrapper).element.value).toBe('носки')
+    expect(lastCall()[0]).toBeUndefined()
+    expect(lastCall()[1]).toMatchObject({ search: 'носки' })
+  })
+
+  it('keeps the typed search when the sorting is changed', async () => {
+    const wrapper = factory()
+    await flushPromises()
+
+    await searchField(wrapper).setValue('носки')
+    await vi.advanceTimersByTimeAsync(300)
+    await flushPromises()
+
+    await sortButton(wrapper, 'SKU')?.trigger('click')
+    await flushPromises()
+
+    expect(searchField(wrapper).element.value).toBe('носки')
+    expect(lastCall()[1]).toMatchObject({ sortBy: 'sku', search: 'носки' })
+  })
+
+  it('does not claim the catalog is empty when the search found nothing', async () => {
+    getProducts.mockResolvedValue(response([], { totalCount: 0 }))
+
+    const wrapper = factory()
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('Нет товаров')
+    expect(wrapper.text()).toContain('Добавьте первый товар')
+
+    await searchField(wrapper).setValue('нет-такого-товара')
+    await vi.advanceTimersByTimeAsync(300)
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('Ничего не найдено по запросу')
+    expect(wrapper.text()).not.toContain('Добавьте первый товар')
+  })
+})
