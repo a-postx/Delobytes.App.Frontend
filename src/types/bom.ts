@@ -111,22 +111,6 @@ export interface ProductCostResponse {
   warnings: CostWarningDto[]
 }
 
-/** Облегчённая сводка себестоимости для табличных представлений (ProductCostSummaryDto). */
-export interface ProductCostSummary {
-  productId: string
-  materialCost: number
-  logisticsCost: number
-  packagingCost: number
-  laborCost: number
-  totalCost: number
-  isComplete: boolean
-}
-
-export interface GetProductCostsBatchResponse {
-  asOfDate: string
-  items: ProductCostSummary[]
-}
-
 export interface ProductCostSnapshotDto {
   id: string
   productId: string

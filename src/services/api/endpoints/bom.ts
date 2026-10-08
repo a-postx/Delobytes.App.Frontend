@@ -8,7 +8,6 @@ import type {
   CreateBomLineResponse,
   ProductCostResponse,
   GetProductCostHistoryResponse,
-  GetProductCostsBatchResponse,
   PreviewProductBomCostRequest,
   PreviewProductBomCostResponse,
 } from '@/types/bom'
@@ -67,16 +66,6 @@ export const productCostApi = {
     if (asOf) { params.asOf = asOf }
     const response = await axiosInstance.get<ProductCostResponse>(
       `/api/catalogs/product-costs/${productId}`,
-      { params },
-    )
-    return response.data
-  },
-
-  getBatch: async (productIds: string[], asOf?: string): Promise<GetProductCostsBatchResponse> => {
-    const params: Record<string, string> = { productIds: productIds.join(',') }
-    if (asOf) { params.asOf = asOf }
-    const response = await axiosInstance.get<GetProductCostsBatchResponse>(
-      '/api/catalogs/product-costs',
       { params },
     )
     return response.data
