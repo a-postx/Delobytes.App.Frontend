@@ -26,8 +26,17 @@ describe('ProductChannelBadges', () => {
   it('renders one badge for each linked channel', () => {
     const wrapper = mount(ProductChannelBadges, { props: { links } })
 
-    expect(wrapper.text()).toContain('ВБ 123456789')
-    expect(wrapper.text()).toContain('ОЗ 987654321')
+    expect(wrapper.text()).toContain('123456789')
+    expect(wrapper.text()).toContain('987654321')
+  })
+
+  it('does not write the sales channel name into the badge', () => {
+    const wrapper = mount(ProductChannelBadges, { props: { links } })
+
+    expect(wrapper.text()).not.toContain('ВБ')
+    expect(wrapper.text()).not.toContain('ОЗ')
+    expect(wrapper.text()).not.toContain('Wildberries')
+    expect(wrapper.text()).not.toContain('Ozon')
   })
 
   it('marks inactive links as muted', () => {
@@ -52,7 +61,7 @@ describe('ProductChannelBadges', () => {
       },
     })
 
-    expect(wrapper.text()).toContain('ВБ 123456789')
+    expect(wrapper.text()).toContain('123456789')
     expect(wrapper.find('span').classes()).toContain('bg-purple-100')
   })
 })

@@ -67,8 +67,6 @@ const form = ref<FormData>({
 
 const newBarcode = ref({ value: '', type: '', isDefault: false })
 
-const getBarcodePrefix = (type?: string): string => channelDisplay(normalizeChannel(type)).prefix
-
 const getBarcodeVariant = (
   type?: string,
 ): 'default' | 'marketplace-wb' | 'marketplace-oz' | 'marketplace-ym' => channelDisplay(normalizeChannel(type)).variant
@@ -301,9 +299,7 @@ onMounted(() => {
                     class="flex items-center gap-2 p-2 bg-muted rounded-md"
                   >
                     <Badge :variant="getBarcodeVariant(barcode.type)" class="flex-shrink-0">
-                      <span v-if="getBarcodePrefix(barcode.type)" class="font-semibold mr-1">
-                        {{ getBarcodePrefix(barcode.type) }}
-                      </span>{{ barcode.value }}
+                      {{ barcode.value }}
                     </Badge>
                     <Button
                       v-if="canWrite && !isLinked"

@@ -3,13 +3,13 @@ import { channelDisplay, channelDisplayForLink, normalizeChannel } from '@/utils
 
 describe('channelBadges', () => {
   it('returns display data for supported channel codes', () => {
-    expect(channelDisplay('wildberries')).toEqual({ prefix: 'ВБ', variant: 'marketplace-wb' })
-    expect(channelDisplay('ozon')).toEqual({ prefix: 'ОЗ', variant: 'marketplace-oz' })
-    expect(channelDisplay('yandex.kit')).toEqual({ prefix: 'ЯМ', variant: 'marketplace-ym' })
+    expect(channelDisplay('wildberries')).toEqual({ variant: 'marketplace-wb' })
+    expect(channelDisplay('ozon')).toEqual({ variant: 'marketplace-oz' })
+    expect(channelDisplay('yandex.kit')).toEqual({ variant: 'marketplace-ym' })
   })
 
   it('recognizes the legacy yandex channel code', () => {
-    expect(channelDisplay('yandex')).toEqual({ prefix: 'ЯМ', variant: 'marketplace-ym' })
+    expect(channelDisplay('yandex')).toEqual({ variant: 'marketplace-ym' })
   })
 
   it('normalizes legacy barcode types', () => {
@@ -19,12 +19,12 @@ describe('channelBadges', () => {
   })
 
   it('uses the default display for an unknown or missing code', () => {
-    expect(channelDisplay('custom')).toEqual({ prefix: '', variant: 'default' })
-    expect(channelDisplay(null)).toEqual({ prefix: '', variant: 'default' })
+    expect(channelDisplay('custom')).toEqual({ variant: 'default' })
+    expect(channelDisplay(null)).toEqual({ variant: 'default' })
   })
 
   it('uses the channel name when a linked product has no recognized code', () => {
-    expect(channelDisplayForLink(null, 'Wildberries')).toEqual({ prefix: 'ВБ', variant: 'marketplace-wb' })
-    expect(channelDisplayForLink('custom', 'Ozon')).toEqual({ prefix: 'ОЗ', variant: 'marketplace-oz' })
+    expect(channelDisplayForLink(null, 'Wildberries')).toEqual({ variant: 'marketplace-wb' })
+    expect(channelDisplayForLink('custom', 'Ozon')).toEqual({ variant: 'marketplace-oz' })
   })
 })

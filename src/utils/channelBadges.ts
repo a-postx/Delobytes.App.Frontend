@@ -1,15 +1,18 @@
 export type ChannelBadgeVariant = 'marketplace-wb' | 'marketplace-oz' | 'marketplace-ym' | 'default'
 
+/**
+ * Канал продаж в бейдже различается только цветом (variant).
+ * Текстовая подпись канала не выводится: цифры артикула/баркода идут без префикса.
+ */
 interface ChannelDisplay {
-  prefix: string
   variant: ChannelBadgeVariant
 }
 
 const channelDisplays: Record<string, ChannelDisplay> = {
-  wildberries: { prefix: 'ВБ', variant: 'marketplace-wb' },
-  ozon: { prefix: 'ОЗ', variant: 'marketplace-oz' },
-  'yandex.kit': { prefix: 'ЯМ', variant: 'marketplace-ym' },
-  yandex: { prefix: 'ЯМ', variant: 'marketplace-ym' },
+  wildberries: { variant: 'marketplace-wb' },
+  ozon: { variant: 'marketplace-oz' },
+  'yandex.kit': { variant: 'marketplace-ym' },
+  yandex: { variant: 'marketplace-ym' },
 }
 
 const legacyChannelCodes: Record<string, string> = {
@@ -30,10 +33,10 @@ export const normalizeChannel = (channelCode?: string | null): string | null => 
 export const channelDisplay = (channelCode?: string | null): ChannelDisplay => {
   const normalizedCode = normalizeChannel(channelCode)
   if (!normalizedCode) {
-    return { prefix: '', variant: 'default' }
+    return { variant: 'default' }
   }
 
-  return channelDisplays[normalizedCode] ?? { prefix: '', variant: 'default' }
+  return channelDisplays[normalizedCode] ?? { variant: 'default' }
 }
 
 export const channelDisplayForLink = (

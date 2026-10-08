@@ -183,8 +183,6 @@ const lastModifiedAt = (item: ProductItem): string => item.updatedAt ?? item.cre
 const toProductSortKey = (columnId: string | undefined): ProductSortKey | undefined =>
   isProductSortKey(columnId) ? columnId : undefined
 
-const getBarcodePrefix = (type?: string): string => channelDisplay(normalizeChannel(type)).prefix
-
 const getBarcodeVariant = (type?: string): 'default' | 'marketplace-wb' | 'marketplace-oz' | 'marketplace-ym' =>
   channelDisplay(normalizeChannel(type)).variant
 
@@ -251,17 +249,13 @@ const columns = computed<ColumnDef<ProductItem, unknown>[]>(() => {
         if (!row.original.barcodes || row.original.barcodes.length === 0) {
           return h('span', { class: 'text-muted-foreground text-sm' }, '—')
         }
-        return h('div', { class: 'flex flex-wrap gap-1' }, row.original.barcodes.map((barcode, index) => {
-          const prefix = getBarcodePrefix(barcode.type)
-          return h(Badge, {
+        return h('div', { class: 'flex flex-wrap gap-1' }, row.original.barcodes.map((barcode, index) =>
+          h(Badge, {
             key: index,
             variant: getBarcodeVariant(barcode.type),
             class: 'text-xs',
-          }, [
-            prefix ? h('span', { class: 'font-semibold mr-1' }, prefix) : null,
-            barcode.value,
-          ])
-        }))
+          }, barcode.value)
+        ))
       },
     },
     {
@@ -767,7 +761,7 @@ const inputClass = 'mt-1'
                     class="flex items-center gap-2 p-2 bg-muted rounded-md"
                   >
                     <Badge :variant="getBarcodeVariant(barcode.type)" class="flex-shrink-0">
-                      <span v-if="getBarcodePrefix(barcode.type)" class="font-semibold mr-1">{{ getBarcodePrefix(barcode.type) }}</span>{{ barcode.value }}
+                      {{ barcode.value }}
                     </Badge>
                     <span v-if="barcode.type" class="text-xs text-muted-foreground">{{ barcode.type }}</span>
                     <Button 

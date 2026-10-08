@@ -17,7 +17,7 @@ defineProps<{
       :class="{ 'opacity-50': !link.isActive }"
       :title="link.isActive ? undefined : 'неактивно'"
     >
-      {{ channelDisplayForLink(link.channelCode, link.channelName).prefix ? `${channelDisplayForLink(link.channelCode, link.channelName).prefix} ${link.externalProductId}` : link.externalProductId }}
+      {{ link.externalProductId }}
     </Badge>
   </div>
 </template>
