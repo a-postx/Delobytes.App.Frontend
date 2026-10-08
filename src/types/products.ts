@@ -90,6 +90,16 @@ export interface GetProductsResponse {
  */
 export type ProductSortKey = 'name' | 'sku' | 'status' | 'createdAt' | 'updatedAt'
 
+const PRODUCT_SORT_KEYS: readonly string[] = ['name', 'sku', 'status', 'createdAt', 'updatedAt']
+
+/**
+ * Проверка значения на {@link ProductSortKey}. Грид отдаёт id колонок простыми строками,
+ * поэтому перед сужением строки до ключа сортировки нужна проверка во время выполнения.
+ */
+export function isProductSortKey(value: unknown): value is ProductSortKey {
+  return typeof value === 'string' && PRODUCT_SORT_KEYS.includes(value)
+}
+
 export interface GetProductsParams {
   page?: number
   pageSize?: number
