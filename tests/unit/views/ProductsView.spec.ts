@@ -184,12 +184,13 @@ describe('ProductsView server-side paging and sorting', () => {
     await wrapper.find('tbody button[role="checkbox"]').trigger('click')
     await flushPromises()
 
-    expect(wrapper.text()).toContain('Выбрано: 1')
+    // Сводку по выбору показывает только футер: верхняя панель с дублем удалена.
+    expect(wrapper.text()).toContain('1 из 60 выбрано')
 
     await wrapper.find('[aria-label="Следующая страница"]').trigger('click')
     await flushPromises()
 
-    expect(wrapper.text()).toContain('Выбрано: 0')
+    expect(wrapper.text()).toContain('0 из 60 выбрано')
   })
 
   it('shows the server total in the footer range', async () => {

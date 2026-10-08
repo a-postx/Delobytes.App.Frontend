@@ -1,14 +1,12 @@
 <script setup lang="ts" generic="T">
 import type { Table } from '@tanstack/vue-table'
-import { Settings2 } from 'lucide-vue-next'
+import { Settings } from 'lucide-vue-next'
 import { computed } from 'vue'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 
@@ -22,14 +20,8 @@ const activatableColumns = computed(() =>
   props.table.getAllLeafColumns().filter(column => column.getCanHide()),
 )
 
-const allVisible = computed<boolean>(() => props.table.getIsAllColumnsVisible())
-
 function isVisible(columnId: string): boolean {
   return props.table.getColumn(columnId)?.getIsVisible() ?? false
-}
-
-function setAllColumnsVisible(visible: boolean | 'indeterminate'): void {
-  props.table.toggleAllColumnsVisible(visible !== false)
 }
 
 function setColumnVisible(columnId: string, visible: boolean | 'indeterminate'): void {
@@ -42,27 +34,18 @@ function setColumnVisible(columnId: string, visible: boolean | 'indeterminate'):
     <DropdownMenuTrigger as-child>
       <Button
         variant="outline"
-        size="sm"
-        class="gap-2"
+        size="icon"
+        class="size-7"
+        title="Настроить колонки"
         aria-label="Настроить колонки"
       >
-        <Settings2 class="size-4" />
-        Колонки
+        <Settings class="size-4" />
       </Button>
     </DropdownMenuTrigger>
     <DropdownMenuContent
       align="end"
       class="w-52"
     >
-      <DropdownMenuLabel>Колонки</DropdownMenuLabel>
-      <DropdownMenuSeparator />
-      <DropdownMenuCheckboxItem
-        :model-value="allVisible"
-        @update:model-value="setAllColumnsVisible"
-      >
-        Показать все
-      </DropdownMenuCheckboxItem>
-      <DropdownMenuSeparator />
       <DropdownMenuCheckboxItem
         v-for="column in activatableColumns"
         :key="column.id"

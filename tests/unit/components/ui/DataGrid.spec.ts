@@ -374,7 +374,18 @@ describe('DataGrid: видимость колонок', () => {
   })
 
   it('переключает видимость колонки через шестерёнку', async () => {
-    const { wrapper, state } = mountGrid()
+    const columnsWithActions: ColumnDef<TestRow, unknown>[] = [
+      ...columns,
+      {
+        id: 'actions',
+        header: '',
+        enableHiding: false,
+        meta: { title: 'Действия' },
+        cell: () => 'cell-actions',
+      },
+    ]
+
+    const { wrapper, state } = mountGrid({ gridColumns: columnsWithActions, actionsColumnId: 'actions' })
 
     await wrapper.findComponent(DataGridViewOptions).find('button').trigger('click')
     await nextTick()
@@ -404,9 +415,32 @@ describe('DataGrid: видимость колонок', () => {
     await wrapper.findComponent(DataGridViewOptions).find('button').trigger('click')
     await nextTick()
 
-    // «Показать все» + две колонки данных; колонка действий из меню исключена.
-    expect(menuItems()).toHaveLength(3)
+    // Две колонки данных; колонка действий из меню исключена.
+    expect(menuItems()).toHaveLength(2)
     expect(menuLabels()).not.toContain('Действия')
+  })
+
+  it('держит шестерёнку в заголовке колонки действий, а не в отдельной панели', async () => {
+    const columnsWithActions: ColumnDef<TestRow, unknown>[] = [
+      ...columns,
+      {
+        id: 'actions',
+        header: '',
+        enableHiding: false,
+        meta: { title: 'Действия' },
+        cell: () => 'cell-actions',
+      },
+    ]
+
+    const { wrapper } = mountGrid({ gridColumns: columnsWithActions, actionsColumnId: 'actions' })
+
+    const actionsHeader = wrapper.findAll('thead th').at(-1)
+
+    expect(actionsHeader?.findComponent(DataGridViewOptions).exists()).toBe(true)
+
+    // Панель над таблицей удалена вместе со слотом toolbar.
+    expect(wrapper.find('[data-slot="toolbar"]').exists()).toBe(false)
+    expect(wrapper.find('thead th').text()).toBe('')
   })
 })
 
@@ -441,13 +475,22 @@ describe('DataGridViewOptions: меню видимости', () => {
     await nextTick()
   }
 
-  it('перечисляет скрываемые колонки и пункт «Показать все»', async () => {
+  it('перечисляет только скрываемые колонки, без служебных пунктов', async () => {
     const { wrapper } = mountOptionsMenu({ sku: false })
 
     await openMenu(wrapper)
 
-    expect(wrapper.text()).toContain('Колонки')
-    expect(menuLabels()).toEqual(['Показать все', 'Название', 'SKU'])
+    expect(menuLabels()).toEqual(['Название', 'SKU'])
+  })
+
+  it('показывает кнопкой только значок, без подписи', async () => {
+    const { wrapper } = mountOptionsMenu({})
+
+    const valueOptionsButton = wrapper.findComponent(DataGridViewOptions).find('button')
+
+    expect(valueOptionsButton.text()).toBe('')
+    expect(valueOptionsButton.attributes('title')).toBe('Настроить колонки')
+    expect(valueOptionsButton.attributes('aria-label')).toBe('Настроить колонки')
   })
 
   it('снимает и возвращает видимость конкретной колонки', async () => {
@@ -461,18 +504,14 @@ describe('DataGridViewOptions: меню видимости', () => {
     expect(table.getColumn('sku')?.getIsVisible()).toBe(false)
   })
 
-  it('возвращает все колонки пунктом «Показать все»', async () => {
+  it('не подменяет видимость колонок при отсутствии скрытых колонок', async () => {
     const { wrapper, table } = mountOptionsMenu({ sku: false, name: false })
 
     await openMenu(wrapper)
 
     expect(table.getColumn('sku')?.getIsVisible()).toBe(false)
-
-    menuItemByLabel('Показать все')?.click()
-    await nextTick()
-
-    expect(table.getColumn('sku')?.getIsVisible()).toBe(true)
-    expect(table.getColumn('name')?.getIsVisible()).toBe(true)
+    expect(table.getColumn('name')?.getIsVisible()).toBe(false)
+    expect(menuLabels()).toEqual(['Название', 'SKU'])
   })
 })
 

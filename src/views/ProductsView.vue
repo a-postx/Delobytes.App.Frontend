@@ -165,10 +165,6 @@ const getBarcodePrefix = (type?: string): string => channelDisplay(normalizeChan
 const getBarcodeVariant = (type?: string): 'default' | 'marketplace-wb' | 'marketplace-oz' | 'marketplace-ym' =>
   channelDisplay(normalizeChannel(type)).variant
 
-const selectedCount = computed<number>(() =>
-  Object.keys(rowSelection.value).filter((key: string) => rowSelection.value[key]).length,
-)
-
 /** Сортируемым колонкам id совпадает с ключом из whitelist бэкенда; остальным он нужен для меню видимости. */
 const columns = computed<ColumnDef<ProductItem, unknown>[]>(() => {
   const definitions: ColumnDef<ProductItem, unknown>[] = [
@@ -265,16 +261,18 @@ const columns = computed<ColumnDef<ProductItem, unknown>[]>(() => {
     },
   ]
 
-  if (canWrite.value) {
-    definitions.push({
-      id: 'actions',
-      enableSorting: false,
-      enableHiding: false,
-      meta: { title: 'Действия' },
-      header: () => h('span', { class: 'sr-only' }, 'Действия'),
-      cell: ({ row }) => renderActions(row.original),
-    })
-  }
+  /**
+   * Колонка действий существует независимо от прав: в её заголовке живёт кнопка настройки
+   * колонок, нужная и читателю, и редактору. Само меню действий рисуется только при праве на запись.
+   */
+  definitions.push({
+    id: 'actions',
+    enableSorting: false,
+    enableHiding: false,
+    meta: { title: 'Действия' },
+    header: () => h('span', { class: 'sr-only' }, 'Действия'),
+    cell: ({ row }) => (canWrite.value ? renderActions(row.original) : null),
+  })
 
   return definitions
 })
@@ -663,10 +661,6 @@ const inputClass = 'mt-1'
             </Button>
           </div>
         </div>
-      </template>
-
-      <template #toolbar>
-        <span class="text-xs text-muted-foreground">Выбрано: {{ selectedCount }}</span>
       </template>
 
       <!--

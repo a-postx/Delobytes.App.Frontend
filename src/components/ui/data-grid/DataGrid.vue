@@ -159,16 +159,6 @@ const summaryClass = 'text-xs text-muted-foreground'
 
 <template>
   <div class="rounded-xl border border-border bg-card overflow-hidden">
-    <div class="flex flex-wrap items-center justify-between gap-3 border-b border-border px-3 py-2">
-      <div class="flex items-center gap-2">
-        <slot name="toolbar" />
-      </div>
-      <div class="flex items-center gap-2">
-        <slot name="toolbar-actions" />
-        <DataGridViewOptions :table="table" />
-      </div>
-    </div>
-
     <div
       v-if="showSkeleton"
       class="p-4 flex flex-col gap-3"
@@ -236,7 +226,16 @@ const summaryClass = 'text-xs text-muted-foreground'
             v-for="header in headerGroup.headers"
             :key="header.id"
           >
+            <!-- Настройка колонок живёт в заголовке столбца действий: отдельная панель над таблицей не нужна. -->
+            <slot
+              v-if="props.actionsColumnId && header.column.id === props.actionsColumnId"
+              name="actions-header"
+              :table="table"
+            >
+              <DataGridViewOptions :table="table" />
+            </slot>
             <DataGridColumnHeader
+              v-else
               :column="header.column"
               :title="header.column.columnDef.meta?.title ?? header.column.id"
             >
