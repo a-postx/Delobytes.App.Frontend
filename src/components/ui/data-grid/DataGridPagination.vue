@@ -143,7 +143,10 @@ const pageItemClass = 'grid size-8 place-items-center rounded-md text-sm text-fo
             &#8230;
           </PaginationEllipsis>
         </template>
-        <PaginationNext :class="navButtonClass" />
+        <PaginationNext
+          :class="navButtonClass"
+          aria-label="Следующая страница"
+        />
       </PaginationList>
     </PaginationRoot>
   </div>
