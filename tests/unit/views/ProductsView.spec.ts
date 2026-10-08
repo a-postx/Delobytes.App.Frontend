@@ -1,5 +1,5 @@
 import { computed, ref } from 'vue'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
 import type { VueWrapper } from '@vue/test-utils'
 import { ProductStatus } from '@/types/products'
@@ -184,7 +184,7 @@ describe('ProductsView server-side paging and sorting', () => {
     const wrapper = factory()
     await flushPromises()
 
-    // Товар без правок «изменён» при создании: колонка не должна оставаться пустой.
+    // Товар без правок «изменён» в момент создания: колонка не должна оставаться пустой.
     expect(wrapper.text()).toContain(ruDateTime(createdAt))
   })
 
@@ -308,8 +308,9 @@ describe('ProductsView channel links', () => {
  * поиска живёт отдельно от вкладок и сортировки и не сбрасывается вместе с ними.
  */
 describe('ProductsView search', () => {
+  /** `data-slot` висит на обёртке, а ввод идёт в сам `input` внутри неё. */
   const searchField = (wrapper: VueWrapper) =>
-    wrapper.find('[data-slot="search-input"]')
+    wrapper.find('[data-slot="search-input"] input')
 
   beforeEach(() => {
     vi.useFakeTimers()

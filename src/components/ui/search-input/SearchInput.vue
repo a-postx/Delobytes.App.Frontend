@@ -13,7 +13,10 @@ const model = defineModel<string>({ required: true })
 </script>
 
 <template>
-  <div :class="cn('relative', $props.class)">
+  <div
+    data-slot="search-input"
+    :class="cn('relative', $props.class)"
+  >
     <Search
       class="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none"
     />
