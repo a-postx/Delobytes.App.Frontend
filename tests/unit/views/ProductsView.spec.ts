@@ -83,6 +83,19 @@ const sortButton = (wrapper: VueWrapper, title: string) =>
     .filter(button => button.attributes('role') !== 'checkbox')
     .find(candidate => candidate.text().includes(title))
 
+/** `aria-sort` живёт на самом `th`, а кликабельный заголовок — кнопка внутри него. */
+const sortHeader = (wrapper: VueWrapper, title: string) =>
+  wrapper.findAll('thead th').find(cell => cell.text().includes(title))
+
+/** Ожидаемую строку считаем тем же Intl-вызовом, что и компонент: тест не зависит от формата локали. */
+const ruDateTime = (date: Date): string => date.toLocaleString('ru-RU', {
+  day: '2-digit',
+  month: '2-digit',
+  year: 'numeric',
+  hour: '2-digit',
+  minute: '2-digit',
+})
+
 /**
  * Regression guards for the /catalogs/products status tabs.
  *
@@ -124,8 +137,8 @@ describe('ProductsView status tabs', () => {
     expect(params).toMatchObject({
       page: 1,
       pageSize: 25,
-      sortBy: 'name',
-      sortDir: 'asc',
+      sortBy: 'updatedAt',
+      sortDir: 'desc',
       includeCounts: true,
     })
   })
@@ -150,6 +163,41 @@ describe('ProductsView server-side paging and sorting', () => {
     canWrite.value = true
     getConnections.mockResolvedValue([])
     getProducts.mockResolvedValue(response([product()], { totalCount: 60 }))
+  })
+
+  it('opens on the Изменено column, newest first', async () => {
+    getProducts.mockResolvedValue(response([product({ updatedAt: '2024-05-06T10:20:00Z' })]))
+
+    const wrapper = factory()
+    await flushPromises()
+
+    expect(lastCall()[1]).toMatchObject({ sortBy: 'updatedAt', sortDir: 'desc' })
+    expect(sortHeader(wrapper, 'Изменено')?.attributes('aria-sort')).toBe('descending')
+  })
+
+  it('shows the creation moment in the Изменено column for a never-edited product', async () => {
+    const createdAt = new Date('2024-03-04T07:05:00Z')
+    getProducts.mockResolvedValue(response([
+      product({ createdAt: createdAt.toISOString() }),
+    ]))
+
+    const wrapper = factory()
+    await flushPromises()
+
+    // Товар без правок «изменён» при создании: колонка не должна оставаться пустой.
+    expect(wrapper.text()).toContain(ruDateTime(createdAt))
+  })
+
+  it('shows the last modification moment in the Изменено column', async () => {
+    const updatedAt = new Date('2024-06-07T15:45:00Z')
+    getProducts.mockResolvedValue(response([
+      product({ createdAt: '2024-01-01T00:00:00Z', updatedAt: updatedAt.toISOString() }),
+    ]))
+
+    const wrapper = factory()
+    await flushPromises()
+
+    expect(wrapper.text()).toContain(ruDateTime(updatedAt))
   })
 
   it('reloads with the new sortBy/sortDir when a sortable header is clicked', async () => {

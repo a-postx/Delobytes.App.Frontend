@@ -84,10 +84,16 @@ export interface GetProductsResponse {
   statusCounts?: ProductStatusCounts
 }
 
+/**
+ * Sort keys the products endpoint accepts. The backend resolves them against the same fixed
+ * whitelist and falls back to `name` for anything unknown.
+ */
+export type ProductSortKey = 'name' | 'sku' | 'status' | 'createdAt' | 'updatedAt'
+
 export interface GetProductsParams {
   page?: number
   pageSize?: number
-  sortBy?: string
+  sortBy?: ProductSortKey
   sortDir?: 'asc' | 'desc'
   includeCounts?: boolean
 }

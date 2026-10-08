@@ -160,6 +160,22 @@ const filterOptions = computed(() => [
 const formatDate = (dateStr: string): string =>
   new Date(dateStr).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' })
 
+/**
+ * Время показываем вместе с датой, иначе порядок строк в колонке «Изменено» выглядит
+ * случайным: сервер сортирует по моменту правки, а в ячейке была бы только дата.
+ */
+const formatDateTime = (dateStr: string): string =>
+  new Date(dateStr).toLocaleString('ru-RU', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+
+/** Товар, который ни разу не меняли, «изменён» в момент создания — так же считает и сервер. */
+const lastModifiedAt = (item: ProductItem): string => item.updatedAt ?? item.createdAt
+
 const getBarcodePrefix = (type?: string): string => channelDisplay(normalizeChannel(type)).prefix
 
 const getBarcodeVariant = (type?: string): 'default' | 'marketplace-wb' | 'marketplace-oz' | 'marketplace-ym' =>
@@ -258,6 +274,19 @@ const columns = computed<ColumnDef<ProductItem, unknown>[]>(() => {
       meta: { title: 'Создан' },
       header: 'Создан',
       cell: ({ row }) => h('span', { class: 'text-muted-foreground text-sm' }, formatDate(row.original.createdAt)),
+    },
+    {
+      id: 'updatedAt',
+      accessorKey: 'updatedAt',
+      enableSorting: true,
+      enableHiding: true,
+      meta: { title: 'Изменено' },
+      header: 'Изменено',
+      cell: ({ row }) => h(
+        'span',
+        { class: 'text-muted-foreground text-sm whitespace-nowrap' },
+        formatDateTime(lastModifiedAt(row.original)),
+      ),
     },
   ]
 
