@@ -224,19 +224,27 @@ const summaryClass = 'text-xs text-muted-foreground'
               </CheckboxIndicator>
             </CheckboxRoot>
           </TableHead>
-          <TableHead
+          <!--
+            `DataGridColumnHeader` и заголовок действий рендерят собственный `TableHead`:
+            лишняя обёртка здесь дала бы `th` внутри `th`, и `aria-sort` оказался бы на
+            вложенном узле, а не на том, который видит скринридер.
+          -->
+          <template
             v-for="header in headerGroup.headers"
             :key="header.id"
-            :class="header.column.id === props.actionsColumnId ? actionsHeadClass : undefined"
           >
             <!-- Настройка колонок живёт в заголовке столбца действий: отдельная панель над таблицей не нужна. -->
-            <slot
+            <TableHead
               v-if="props.actionsColumnId && header.column.id === props.actionsColumnId"
-              name="actions-header"
-              :table="table"
+              :class="actionsHeadClass"
             >
-              <DataGridViewOptions :table="table" />
-            </slot>
+              <slot
+                name="actions-header"
+                :table="table"
+              >
+                <DataGridViewOptions :table="table" />
+              </slot>
+            </TableHead>
             <DataGridColumnHeader
               v-else
               :column="header.column"
@@ -247,7 +255,7 @@ const summaryClass = 'text-xs text-muted-foreground'
                 :props="header.getContext()"
               />
             </DataGridColumnHeader>
-          </TableHead>
+          </template>
         </TableRow>
       </TableHeader>
       <TableBody>
