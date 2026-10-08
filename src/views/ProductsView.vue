@@ -37,7 +37,6 @@ import { Spinner } from '@/components/ui/spinner'
 import { StatusFilter } from '@/components/ui/status-filter'
 import {
   DataGrid,
-  DataGridColumnHeader,
   type ColumnDef,
   type RowSelectionState,
   type SortingState,
@@ -179,7 +178,7 @@ const columns = computed<ColumnDef<ProductItem, unknown>[]>(() => {
       enableSorting: false,
       enableHiding: false,
       meta: { title: 'Фото' },
-      header: () => h(DataGridColumnHeader, { column: { getCanSort: () => false } as never, title: 'Фото' }),
+      header: 'Фото',
       cell: ({ row }) => h('div', {
         class: 'w-10 aspect-[3/4] rounded-md overflow-hidden border border-border bg-muted flex items-center justify-center flex-shrink-0',
       }, [
@@ -199,6 +198,7 @@ const columns = computed<ColumnDef<ProductItem, unknown>[]>(() => {
       enableSorting: true,
       enableHiding: true,
       meta: { title: 'SKU' },
+      header: 'SKU',
       cell: ({ row }) => h('span', { class: 'font-mono text-sm' }, row.original.sku),
     },
     {
@@ -207,6 +207,7 @@ const columns = computed<ColumnDef<ProductItem, unknown>[]>(() => {
       enableSorting: true,
       enableHiding: true,
       meta: { title: 'Название' },
+      header: 'Название',
       cell: ({ row }) => h('span', { class: 'font-medium' }, row.original.name),
     },
     {
@@ -215,6 +216,7 @@ const columns = computed<ColumnDef<ProductItem, unknown>[]>(() => {
       enableSorting: false,
       enableHiding: true,
       meta: { title: 'Артикул' },
+      header: 'Артикул',
       cell: ({ row }) => row.original.channelLinks?.length
         ? h(ProductChannelBadges, { links: row.original.channelLinks })
         : h('span', { class: 'text-muted-foreground text-sm' }, '—'),
@@ -225,6 +227,7 @@ const columns = computed<ColumnDef<ProductItem, unknown>[]>(() => {
       enableSorting: false,
       enableHiding: true,
       meta: { title: 'Баркоды' },
+      header: 'Баркоды',
       cell: ({ row }) => {
         if (!row.original.barcodes || row.original.barcodes.length === 0) {
           return h('span', { class: 'text-muted-foreground text-sm' }, '—')
@@ -248,6 +251,7 @@ const columns = computed<ColumnDef<ProductItem, unknown>[]>(() => {
       enableSorting: true,
       enableHiding: true,
       meta: { title: 'Статус' },
+      header: 'Статус',
       cell: ({ row }) => h(ProductStatusBadge, { status: row.original.status }),
     },
     {
@@ -256,6 +260,7 @@ const columns = computed<ColumnDef<ProductItem, unknown>[]>(() => {
       enableSorting: true,
       enableHiding: true,
       meta: { title: 'Создан' },
+      header: 'Создан',
       cell: ({ row }) => h('span', { class: 'text-muted-foreground text-sm' }, formatDate(row.original.createdAt)),
     },
   ]
@@ -265,6 +270,7 @@ const columns = computed<ColumnDef<ProductItem, unknown>[]>(() => {
       id: 'actions',
       enableSorting: false,
       enableHiding: false,
+      meta: { title: 'Действия' },
       header: () => h('span', { class: 'sr-only' }, 'Действия'),
       cell: ({ row }) => renderActions(row.original),
     })
