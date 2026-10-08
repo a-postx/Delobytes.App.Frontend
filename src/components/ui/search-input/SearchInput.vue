@@ -23,7 +23,7 @@ const model = defineModel<string>({ required: true })
     <Input
       v-model="model"
       :placeholder="placeholder"
-      class="pl-9"
+      class="pl-9 bg-card placeholder:opacity-50"
     />
   </div>
 </template>
