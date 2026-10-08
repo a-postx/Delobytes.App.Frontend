@@ -1,6 +1,6 @@
 /**
  * Product lifecycle status matching backend ProductStatus enum.
- * Backend serializes enums as numbers, so we use numeric values here.
+ * Backend serializes enums as strings, so we use string values here.
  */
 export enum ProductStatus {
   Active = 'Active',
@@ -60,8 +60,36 @@ export interface ProductItem {
   channelLinks?: ProductChannelLink[]
 }
 
+/**
+ * Per-status totals computed by the backend over the whole (unpaged) result set.
+ * Present only when the request asked for counts, so the status tabs stay correct
+ * while the list itself is paged.
+ */
+export interface ProductStatusCounts {
+  active: number
+  archived: number
+  all: number
+}
+
+/**
+ * `items` holds either a single page or the full list, depending on whether `page` was
+ * requested. The remaining fields are additive: callers that do not paginate (product work
+ * rates, channel costs) simply ignore them.
+ */
 export interface GetProductsResponse {
   items: ProductItem[]
+  totalCount?: number
+  page?: number
+  pageSize?: number
+  statusCounts?: ProductStatusCounts
+}
+
+export interface GetProductsParams {
+  page?: number
+  pageSize?: number
+  sortBy?: string
+  sortDir?: 'asc' | 'desc'
+  includeCounts?: boolean
 }
 
 export interface GetProductResponse {

@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref, onMounted, computed, watch, onUnmounted } from 'vue'
-import { Plus, Pencil, Trash2, Archive, Undo2, Package, AlertTriangle, MoreHorizontal, X as XIcon, Download } from 'lucide-vue-next'
+import { ref, onMounted, computed, watch, onUnmounted, h } from 'vue'
+import { Plus, Pencil, Trash2, Archive, Undo2, Package, MoreHorizontal, X as XIcon, Download } from 'lucide-vue-next'
 import {
   DialogClose,
   DialogContent,
@@ -34,16 +34,15 @@ import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Spinner } from '@/components/ui/spinner'
-import { Skeleton } from '@/components/ui/skeleton'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
 import { StatusFilter } from '@/components/ui/status-filter'
+import {
+  DataGrid,
+  DataGridColumnHeader,
+  type ColumnDef,
+  type RowSelectionState,
+  type SortingState,
+  type VisibilityState,
+} from '@/components/ui/data-grid'
 import ProductStatusBadge from '@/components/products/ProductStatusBadge.vue'
 import ProductChannelBadges from '@/components/products/ProductChannelBadges.vue'
 import { channelDisplay, normalizeChannel } from '@/utils/channelBadges'
@@ -78,6 +77,48 @@ const deletingProductIds = ref<Set<string>>(new Set())
 
 const statusFilter = ref<'all' | 'active' | 'archived'>('active')
 
+/**
+ * Состояние грида принадлежит странице, потому что сортировку и нарезку на страницы
+ * выполняет сервер: грид показывает ровно тот набор строк, который пришёл в ответе.
+ */
+const pagination = ref<{ pageIndex: number; pageSize: number }>({ pageIndex: 0, pageSize: 25 })
+const sorting = ref<SortingState>([{ id: 'name', desc: false }])
+const columnVisibility = ref<VisibilityState>({})
+const rowSelection = ref<RowSelectionState>({})
+const totalCount = ref<number>(0)
+const statusCounts = ref<{ active: number; archived: number; all: number }>({ active: 0, archived: 0, all: 0 })
+
+/** Соответствие вкладок значениям перечисления задано явно, а не сравнением строк наудачу. */
+const statusByFilter: Record<'active' | 'archived', ProductStatus> = {
+  active: ProductStatus.Active,
+  archived: ProductStatus.Archived,
+}
+
+const COLUMN_VISIBILITY_KEY = 'delobytes.products.columns'
+
+const readStoredColumnVisibility = (): VisibilityState => {
+  try {
+    const raw = localStorage.getItem(COLUMN_VISIBILITY_KEY)
+    if (!raw) {
+      return {}
+    }
+    const parsed: unknown = JSON.parse(raw)
+    if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      return {}
+    }
+    return parsed as VisibilityState
+  } catch {
+    // Повреждённое значение в хранилище не должно ломать страницу: откатываемся к умолчаниям.
+    return {}
+  }
+}
+
+columnVisibility.value = readStoredColumnVisibility()
+
+watch(columnVisibility, (value: VisibilityState) => {
+  localStorage.setItem(COLUMN_VISIBILITY_KEY, JSON.stringify(value))
+}, { deep: true })
+
 // Поля ввода всегда дают строку, поэтому габариты в форме — это PackingUnit
 // с текстовыми значениями; числами они становятся на отправке.
 type PackingUnitForm = {
@@ -111,21 +152,11 @@ const newBarcode = ref({ value: '', type: '', isDefault: false })
 
 let pollingInterval: number | null = null
 
-const activeCount = computed(() => items.value.filter(i => i.status === ProductStatus.Active).length)
-const archivedCount = computed(() => items.value.filter(i => i.status === ProductStatus.Archived).length)
-const totalCount = computed(() => items.value.length)
-
 const filterOptions = computed(() => [
-  { value: 'active', label: 'Активные', count: activeCount.value },
-  { value: 'all', label: 'Все', count: totalCount.value },
-  { value: 'archived', label: 'Архив', count: archivedCount.value },
+  { value: 'active', label: 'Активные', count: statusCounts.value.active },
+  { value: 'all', label: 'Все', count: statusCounts.value.all },
+  { value: 'archived', label: 'Архив', count: statusCounts.value.archived },
 ])
-
-const filteredItems = computed(() => {
-  if (statusFilter.value === 'all') return items.value
-  if (statusFilter.value === 'active') return items.value.filter(i => i.status === ProductStatus.Active)
-  return items.value.filter(i => i.status === ProductStatus.Archived)
-})
 
 const formatDate = (dateStr: string): string =>
   new Date(dateStr).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' })
@@ -135,11 +166,180 @@ const getBarcodePrefix = (type?: string): string => channelDisplay(normalizeChan
 const getBarcodeVariant = (type?: string): 'default' | 'marketplace-wb' | 'marketplace-oz' | 'marketplace-ym' =>
   channelDisplay(normalizeChannel(type)).variant
 
+const selectedCount = computed<number>(() =>
+  Object.keys(rowSelection.value).filter((key: string) => rowSelection.value[key]).length,
+)
+
+/** Сортируемым колонкам id совпадает с ключом из whitelist бэкенда; остальным он нужен для меню видимости. */
+const columns = computed<ColumnDef<ProductItem, unknown>[]>(() => {
+  const definitions: ColumnDef<ProductItem, unknown>[] = [
+    {
+      id: 'photos',
+      accessorKey: 'photos',
+      enableSorting: false,
+      enableHiding: false,
+      meta: { title: 'Фото' },
+      header: () => h(DataGridColumnHeader, { column: { getCanSort: () => false } as never, title: 'Фото' }),
+      cell: ({ row }) => h('div', {
+        class: 'w-10 aspect-[3/4] rounded-md overflow-hidden border border-border bg-muted flex items-center justify-center flex-shrink-0',
+      }, [
+        row.original.photos && row.original.photos.length > 0
+          ? h('img', {
+            src: row.original.photos[0].url,
+            alt: row.original.name,
+            class: 'size-full object-contain',
+            loading: 'lazy',
+          })
+          : h('span', { class: 'text-muted-foreground text-xs leading-none select-none' }, '—'),
+      ]),
+    },
+    {
+      id: 'sku',
+      accessorKey: 'sku',
+      enableSorting: true,
+      enableHiding: true,
+      meta: { title: 'SKU' },
+      cell: ({ row }) => h('span', { class: 'font-mono text-sm' }, row.original.sku),
+    },
+    {
+      id: 'name',
+      accessorKey: 'name',
+      enableSorting: true,
+      enableHiding: true,
+      meta: { title: 'Название' },
+      cell: ({ row }) => h('span', { class: 'font-medium' }, row.original.name),
+    },
+    {
+      id: 'channelLinks',
+      accessorKey: 'channelLinks',
+      enableSorting: false,
+      enableHiding: true,
+      meta: { title: 'Артикул' },
+      cell: ({ row }) => row.original.channelLinks?.length
+        ? h(ProductChannelBadges, { links: row.original.channelLinks })
+        : h('span', { class: 'text-muted-foreground text-sm' }, '—'),
+    },
+    {
+      id: 'barcodes',
+      accessorKey: 'barcodes',
+      enableSorting: false,
+      enableHiding: true,
+      meta: { title: 'Баркоды' },
+      cell: ({ row }) => {
+        if (!row.original.barcodes || row.original.barcodes.length === 0) {
+          return h('span', { class: 'text-muted-foreground text-sm' }, '—')
+        }
+        return h('div', { class: 'flex flex-wrap gap-1' }, row.original.barcodes.map((barcode, index) => {
+          const prefix = getBarcodePrefix(barcode.type)
+          return h(Badge, {
+            key: index,
+            variant: getBarcodeVariant(barcode.type),
+            class: 'text-xs',
+          }, [
+            prefix ? h('span', { class: 'font-semibold mr-1' }, prefix) : null,
+            barcode.value,
+          ])
+        }))
+      },
+    },
+    {
+      id: 'status',
+      accessorKey: 'status',
+      enableSorting: true,
+      enableHiding: true,
+      meta: { title: 'Статус' },
+      cell: ({ row }) => h(ProductStatusBadge, { status: row.original.status }),
+    },
+    {
+      id: 'createdAt',
+      accessorKey: 'createdAt',
+      enableSorting: true,
+      enableHiding: true,
+      meta: { title: 'Создан' },
+      cell: ({ row }) => h('span', { class: 'text-muted-foreground text-sm' }, formatDate(row.original.createdAt)),
+    },
+  ]
+
+  if (canWrite.value) {
+    definitions.push({
+      id: 'actions',
+      enableSorting: false,
+      enableHiding: false,
+      header: () => h('span', { class: 'sr-only' }, 'Действия'),
+      cell: ({ row }) => renderActions(row.original),
+    })
+  }
+
+  return definitions
+})
+
+const renderActions = (item: ProductItem): unknown => {
+  const editItem = h(DropdownMenuItem, { onClick: () => openEdit(item) }, () => [
+    h(Pencil, { class: 'size-4 mr-2' }),
+    'Изменить',
+  ])
+  const archiveItem = h(DropdownMenuItem, { onClick: () => openArchive(item) }, () => [
+    h(Archive, { class: 'size-4 mr-2' }),
+    'Архивировать',
+  ])
+  const deleteItem = h(DropdownMenuItem, { class: 'text-destructive', onClick: () => openDelete(item) }, () => [
+    h(Trash2, { class: 'size-4 mr-2' }),
+    'Удалить',
+  ])
+  const restoreItem = h(DropdownMenuItem, { onClick: () => openRestore(item) }, () => [
+    h(Undo2, { class: 'size-4 mr-2' }),
+    'Восстановить',
+  ])
+
+  const menu = (children: unknown[]) => h('div', { class: 'text-right' }, [
+    h(DropdownMenu, {}, () => [
+      h(DropdownMenuTrigger, { asChild: true }, () => h(Button, { variant: 'ghost', size: 'icon', class: 'size-8' }, () => h(MoreHorizontal, { class: 'size-4' }))),
+      h(DropdownMenuContent, { align: 'end' }, () => children),
+    ]),
+  ])
+
+  if (item.status === ProductStatus.Active) {
+    return menu([editItem, archiveItem, deleteItem])
+  }
+
+  if (item.status === ProductStatus.Archived) {
+    return menu([restoreItem])
+  }
+
+  if (item.status === ProductStatus.DeletionPending) {
+    return h('span', { class: 'text-xs text-muted-foreground' }, 'Проверяем историю продаж...')
+  }
+
+  if (item.status === ProductStatus.DeletionFailed) {
+    return menu([restoreItem, archiveItem])
+  }
+
+  return null
+}
+
+/**
+ * Загружает одну страницу: фильтр по статусу, порядок и смещение считает сервер.
+ * Счётчики вкладок приходят тем же ответом, поэтому второго запроса на «Все» больше нет.
+ */
 const loadItems = async (): Promise<void> => {
   isLoading.value = true
   try {
-    const resp = await catalogProductsApi.getAll()
+    const sort = sorting.value[0]
+    const resp = await catalogProductsApi.getAll(
+      statusFilter.value === 'all' ? undefined : statusByFilter[statusFilter.value],
+      {
+        page: pagination.value.pageIndex + 1,
+        pageSize: pagination.value.pageSize,
+        sortBy: sort?.id,
+        sortDir: sort?.desc ? 'desc' : 'asc',
+        includeCounts: true,
+      },
+    )
     items.value = resp.items
+    totalCount.value = resp.totalCount ?? resp.items.length
+    if (resp.statusCounts) {
+      statusCounts.value = resp.statusCounts
+    }
   } catch {
     toast.error('Не удалось загрузить товары')
     return
@@ -168,18 +368,21 @@ const activeWildberriesConnection = computed<Connection | null>(() => {
 
 const checkDeletionStatus = async (): Promise<void> => {
   const pendingProducts = items.value.filter(p => p.status === ProductStatus.DeletionPending)
-  
+
   if (pendingProducts.length === 0) {
     return
   }
 
+  let deletedFromPage = false
+
   for (const product of pendingProducts) {
     try {
       const status = await catalogProductsApi.getDeletionStatus(product.id)
-      
+
       if (status.status === ProductStatus.Deleted) {
         items.value = items.value.filter(p => p.id !== product.id)
         deletingProductIds.value.delete(product.id)
+        deletedFromPage = true
         toast.success(`Товар "${product.name}" успешно удалён`)
       } else if (status.status === ProductStatus.DeletionFailed) {
         const index = items.value.findIndex(p => p.id === product.id)
@@ -192,6 +395,12 @@ const checkDeletionStatus = async (): Promise<void> => {
     } catch (error) {
       console.error('Error checking deletion status:', error)
     }
+  }
+
+  // Строка исчезла со страницы, значит и `totalCount` устарел: перезапрашиваем страницу,
+  // иначе пагинация будет считать места под уже удалённые товары.
+  if (deletedFromPage) {
+    await loadItems()
   }
 }
 
@@ -216,6 +425,25 @@ watch(() => items.value, (newItems) => {
   } else {
     stopPolling()
   }
+}, { deep: true })
+
+// Смена фильтра, порядка или страницы меняет набор строк под курсором, поэтому выделение
+// сбрасывается: таскать скрытые id между страницами — верный путь к «удалил 3, исчезло 40».
+watch(statusFilter, () => {
+  rowSelection.value = {}
+  pagination.value = { ...pagination.value, pageIndex: 0 }
+  loadItems()
+})
+
+watch([() => pagination.value.pageIndex, () => pagination.value.pageSize], () => {
+  rowSelection.value = {}
+  loadItems()
+})
+
+watch(sorting, () => {
+  rowSelection.value = {}
+  pagination.value = { ...pagination.value, pageIndex: 0 }
+  loadItems()
 }, { deep: true })
 
 onMounted(() => {
@@ -310,7 +538,7 @@ const handleDelete = async (): Promise<void> => {
   isDeleting.value = true
   try {
     await catalogProductsApi.requestDeletion(deleteTarget.value.id)
-    
+
     const index = items.value.findIndex(p => p.id === deleteTarget.value!.id)
     if (index !== -1) {
       items.value[index] = {
@@ -320,7 +548,7 @@ const handleDelete = async (): Promise<void> => {
       }
     }
     deletingProductIds.value.add(deleteTarget.value.id)
-    
+
     toast.info('Запрос на удаление отправлен, проверяем историю продаж...')
     deleteDialogOpen.value = false
   } catch {
@@ -383,173 +611,64 @@ const inputClass = 'mt-1'
 
     <StatusFilter v-model="statusFilter" :options="filterOptions" />
 
-    <div v-if="isLoading" class="rounded-xl border border-border bg-card overflow-hidden">
-      <div class="p-4 flex flex-col gap-3">
-        <Skeleton v-for="n in 5" :key="n" class="h-10 w-full rounded-lg" />
-      </div>
-    </div>
-
-    <div v-else-if="filteredItems.length === 0" class="rounded-xl border border-border bg-card p-12">
-      <div class="flex flex-col items-center justify-center gap-3 text-center">
-        <div class="size-12 rounded-full bg-muted flex items-center justify-center">
-          <Package class="size-6 text-muted-foreground" />
+    <DataGrid
+      v-model:pagination="pagination"
+      v-model:sorting="sorting"
+      v-model:column-visibility="columnVisibility"
+      v-model:row-selection="rowSelection"
+      :data="items"
+      :columns="columns"
+      :total-count="totalCount"
+      :is-loading="isLoading"
+      actions-column-id="actions"
+    >
+      <template #empty>
+        <div class="flex flex-col items-center justify-center gap-3 text-center">
+          <div class="size-12 rounded-full bg-muted flex items-center justify-center">
+            <Package class="size-6 text-muted-foreground" />
+          </div>
+          <div>
+            <h3 class="font-semibold">Нет товаров</h3>
+            <p class="text-sm text-muted-foreground">
+              {{ statusFilter === 'active' ? 'Добавьте первый товар' : 'В этом разделе пока ничего нет' }}
+            </p>
+          </div>
+          <div v-if="canWrite && statusFilter === 'active'" class="flex flex-col sm:flex-row gap-2 mt-2">
+            <Button @click="openCreate" variant="outline" class="gap-2">
+              <Plus class="size-4" />
+              Добавить товар
+            </Button>
+            <Button
+              v-if="!isLoadingConnections && activeWildberriesConnection"
+              @click="router.push('/catalogs/products/imports')"
+              variant="default"
+              class="gap-2"
+            >
+              <Download class="size-4" />
+              Импорт из Wildberries
+            </Button>
+            <Button
+              v-else-if="!isLoadingConnections && !activeWildberriesConnection"
+              @click="router.push('/catalogs/sales-channels')"
+              variant="outline"
+              class="gap-2"
+            >
+              Настроить интеграцию
+            </Button>
+          </div>
         </div>
-        <div>
-          <h3 class="font-semibold">Нет товаров</h3>
-          <p class="text-sm text-muted-foreground">
-            {{ statusFilter === 'active' ? 'Добавьте первый товар' : 'В этом разделе пока ничего нет' }}
-          </p>
-        </div>
-        <div v-if="canWrite && statusFilter === 'active'" class="flex flex-col sm:flex-row gap-2 mt-2">
-          <Button @click="openCreate" variant="outline" class="gap-2">
-            <Plus class="size-4" />
-            Добавить товар
-          </Button>
-          <Button 
-            v-if="!isLoadingConnections && activeWildberriesConnection" 
-            @click="router.push('/catalogs/products/imports')" 
-            variant="default" 
-            class="gap-2"
-          >
-            <Download class="size-4" />
-            Импорт из Wildberries
-          </Button>
-          <Button 
-            v-else-if="!isLoadingConnections && !activeWildberriesConnection" 
-            @click="router.push('/catalogs/sales-channels')" 
-            variant="outline" 
-            class="gap-2"
-          >
-            Настроить интеграцию
-          </Button>
-        </div>
-      </div>
-    </div>
+      </template>
 
-    <div v-else class="rounded-xl border border-border bg-card overflow-hidden">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead class="w-14">Фото</TableHead>
-            <TableHead>SKU</TableHead>
-            <TableHead>Название</TableHead>
-            <TableHead>Артикул</TableHead>
-            <TableHead>Баркоды</TableHead>
-            <TableHead>Статус</TableHead>
-            <TableHead>Создан</TableHead>
-            <TableHead v-if="canWrite"></TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          <TableRow
-            v-for="item in filteredItems"
-            :key="item.id"
-            class="hover:bg-muted/40 transition-colors"
-          >
-            <TableCell class="w-14 py-1.5">
-              <div class="w-10 aspect-[3/4] rounded-md overflow-hidden border border-border bg-muted flex items-center justify-center flex-shrink-0">
-				<img
-					v-if="item.photos && item.photos.length > 0"
-					:src="item.photos[0].url"
-					:alt="item.name"
-					class="size-full object-contain"
-					loading="lazy"
-				/>
-                <span v-else class="text-muted-foreground text-xs leading-none select-none" aria-hidden="true">—</span>
-              </div>
-            </TableCell>
-            <TableCell class="font-mono text-sm">{{ item.sku }}</TableCell>
-            <TableCell class="font-medium">{{ item.name }}</TableCell>
-            <TableCell>
-              <ProductChannelBadges v-if="item.channelLinks?.length" :links="item.channelLinks" />
-              <span v-else class="text-muted-foreground text-sm">—</span>
-            </TableCell>
-            <TableCell>
-              <div v-if="item.barcodes && item.barcodes.length > 0" class="flex flex-wrap gap-1">
-                <Badge
-                  v-for="(bc, idx) in item.barcodes"
-                  :key="idx"
-                  :variant="getBarcodeVariant(bc.type)"
-                  class="text-xs"
-                >
-                  <span v-if="getBarcodePrefix(bc.type)" class="font-semibold mr-1">{{ getBarcodePrefix(bc.type) }}</span>{{ bc.value }}
-                </Badge>
-              </div>
-              <span v-else class="text-muted-foreground text-sm">—</span>
-            </TableCell>
-            <TableCell>
-              <ProductStatusBadge :status="item.status" />
-            </TableCell>
-            <TableCell class="text-muted-foreground text-sm">{{ formatDate(item.createdAt) }}</TableCell>
-            <TableCell v-if="canWrite" class="text-right">
-              <template v-if="item.status === ProductStatus.Active">
-                <DropdownMenu>
-                  <DropdownMenuTrigger as-child>
-                    <Button variant="ghost" size="icon" class="size-8">
-                      <MoreHorizontal class="size-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem @click="openEdit(item)">
-                      <Pencil class="size-4 mr-2" />
-                      Изменить
-                    </DropdownMenuItem>
-                    <DropdownMenuItem @click="openArchive(item)">
-                      <Archive class="size-4 mr-2" />
-                      Архивировать
-                    </DropdownMenuItem>
-                    <DropdownMenuItem @click="openDelete(item)" class="text-destructive">
-                      <Trash2 class="size-4 mr-2" />
-                      Удалить
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </template>
+      <template #toolbar>
+        <span class="text-xs text-muted-foreground">Выбрано: {{ selectedCount }}</span>
+      </template>
 
-              <template v-else-if="item.status === ProductStatus.Archived">
-                <DropdownMenu>
-                  <DropdownMenuTrigger as-child>
-                    <Button variant="ghost" size="icon" class="size-8">
-                      <MoreHorizontal class="size-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem @click="openRestore(item)">
-                      <Undo2 class="size-4 mr-2" />
-                      Восстановить
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </template>
-
-              <template v-else-if="item.status === ProductStatus.DeletionPending">
-                <span class="text-xs text-muted-foreground">Проверяем историю продаж...</span>
-              </template>
-
-              <template v-else-if="item.status === ProductStatus.DeletionFailed">
-                <DropdownMenu>
-                  <DropdownMenuTrigger as-child>
-                    <Button variant="ghost" size="icon" class="size-8">
-                      <MoreHorizontal class="size-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem @click="openRestore(item)">
-                      <Undo2 class="size-4 mr-2" />
-                      Восстановить
-                    </DropdownMenuItem>
-                    <DropdownMenuItem @click="openArchive(item)">
-                      <Archive class="size-4 mr-2" />
-                      Архив
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </template>
-            </TableCell>
-          </TableRow>
-        </TableBody>
-      </Table>
-    </div>
+      <!--
+        Точка расширения под массовые операции: выделение строк уже живёт в `rowSelection`
+        (в границах видимой страницы), но действий по нему в этой задаче нет — под них нужны
+        отдельные batch-эндпоинты бэкенда.
+      -->
+    </DataGrid>
 
     <!-- Create Dialog -->
     <DialogRoot v-model:open="createDialogOpen">
@@ -658,38 +777,36 @@ const inputClass = 'mt-1'
                   type="number" 
                   step="0.01"
                 />
+              </div>
+              <div class="flex gap-2 mt-1">
                 <Input 
                   v-model="form.packingUnit.heightCm" 
                   placeholder="Высота" 
                   type="number" 
                   step="0.01"
                 />
-              </div>
-              <div class="flex gap-2 mt-2">
                 <Input 
                   v-model="form.packingUnit.weightKg" 
                   placeholder="Вес" 
                   type="number" 
                   step="0.01"
-                  class="w-full"
                 />
               </div>
             </div>
           </div>
 
-          <div class="flex gap-3 mt-6">
-            <Button @click="handleCreate" :disabled="isSaving" class="flex-1">
-              <Spinner v-if="isSaving" class="mr-2" />
-              {{ isSaving ? 'Создание...' : 'Создать' }}
-            </Button>
+          <div class="flex justify-end gap-3 mt-6">
             <DialogClose as-child>
-              <Button variant="outline" :disabled="isSaving">Отмена</Button>
+              <Button variant="outline">Отмена</Button>
             </DialogClose>
+            <Button @click="handleCreate" :disabled="isSaving">
+              <Spinner v-if="isSaving" class="mr-2" />
+              {{ isSaving ? 'Сохранение...' : 'Создать' }}
+            </Button>
           </div>
         </DialogContent>
       </DialogPortal>
     </DialogRoot>
-
 
     <!-- Delete Dialog -->
     <AlertDialogRoot v-model:open="deleteDialogOpen">
@@ -732,13 +849,18 @@ const inputClass = 'mt-1'
         <AlertDialogOverlay class="fixed inset-0 z-50 bg-black/50" />
         <AlertDialogContent class="bg-popover text-popover-foreground fixed top-[50%] left-[50%] max-h-[85vh] w-[90vw] max-w-[480px] translate-x-[-50%] translate-y-[-50%] rounded-lg border shadow-lg p-6 focus:outline-none z-[100]">
           <div class="flex flex-col gap-4">
-            <div>
-              <AlertDialogTitle class="text-lg font-semibold">Архивировать товар?</AlertDialogTitle>
-              <AlertDialogDescription class="text-sm text-muted-foreground mt-2">
-                Товар <strong>{{ archiveTarget?.name }}</strong> будет перемещён в архив.
-              </AlertDialogDescription>
+            <div class="flex items-start gap-3">
+              <div class="mt-1">
+                <Archive class="size-5 text-muted-foreground" />
+              </div>
+              <div class="flex-1">
+                <AlertDialogTitle class="text-lg font-semibold">Архивировать товар?</AlertDialogTitle>
+                <AlertDialogDescription class="text-sm text-muted-foreground mt-2">
+                  Товар <strong>{{ archiveTarget?.name }}</strong> будет перемещён в архив.
+                </AlertDialogDescription>
+              </div>
             </div>
-            <div class="flex justify-end gap-3">
+            <div class="flex justify-end gap-3 mt-2">
               <AlertDialogCancel as-child>
                 <Button variant="outline" :disabled="isSaving">Отмена</Button>
               </AlertDialogCancel>
@@ -760,13 +882,18 @@ const inputClass = 'mt-1'
         <AlertDialogOverlay class="fixed inset-0 z-50 bg-black/50" />
         <AlertDialogContent class="bg-popover text-popover-foreground fixed top-[50%] left-[50%] max-h-[85vh] w-[90vw] max-w-[480px] translate-x-[-50%] translate-y-[-50%] rounded-lg border shadow-lg p-6 focus:outline-none z-[100]">
           <div class="flex flex-col gap-4">
-            <div>
-              <AlertDialogTitle class="text-lg font-semibold">Восстановить товар?</AlertDialogTitle>
-              <AlertDialogDescription class="text-sm text-muted-foreground mt-2">
-                Товар <strong>{{ restoreTarget?.name }}</strong> будет восстановлен и станет активным.
-              </AlertDialogDescription>
+            <div class="flex items-start gap-3">
+              <div class="mt-1">
+                <Undo2 class="size-5 text-muted-foreground" />
+              </div>
+              <div class="flex-1">
+                <AlertDialogTitle class="text-lg font-semibold">Восстановить товар?</AlertDialogTitle>
+                <AlertDialogDescription class="text-sm text-muted-foreground mt-2">
+                  Товар <strong>{{ restoreTarget?.name }}</strong> будет возвращён в активные.
+                </AlertDialogDescription>
+              </div>
             </div>
-            <div class="flex justify-end gap-3">
+            <div class="flex justify-end gap-3 mt-2">
               <AlertDialogCancel as-child>
                 <Button variant="outline" :disabled="isSaving">Отмена</Button>
               </AlertDialogCancel>
