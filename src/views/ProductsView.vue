@@ -47,9 +47,9 @@ import ProductChannelBadges from '@/components/products/ProductChannelBadges.vue
 import { channelDisplay, normalizeChannel } from '@/utils/channelBadges'
 import { toast } from 'vue-sonner'
 import { catalogProductsApi, integrationsApi } from '@/services/api'
-import type { ProductItem, CreateProductRequest, ProductBarcode, PackingUnit } from '@/types/products'
+import type { ProductItem, CreateProductRequest, ProductBarcode, PackingUnit, ProductSortKey } from '@/types/products'
 import type { Connection } from '@/types'
-import { ProductStatus } from '@/types/products'
+import { ProductStatus, isProductSortKey } from '@/types/products'
 import { useCurrentUser } from '@/composables/useCurrentUser'
 import { useRouter } from 'vue-router'
 import { X } from 'lucide-vue-next'
@@ -81,7 +81,7 @@ const statusFilter = ref<'all' | 'active' | 'archived'>('active')
  * выполняет сервер: грид показывает ровно тот набор строк, который пришёл в ответе.
  */
 const pagination = ref<{ pageIndex: number; pageSize: number }>({ pageIndex: 0, pageSize: 25 })
-const sorting = ref<SortingState>([{ id: 'name', desc: false }])
+const sorting = ref<SortingState>([{ id: 'updatedAt', desc: true }])
 const columnVisibility = ref<VisibilityState>({})
 const rowSelection = ref<RowSelectionState>({})
 const totalCount = ref<number>(0)
@@ -175,6 +175,13 @@ const formatDateTime = (dateStr: string): string =>
 
 /** Товар, который ни разу не меняли, «изменён» в момент создания — так же считает и сервер. */
 const lastModifiedAt = (item: ProductItem): string => item.updatedAt ?? item.createdAt
+
+/**
+ * id колонки грида → ключ сортировки API. Для неизвестного id возвращаем undefined: запрос уйдёт
+ * без sortBy, и сервер применит свой порядок по умолчанию, а не отсортирует не по тому полю.
+ */
+const toProductSortKey = (columnId: string | undefined): ProductSortKey | undefined =>
+  isProductSortKey(columnId) ? columnId : undefined
 
 const getBarcodePrefix = (type?: string): string => channelDisplay(normalizeChannel(type)).prefix
 
@@ -363,7 +370,7 @@ const loadItems = async (): Promise<void> => {
       {
         page: pagination.value.pageIndex + 1,
         pageSize: pagination.value.pageSize,
-        sortBy: sort?.id,
+        sortBy: toProductSortKey(sort?.id),
         sortDir: sort?.desc ? 'desc' : 'asc',
         includeCounts: true,
       },
