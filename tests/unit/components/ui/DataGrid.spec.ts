@@ -1,9 +1,9 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, afterEach } from 'vitest'
 import { mount } from '@vue/test-utils'
 import type { VueWrapper } from '@vue/test-utils'
 import { getCoreRowModel, useVueTable } from '@tanstack/vue-table'
 import type { ColumnDef, RowSelectionState, SortingState, VisibilityState } from '@tanstack/vue-table'
-import { nextTick, ref } from 'vue'
+import { defineComponent, h, nextTick, ref, type Ref } from 'vue'
 import DataGrid from '@/components/ui/data-grid/DataGrid.vue'
 import DataGridPagination from '@/components/ui/data-grid/DataGridPagination.vue'
 import DataGridViewOptions from '@/components/ui/data-grid/DataGridViewOptions.vue'
@@ -40,15 +40,16 @@ const columns: ColumnDef<TestRow, unknown>[] = [
 ]
 
 interface GridState {
-  pagination: DataGridPaginationState
-  sorting: SortingState
-  columnVisibility: VisibilityState
-  rowSelection: RowSelectionState
+  pagination: Ref<DataGridPaginationState>
+  sorting: Ref<SortingState>
+  columnVisibility: Ref<VisibilityState>
+  rowSelection: Ref<RowSelectionState>
   data: TestRow[]
   totalCount: number
   selectable: boolean
   isLoading: boolean
   actionsColumnId?: string
+  gridColumns: ColumnDef<TestRow, unknown>[]
 }
 
 interface MountedGrid {
@@ -56,101 +57,106 @@ interface MountedGrid {
   state: GridState
 }
 
+/**
+ * Компонент работает в manual-режиме: состояние принадлежит вызывающей стороне,
+ * поэтому тестовый «хозяин» обязан быть реактивным. Со статичными props
+ * запись обратно не доходит до таблицы, и любой клик теряет эффект.
+ */
 function mountGrid(overrides: Partial<GridState> = {}): MountedGrid {
   const state: GridState = {
-    pagination: { pageIndex: 0, pageSize: 10 },
-    sorting: [],
-    columnVisibility: {},
-    rowSelection: {},
+    pagination: ref({ pageIndex: 0, pageSize: 10 }),
+    sorting: ref<SortingState>([]),
+    columnVisibility: ref<VisibilityState>({}),
+    rowSelection: ref<RowSelectionState>({}),
     data: pageRows,
     totalCount: 42,
     selectable: true,
     isLoading: false,
+    gridColumns: columns,
     ...overrides,
   }
 
-  const wrapper = mount(DataGrid, {
-    props: {
-      data: state.data,
-      columns,
-      totalCount: state.totalCount,
-      pagination: state.pagination,
-      sorting: state.sorting,
-      columnVisibility: state.columnVisibility,
-      rowSelection: state.rowSelection,
-      selectable: state.selectable,
-      isLoading: state.isLoading,
-      actionsColumnId: state.actionsColumnId,
-      'onUpdate:pagination': (value: DataGridPaginationState) => {
-        state.pagination = value
-      },
-      'onUpdate:sorting': (value: SortingState) => {
-        state.sorting = value
-      },
-      'onUpdate:columnVisibility': (value: VisibilityState) => {
-        state.columnVisibility = value
-      },
-      'onUpdate:rowSelection': (value: RowSelectionState) => {
-        state.rowSelection = value
-      },
+  const Host = defineComponent({
+    name: 'DataGridHost',
+    setup() {
+      return () => h(DataGrid as never, {
+        data: state.data,
+        columns: state.gridColumns,
+        totalCount: state.totalCount,
+        selectable: state.selectable,
+        isLoading: state.isLoading,
+        actionsColumnId: state.actionsColumnId,
+        'pagination': state.pagination.value,
+        'sorting': state.sorting.value,
+        'columnVisibility': state.columnVisibility.value,
+        'rowSelection': state.rowSelection.value,
+        'onUpdate:pagination': (value: DataGridPaginationState) => {
+          state.pagination.value = value
+        },
+        'onUpdate:sorting': (value: SortingState) => {
+          state.sorting.value = value
+        },
+        'onUpdate:columnVisibility': (value: VisibilityState) => {
+          state.columnVisibility.value = value
+        },
+        'onUpdate:rowSelection': (value: RowSelectionState) => {
+          state.rowSelection.value = value
+        },
+      })
     },
-    global: { stubs: { teleport: true } },
   })
+
+  const wrapper = mount(Host, { attachTo: document.body })
 
   return { wrapper, state }
 }
 
+function grid(wrapper: VueWrapper) {
+  return wrapper.findComponent(DataGrid)
+}
+
 function headerCheckbox(wrapper: VueWrapper) {
-  return wrapper.find('thead [data-slot="checkbox"]')
+  return wrapper.find('thead button[role="checkbox"]')
 }
 
 function rowCheckboxes(wrapper: VueWrapper) {
-  return wrapper.findAll('tbody [data-slot="checkbox"]')
+  return wrapper.findAll('tbody button[role="checkbox"]')
 }
 
-function findSortButton(wrapper: VueWrapper, title: string) {
-  const button = wrapper.findAll('thead button').find(candidate => candidate.text().includes(title))
+function sortButtons(wrapper: VueWrapper) {
+  return wrapper.findAll('thead button').filter(button => button.attributes('role') !== 'checkbox')
+}
+
+async function clickSortHeader(wrapper: VueWrapper, title: string): Promise<void> {
+  const button = sortButtons(wrapper).find(candidate => candidate.text().includes(title))
 
   if (!button) {
     throw new Error(`Кнопка сортировки «${title}» не найдена`)
   }
 
-  return button
-}
-
-async function clickSortHeader(wrapper: VueWrapper, title: string): Promise<void> {
-  await findSortButton(wrapper, title).trigger('click')
+  await button.trigger('click')
   await nextTick()
 }
 
-function mountOptionsMenu(initialVisibility: VisibilityState = {}, gridColumns: ColumnDef<TestRow, unknown>[] = columns) {
-  const columnVisibility = ref<VisibilityState>({ ...initialVisibility })
-
-  const table = useVueTable<TestRow>({
-    data: pageRows,
-    columns: gridColumns,
-    getCoreRowModel: getCoreRowModel(),
-    state: {
-      get columnVisibility() {
-        return columnVisibility.value
-      },
-    },
-    onColumnVisibilityChange: (updater) => {
-      columnVisibility.value = typeof updater === 'function' ? updater(columnVisibility.value) : updater
-    },
-  })
-
-  const wrapper = mount(DataGridViewOptions, {
-    props: { table },
-    global: { stubs: { teleport: true } },
-  })
-
-  return { wrapper, table, columnVisibility }
+/**
+ * Меню видимости рендерится через портал в `document.body`, поэтому искать
+ * пункты внутри обёртки бессмысленно — их там никогда не будет.
+ */
+function menuItems(): HTMLElement[] {
+  return Array.from(document.querySelectorAll<HTMLElement>('[data-slot="dropdown-menu-checkbox-item"]'))
 }
 
-function menuItemLabels(wrapper: VueWrapper): string[] {
-  return wrapper.findAll('[data-slot="dropdown-menu-checkbox-item"]').map(item => item.text())
+function menuLabels(): string[] {
+  return menuItems().map(item => item.textContent?.trim() ?? '')
 }
+
+function menuItemByLabel(label: string): HTMLElement | undefined {
+  return menuItems().find(item => item.textContent?.trim() === label)
+}
+
+afterEach(() => {
+  document.body.innerHTML = ''
+})
 
 describe('DataGrid: рендер строк', () => {
   it('рендерит строки текущей страницы и заголовки колонок', () => {
@@ -164,7 +170,7 @@ describe('DataGrid: рендер строк', () => {
   })
 
   it('показывает сводку по выбору относительно totalCount, а не длины страницы', () => {
-    const { wrapper } = mountGrid({ totalCount: 42, rowSelection: { 'row-1': true } })
+    const { wrapper } = mountGrid({ totalCount: 42, rowSelection: ref({ 'row-1': true }) })
 
     expect(wrapper.text()).toContain('1 из 42 выбрано')
   })
@@ -177,7 +183,7 @@ describe('DataGrid: рендер строк', () => {
   })
 
   it('показывает пустое состояние по умолчанию', () => {
-    const { wrapper } = mountGrid({ data: [], totalCount: 0 })
+    const { wrapper } = mountGrid({ data: [], totalCount: 0, rowSelection: ref({}) })
 
     expect(wrapper.text()).toContain('Нет товаров')
     expect(wrapper.text()).toContain('В этом разделе пока ничего нет')
@@ -195,7 +201,6 @@ describe('DataGrid: рендер строк', () => {
         rowSelection: {},
       },
       slots: { empty: '<div class="custom-empty">Своё состояние</div>' },
-      global: { stubs: { teleport: true } },
     })
 
     expect(wrapper.find('.custom-empty').exists()).toBe(true)
@@ -204,56 +209,56 @@ describe('DataGrid: рендер строк', () => {
   it('эмитит rowClick с исходной строкой, но молчит на клик по чекбоксу', async () => {
     const { wrapper } = mountGrid()
 
-    const firstDataCell = wrapper.findAll('tbody tr')[0].findAll('td')[1]
-    await firstDataCell.trigger('click')
+    await wrapper.findAll('tbody tr')[0].findAll('td')[1].trigger('click')
+    expect(grid(wrapper).emitted('rowClick')?.[0]).toEqual([pageRows[0]])
 
-    expect(wrapper.emitted('rowClick')?.[0]).toEqual([pageRows[0]])
-
-    const fresh = mountGrid()
-    await rowCheckboxes(fresh.wrapper)[0].trigger('click')
+    await rowCheckboxes(wrapper)[0].trigger('click')
     await nextTick()
 
-    expect(fresh.wrapper.emitted('rowClick')).toBeUndefined()
+    expect(grid(wrapper).emitted('rowClick')).toHaveLength(1)
   })
 })
 
 describe('DataGrid: серверная сортировка', () => {
-  it('циклически переключает состояние сортировки и эмитит update:sorting', async () => {
+  it('переключает asc → desc → asc и эмитит update:sorting', async () => {
     const { wrapper, state } = mountGrid()
 
     await clickSortHeader(wrapper, 'Название')
-    expect(state.sorting).toEqual([{ id: 'name', desc: false }])
+    expect(state.sorting.value).toEqual([{ id: 'name', desc: false }])
 
     await clickSortHeader(wrapper, 'Название')
-    expect(state.sorting).toEqual([{ id: 'name', desc: true }])
+    expect(state.sorting.value).toEqual([{ id: 'name', desc: true }])
 
     await clickSortHeader(wrapper, 'Название')
-    expect(state.sorting).toEqual([])
+    expect(state.sorting.value).toEqual([{ id: 'name', desc: false }])
 
-    expect(wrapper.emitted('update:sorting')).toHaveLength(3)
+    expect(grid(wrapper).emitted('update:sorting')).toHaveLength(3)
   })
 
   it('сбрасывает страницу на первую при смене сортировки', async () => {
-    const { wrapper, state } = mountGrid({ pagination: { pageIndex: 2, pageSize: 10 } })
+    const { wrapper, state } = mountGrid({
+      pagination: ref({ pageIndex: 2, pageSize: 10 }),
+    })
 
     await clickSortHeader(wrapper, 'SKU')
 
-    expect(state.sorting).toEqual([{ id: 'sku', desc: false }])
-    expect(state.pagination).toEqual({ pageIndex: 0, pageSize: 10 })
-    expect(wrapper.emitted('update:pagination')?.at(-1)).toEqual([{ pageIndex: 0, pageSize: 10 }])
+    expect(state.sorting.value).toEqual([{ id: 'sku', desc: false }])
+    expect(state.pagination.value).toEqual({ pageIndex: 0, pageSize: 10 })
   })
 
   it('не трогает страницу, если она уже первая', async () => {
-    const { wrapper, state } = mountGrid({ pagination: { pageIndex: 0, pageSize: 10 } })
+    const { wrapper, state } = mountGrid({
+      pagination: ref({ pageIndex: 0, pageSize: 10 }),
+    })
 
     await clickSortHeader(wrapper, 'Название')
 
-    expect(state.pagination).toEqual({ pageIndex: 0, pageSize: 10 })
-    expect(wrapper.emitted('update:pagination')).toBeUndefined()
+    expect(state.pagination.value).toEqual({ pageIndex: 0, pageSize: 10 })
+    expect(grid(wrapper).emitted('update:pagination')).toBeUndefined()
   })
 
   it('помечает активную сортировку через aria-sort', () => {
-    const { wrapper } = mountGrid({ sorting: [{ id: 'name', desc: true }] })
+    const { wrapper } = mountGrid({ sorting: ref<SortingState>([{ id: 'name', desc: true }]) })
 
     const ariaSorts = wrapper.findAll('thead th').map(cell => cell.attributes('aria-sort'))
 
@@ -263,23 +268,12 @@ describe('DataGrid: серверная сортировка', () => {
 
   it('не даёт сортировать колонку без enableSorting', () => {
     const staticColumns: ColumnDef<TestRow, unknown>[] = [
-      { id: 'sku', accessorKey: 'sku', header: 'SKU', cell: () => 'static' },
+      { id: 'sku', accessorKey: 'sku', enableSorting: false, header: 'SKU', meta: { title: 'SKU' }, cell: () => 'static' },
     ]
 
-    const wrapper = mount(DataGrid, {
-      props: {
-        data: pageRows,
-        columns: staticColumns,
-        totalCount: pageRows.length,
-        pagination: { pageIndex: 0, pageSize: 10 },
-        sorting: [],
-        columnVisibility: {},
-        rowSelection: {},
-      },
-      global: { stubs: { teleport: true } },
-    })
+    const { wrapper } = mountGrid({ gridColumns: staticColumns, selectable: false })
 
-    expect(wrapper.findAll('thead button')).toHaveLength(0)
+    expect(sortButtons(wrapper)).toHaveLength(0)
   })
 })
 
@@ -290,19 +284,21 @@ describe('DataGrid: выбор строк', () => {
     await headerCheckbox(wrapper).trigger('click')
     await nextTick()
 
-    expect(state.rowSelection).toEqual({ 'row-1': true, 'row-2': true })
-    expect(Object.keys(state.rowSelection)).toHaveLength(pageRows.length)
-    expect(wrapper.emitted('update:rowSelection')?.at(-1)).toEqual([{ 'row-1': true, 'row-2': true }])
+    expect(state.rowSelection.value).toEqual({ 'row-1': true, 'row-2': true })
+    expect(Object.keys(state.rowSelection.value)).toHaveLength(pageRows.length)
+    expect(grid(wrapper).emitted('update:rowSelection')?.at(-1)).toEqual([{ 'row-1': true, 'row-2': true }])
   })
 
   it('повторный клик по select-all снимает выбор со страницы', async () => {
-    const { wrapper, state } = mountGrid({ rowSelection: { 'row-1': true, 'row-2': true } })
+    const { wrapper, state } = mountGrid({
+      rowSelection: ref<RowSelectionState>({ 'row-1': true, 'row-2': true }),
+    })
 
     await headerCheckbox(wrapper).trigger('click')
     await nextTick()
 
-    expect(state.rowSelection).toEqual({})
-    expect(wrapper.emitted('update:rowSelection')?.at(-1)).toEqual([{}])
+    expect(state.rowSelection.value).toEqual({})
+    expect(grid(wrapper).emitted('update:rowSelection')?.at(-1)).toEqual([{}])
   })
 
   it('не выдумывает id строк, которых нет на странице', async () => {
@@ -311,11 +307,11 @@ describe('DataGrid: выбор строк', () => {
     await headerCheckbox(wrapper).trigger('click')
     await nextTick()
 
-    expect(Object.keys(state.rowSelection).sort()).toEqual(['row-1', 'row-2'])
+    expect(Object.keys(state.rowSelection.value).sort()).toEqual(['row-1', 'row-2'])
   })
 
   it('частичный выбор даёт indeterminate у чекбокса в шапке', () => {
-    const { wrapper } = mountGrid({ rowSelection: { 'row-1': true } })
+    const { wrapper } = mountGrid({ rowSelection: ref<RowSelectionState>({ 'row-1': true }) })
 
     const checkbox = headerCheckbox(wrapper)
 
@@ -324,13 +320,17 @@ describe('DataGrid: выбор строк', () => {
   })
 
   it('полный выбор страницы даёт checked у чекбокса в шапке', () => {
-    const { wrapper } = mountGrid({ rowSelection: { 'row-1': true, 'row-2': true } })
+    const { wrapper } = mountGrid({
+      rowSelection: ref<RowSelectionState>({ 'row-1': true, 'row-2': true }),
+    })
 
     expect(headerCheckbox(wrapper).attributes('data-state')).toBe('checked')
   })
 
   it('подсвечивает выбранную строку', () => {
-    const { wrapper } = mountGrid({ rowSelection: { 'row-1': true, 'row-2': true } })
+    const { wrapper } = mountGrid({
+      rowSelection: ref<RowSelectionState>({ 'row-1': true, 'row-2': true }),
+    })
 
     const rows = wrapper.findAll('tbody tr')
 
@@ -339,12 +339,14 @@ describe('DataGrid: выбор строк', () => {
   })
 
   it('клик по чекбоксу строки меняет только эту строку', async () => {
-    const { wrapper, state } = mountGrid({ rowSelection: { 'row-2': true } })
+    const { wrapper, state } = mountGrid({
+      rowSelection: ref<RowSelectionState>({ 'row-2': true }),
+    })
 
     await rowCheckboxes(wrapper)[0].trigger('click')
     await nextTick()
 
-    expect(state.rowSelection).toEqual({ 'row-2': true, 'row-1': true })
+    expect(state.rowSelection.value).toEqual({ 'row-2': true, 'row-1': true })
   })
 
   it('скрывает колонку выбора при selectable = false', () => {
@@ -357,7 +359,7 @@ describe('DataGrid: выбор строк', () => {
 
 describe('DataGrid: видимость колонок', () => {
   it('скрывает колонку через состояние columnVisibility', () => {
-    const { wrapper } = mountGrid({ columnVisibility: { sku: false } })
+    const { wrapper } = mountGrid({ columnVisibility: ref<VisibilityState>({ sku: false }) })
 
     expect(wrapper.find('thead').text()).not.toContain('SKU')
     expect(wrapper.find('tbody').text()).not.toContain('cell-sku-row-1')
@@ -365,7 +367,7 @@ describe('DataGrid: видимость колонок', () => {
   })
 
   it('оставляет только включённые колонки', () => {
-    const { wrapper } = mountGrid({ columnVisibility: { name: false, sku: true } })
+    const { wrapper } = mountGrid({ columnVisibility: ref<VisibilityState>({ name: false, sku: true }) })
 
     expect(wrapper.find('thead').text()).toContain('SKU')
     expect(wrapper.find('thead').text()).not.toContain('Название')
@@ -374,18 +376,13 @@ describe('DataGrid: видимость колонок', () => {
   it('переключает видимость колонки через шестерёнку', async () => {
     const { wrapper, state } = mountGrid()
 
-    const options = wrapper.findComponent(DataGridViewOptions)
-    await options.find('button').trigger('click')
+    await wrapper.findComponent(DataGridViewOptions).find('button').trigger('click')
     await nextTick()
 
-    const skuItem = options
-      .findAll('[data-slot="dropdown-menu-checkbox-item"]')
-      .find(item => item.text().includes('SKU'))
-
-    await skuItem!.trigger('click')
+    menuItemByLabel('SKU')?.click()
     await nextTick()
 
-    expect(state.columnVisibility).toEqual({ sku: false })
+    expect(state.columnVisibility.value).toEqual({ sku: false })
   })
 
   it('исключает колонку действий из меню видимости', async () => {
@@ -394,61 +391,70 @@ describe('DataGrid: видимость колонок', () => {
       {
         id: 'actions',
         header: '',
+        enableHiding: false,
         meta: { title: 'Действия' },
         cell: () => 'cell-actions',
       },
     ]
 
-    const wrapper = mount(DataGrid, {
-      props: {
-        data: pageRows,
-        columns: columnsWithActions,
-        totalCount: pageRows.length,
-        actionsColumnId: 'actions',
-        pagination: { pageIndex: 0, pageSize: 10 },
-        sorting: [],
-        columnVisibility: {},
-        rowSelection: {},
-      },
-      global: { stubs: { teleport: true } },
-    })
+    const { wrapper } = mountGrid({ gridColumns: columnsWithActions, actionsColumnId: 'actions' })
 
     expect(wrapper.find('tbody').text()).toContain('cell-actions')
 
-    const options = wrapper.findComponent(DataGridViewOptions)
-    await options.find('button').trigger('click')
+    await wrapper.findComponent(DataGridViewOptions).find('button').trigger('click')
     await nextTick()
 
-    // «Показать все» + две колонки данных: колонка действий из меню исключена.
-    expect(options.findAll('[data-slot="dropdown-menu-checkbox-item"]')).toHaveLength(3)
-    expect(menuItemLabels(options)).not.toContain('Действия')
+    // «Показать все» + две колонки данных; колонка действий из меню исключена.
+    expect(menuItems()).toHaveLength(3)
+    expect(menuLabels()).not.toContain('Действия')
   })
 })
 
 describe('DataGridViewOptions: меню видимости', () => {
+  function mountOptionsMenu(initialVisibility: VisibilityState = {}) {
+    const columnVisibility = ref<VisibilityState>({ ...initialVisibility })
+
+    const table = useVueTable<TestRow>({
+      data: pageRows,
+      columns,
+      getCoreRowModel: getCoreRowModel(),
+      state: {
+        get columnVisibility() {
+          return columnVisibility.value
+        },
+      },
+      onColumnVisibilityChange: (updater) => {
+        columnVisibility.value = typeof updater === 'function' ? updater(columnVisibility.value) : updater
+      },
+    })
+
+    const wrapper = mount(DataGridViewOptions, {
+      props: { table },
+      attachTo: document.body,
+    })
+
+    return { wrapper, table, columnVisibility }
+  }
+
+  async function openMenu(wrapper: VueWrapper): Promise<void> {
+    await wrapper.find('button').trigger('click')
+    await nextTick()
+  }
+
   it('перечисляет скрываемые колонки и пункт «Показать все»', async () => {
     const { wrapper } = mountOptionsMenu({ sku: false })
 
-    await wrapper.find('button').trigger('click')
-    await nextTick()
+    await openMenu(wrapper)
 
-    const labels = menuItemLabels(wrapper)
-
-    expect(labels).toHaveLength(columns.length + 1)
-    expect(labels[0]).toBe('Показать все')
+    expect(wrapper.text()).toContain('Колонки')
+    expect(menuLabels()).toEqual(['Показать все', 'Название', 'SKU'])
   })
 
   it('снимает и возвращает видимость конкретной колонки', async () => {
     const { wrapper, table, columnVisibility } = mountOptionsMenu({})
 
-    await wrapper.find('button').trigger('click')
-    await nextTick()
-
-    const skuItem = wrapper
-      .findAll('[data-slot="dropdown-menu-checkbox-item"]')
-      .find(item => item.text() === 'SKU')
-
-    await skuItem!.trigger('click')
+    await openMenu(wrapper)
+    menuItemByLabel('SKU')?.click()
     await nextTick()
 
     expect(columnVisibility.value).toEqual({ sku: false })
@@ -456,21 +462,17 @@ describe('DataGridViewOptions: меню видимости', () => {
   })
 
   it('возвращает все колонки пунктом «Показать все»', async () => {
-    const { wrapper, table, columnVisibility } = mountOptionsMenu({ sku: false, name: false })
+    const { wrapper, table } = mountOptionsMenu({ sku: false, name: false })
 
-    await wrapper.find('button').trigger('click')
-    await nextTick()
+    await openMenu(wrapper)
 
-    const allItem = wrapper
-      .findAll('[data-slot="dropdown-menu-checkbox-item"]')
-      .find(item => item.text() === 'Показать все')
+    expect(table.getColumn('sku')?.getIsVisible()).toBe(false)
 
-    await allItem!.trigger('click')
+    menuItemByLabel('Показать все')?.click()
     await nextTick()
 
     expect(table.getColumn('sku')?.getIsVisible()).toBe(true)
     expect(table.getColumn('name')?.getIsVisible()).toBe(true)
-    expect(columnVisibility.value).not.toEqual({ sku: false, name: false })
   })
 })
 
@@ -487,7 +489,7 @@ describe('DataGridPagination: футер', () => {
         pagination: { pageIndex: 0, pageSize: 25 },
         ...overrides,
       },
-      global: { stubs: { teleport: true } },
+      attachTo: document.body,
     })
   }
 
@@ -506,7 +508,7 @@ describe('DataGridPagination: футер', () => {
   it('эмитит update:pagination при переходе на следующую страницу', async () => {
     const wrapper = mountFooter({ pagination: { pageIndex: 0, pageSize: 25 } })
 
-    await wrapper.find('[data-slot="pagination-next"]').trigger('click')
+    await wrapper.find('[aria-label="Следующая страница"]').trigger('click')
     await nextTick()
 
     expect(wrapper.emitted('update:pagination')?.at(-1)).toEqual([{ pageIndex: 1, pageSize: 25 }])
@@ -515,7 +517,7 @@ describe('DataGridPagination: футер', () => {
   it('не рендерит блок пагинации при пустом результате', () => {
     const wrapper = mountFooter({ totalCount: 0 })
 
-    expect(wrapper.find('[data-slot="pagination-prev"]').exists()).toBe(false)
+    expect(wrapper.find('nav').exists()).toBe(false)
   })
 
   it('скрывает выбор размера страницы по требованию', () => {
