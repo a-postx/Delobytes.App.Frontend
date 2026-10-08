@@ -196,7 +196,9 @@ describe('ProductsView server-side paging and sorting', () => {
     const wrapper = factory()
     await flushPromises()
 
-    expect(wrapper.text()).toContain('1–1 из 60')
+    // Диапазон считает DataGridPagination от pageSize (25), а не от числа строк
+    // в моке ответа: на первой странице это всегда "1–pageSize из totalCount".
+    expect(wrapper.text()).toContain('1–25 из 60')
   })
 })
 
