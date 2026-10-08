@@ -319,6 +319,29 @@ describe('DataGrid: выбор строк', () => {
     expect(checkbox.attributes('aria-checked')).toBe('mixed')
   })
 
+  it('рисует минус, а не галочку, при частичном выборе', () => {
+    const { wrapper } = mountGrid({ rowSelection: ref<RowSelectionState>({ 'row-1': true }) })
+
+    // Индикатор обязан отрисовать переданный слот: без выхода для слота Vue молча
+    // выбрасывает Minus, и «выбрано частично» визуально не отличается от «выбрано всё».
+    const indicator = headerCheckbox(wrapper).find('[data-slot="checkbox-indicator"]')
+
+    expect(indicator.find('path[d="M5 12h14"]').exists()).toBe(true)
+    expect(indicator.find('path[d="M20 6 9 17l-5-5"]').exists()).toBe(false)
+    expect(indicator.find('polyline').exists()).toBe(false)
+  })
+
+  it('рисует галочку при полном выборе страницы', () => {
+    const { wrapper } = mountGrid({
+      rowSelection: ref<RowSelectionState>({ 'row-1': true, 'row-2': true }),
+    })
+
+    const indicator = headerCheckbox(wrapper).find('[data-slot="checkbox-indicator"]')
+
+    expect(indicator.find('path[d="M20 6 9 17l-5-5"]').exists()).toBe(true)
+    expect(indicator.find('path[d="M5 12h14"]').exists()).toBe(false)
+  })
+
   it('полный выбор страницы даёт checked у чекбокса в шапке', () => {
     const { wrapper } = mountGrid({
       rowSelection: ref<RowSelectionState>({ 'row-1': true, 'row-2': true }),
@@ -441,6 +464,30 @@ describe('DataGrid: видимость колонок', () => {
     // Панель над таблицей удалена вместе со слотом toolbar.
     expect(wrapper.find('[data-slot="toolbar"]').exists()).toBe(false)
     expect(wrapper.find('thead th').text()).toBe('')
+  })
+
+  it('выравнивает заголовок колонки действий по правому краю', () => {
+    const columnsWithActions: ColumnDef<TestRow, unknown>[] = [
+      ...columns,
+      {
+        id: 'actions',
+        header: '',
+        enableHiding: false,
+        meta: { title: 'Действия' },
+        cell: () => 'cell-actions',
+      },
+    ]
+
+    const { wrapper } = mountGrid({ gridColumns: columnsWithActions, actionsColumnId: 'actions' })
+
+    const actionsHeader = wrapper.findAll('thead th').at(-1)
+
+    // Шестерёнка стоит над меню «⋯» из строк, а то меню выровнено вправо.
+    expect(actionsHeader?.classes()).toContain('text-right')
+    expect(actionsHeader?.classes()).not.toContain('text-left')
+
+    // Выравнивание не протекло на колонки данных.
+    expect(wrapper.findAll('thead th')[1].classes()).toContain('text-left')
   })
 })
 

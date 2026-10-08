@@ -154,6 +154,8 @@ const selectedSummary = computed<string>(() => `${selectedCount.value} из ${pr
 const checkboxClass = 'grid size-4 shrink-0 place-items-center rounded border border-muted-foreground/40 bg-background data-[state=checked]:border-primary data-[state=checked]:bg-primary data-[state=indeterminate]:border-primary data-[state=indeterminate]:bg-primary focus:outline-none focus:ring-2 focus:ring-primary/40 transition-colors'
 
 const selectCellClass = 'w-9 px-3 py-2.5'
+/** Заголовок колонки действий выравнивается по правому краю: шестерёнка встаёт над меню «⋯» из строк. */
+const actionsHeadClass = 'text-right'
 const summaryClass = 'text-xs text-muted-foreground'
 </script>
 
@@ -225,6 +227,7 @@ const summaryClass = 'text-xs text-muted-foreground'
           <TableHead
             v-for="header in headerGroup.headers"
             :key="header.id"
+            :class="header.column.id === props.actionsColumnId ? actionsHeadClass : undefined"
           >
             <!-- Настройка колонок живёт в заголовке столбца действий: отдельная панель над таблицей не нужна. -->
             <slot
