@@ -58,6 +58,11 @@ export interface ProductItem {
   packingUnit?: PackingUnit
   photos?: ProductPhoto[]
   channelLinks?: ProductChannelLink[]
+  /**
+   * true, когда у товара есть хотя бы одна активная норма выработки.
+   * Заполняется только при `includeWorkRateCoverage` — подзапрос не нужен основной выдаче каталога.
+   */
+  hasActiveWorkRate?: boolean
 }
 
 /**
@@ -108,6 +113,11 @@ export interface GetProductsParams {
   includeCounts?: boolean
   /** Регистронезависимая подстрока по `Name` и `Sku`. Пустое значение бэкенд игнорирует. */
   search?: string
+  /**
+   * Добавляет `hasActiveWorkRate` каждому товару. Флаг опциональный: лишний подзапрос нужен только
+   * тому, кто показывает признак покрытия нормами.
+   */
+  includeWorkRateCoverage?: boolean
 }
 
 export interface GetProductResponse {

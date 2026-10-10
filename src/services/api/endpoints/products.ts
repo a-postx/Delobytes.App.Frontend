@@ -46,6 +46,9 @@ export const catalogProductsApi = {
       if (params.search !== undefined) {
         query.search = params.search
       }
+      if (params.includeWorkRateCoverage !== undefined) {
+        query.includeWorkRateCoverage = params.includeWorkRateCoverage
+      }
     }
     const response = await axiosInstance.get<GetProductsResponse>('/api/catalogs/products', {
       params: query,

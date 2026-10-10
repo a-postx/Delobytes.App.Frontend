@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
-import { Plus, Trash2, Gauge, Pencil, History, X } from 'lucide-vue-next'
+import { ref, onMounted, computed, watch, onUnmounted } from 'vue'
+import { Plus, Trash2, Gauge, Pencil, History, X, ChevronDown, ChevronRight } from 'lucide-vue-next'
 import {
   DialogClose,
   DialogContent,
@@ -28,6 +28,8 @@ import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Spinner } from '@/components/ui/spinner'
 import { Skeleton } from '@/components/ui/skeleton'
+import { SearchInput } from '@/components/ui/search-input'
+import { DataGridPagination } from '@/components/ui/data-grid'
 import {
   Table,
   TableBody,
@@ -37,27 +39,38 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { StatusFilter } from '@/components/ui/status-filter'
+import ProductCombobox from '@/components/products/ProductCombobox.vue'
 import { toast } from 'vue-sonner'
 import { productWorkRatesApi, catalogProductsApi, workRatesApi } from '@/services/api'
 import type {
   ProductWorkRateItem,
+  ProductWorkRateStatusCounts,
   CreateProductWorkRateRequest,
   UpdateProductWorkRateRequest,
   WorkRateItem,
 } from '@/services/api'
-import type { ProductItem } from '@/types/products'
 import { useCurrentUser } from '@/composables/useCurrentUser'
 import { useTenantMoney } from '@/composables/useTenantMoney'
 import { useApiCall } from '@/composables/useApiCall'
 import { ErrorCodes } from '@/types/errors'
 import type { ApiError } from '@/types/errors'
+import {
+  countInactive,
+  filterOptionsFromCounts,
+  formatIsoDate,
+  groupWorkRates,
+  validateCreateForm,
+  validateEditForm,
+} from '@/utils/productWorkRates'
 
 const { canWrite } = useCurrentUser()
 const { formatMoney } = useTenantMoney()
 
 const items = ref<ProductWorkRateItem[]>([])
-const products = ref<ProductItem[]>([])
 const workRates = ref<WorkRateItem[]>([])
+const totalCount = ref<number>(0)
+const statusCounts = ref<ProductWorkRateStatusCounts>({ active: 0, inactive: 0, all: 0 })
+const hasEmptyCatalog = ref<boolean>(false)
 
 const createDialogOpen = ref<boolean>(false)
 const editDialogOpen = ref<boolean>(false)
@@ -67,52 +80,49 @@ const editTarget = ref<ProductWorkRateItem | null>(null)
 const deleteTarget = ref<ProductWorkRateItem | null>(null)
 const isSaving = ref<boolean>(false)
 const isDeleting = ref<boolean>(false)
+/** Диалог, открытый кнопкой «Новая версия» строки, привязан к товару этой строки: менять его нельзя. */
+const isProductLocked = ref<boolean>(false)
+const lockedProductName = ref<string>('')
 
 const statusFilter = ref<'all' | 'active' | 'inactive'>('active')
+const searchQuery = ref<string>('')
+
+/**
+ * Срез списка считает сервер, поэтому состояние пагинации живёт на странице,
+ * а не внутри грида: грид отсутствует, остаётся только футер `DataGridPagination`.
+ */
+const pagination = ref<{ pageIndex: number; pageSize: number }>({ pageIndex: 0, pageSize: 25 })
+
+/** Товары, чей архив версий раскрыт вручную. Сбрасывается при смене страницы, фильтра и поиска. */
+const expandedGroups = ref<Set<string>>(new Set())
+
+let searchDebounceTimer: ReturnType<typeof setTimeout> | null = null
+
+const SEARCH_DEBOUNCE_MS = 300
+
+const statusByFilter: Record<'all' | 'active' | 'inactive', 'Active' | 'All' | 'Inactive'> = {
+  active: 'Active',
+  all: 'All',
+  inactive: 'Inactive',
+}
 
 const today = (): string => new Date().toISOString().slice(0, 10)
 
 const form = ref({ productId: '', workRateId: '', assemblyRatePerDay: 0, validFrom: today() })
 const editForm = ref({ workRateId: '', assemblyRatePerDay: 0, validFrom: '' })
 
-const activeCount = computed(() => items.value.filter(i => i.isActive).length)
-const inactiveCount = computed(() => items.value.filter(i => !i.isActive).length)
-const totalCount = computed(() => items.value.length)
+const groups = computed(() => groupWorkRates(items.value))
 
-const filterOptions = computed(() => [
-  { value: 'active', label: 'Активные', count: activeCount.value },
-  { value: 'all', label: 'Все', count: totalCount.value },
-  { value: 'inactive', label: 'Неактивные', count: inactiveCount.value },
-])
+const filterOptions = computed(() => filterOptionsFromCounts(statusCounts.value))
 
-const filteredItems = computed(() => {
-  if (statusFilter.value === 'all') return items.value
-  if (statusFilter.value === 'active') return items.value.filter(i => i.isActive)
-  return items.value.filter(i => !i.isActive)
-})
+const columnCount = computed<number>(() => (canWrite.value ? 7 : 6))
 
-const formatDate = (d: string): string =>
-  new Date(d).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' })
-
-const productName = (id: string): string => products.value.find(p => p.id === id)?.name ?? id.slice(0, 8) + '...'
-
-const activeWorkRates = (): WorkRateItem[] => workRates.value.filter(r => r.isActive)
-
-const workRateLabel = (id: string): string => {
-  const rate = workRates.value.find(r => r.id === id)
-  if (!rate) return id.slice(0, 8) + '...'
-  return `${rate.name} (${formatMoney(rate.dailyWage)}/день)`
-}
-
-/** Дата новой версии в прошлом меняет исторические расчёты — предупреждаем, как isPriceDateInPast в ComponentsView. */
 const isNewRateDateInPast = computed<boolean>(() => {
-  if (!form.value.validFrom) return false
+  if (!form.value.validFrom) {
+    return false
+  }
   return form.value.validFrom < today()
 })
-
-/** Остальные версии того же товара (кроме редактируемой) — для проверки порядка дат без лишнего запроса. */
-const otherVersionsOf = (productId: string, excludeId: string | null): ProductWorkRateItem[] =>
-  items.value.filter(i => i.productId === productId && i.id !== excludeId)
 
 const { loading: isLoading, execute: fetchData } = useApiCall({
   fallbackMessage: 'Не удалось загрузить данные',
@@ -130,7 +140,7 @@ const { execute: createRate } = useApiCall({
       // Конкурентный POST по тому же товару: кто-то успел деактивировать предыдущую версию первым.
       toast.error(conflictMessage)
       createDialogOpen.value = false
-      void loadData()
+      void loadRates()
     },
   },
 })
@@ -147,13 +157,13 @@ const { execute: updateRate } = useApiCall({
     [ErrorCodes.Catalog.ProductWorkRateNotFound]: () => {
       toast.error('Запись больше не активна и не может быть отредактирована')
       editDialogOpen.value = false
-      void loadData()
+      void loadRates()
     },
     [ErrorCodes.Common.Conflict]: () => {
       // Оптимистическая блокировка (xmin) на сервере: запись успели изменить параллельно.
       toast.error(conflictMessage)
       editDialogOpen.value = false
-      void loadData()
+      void loadRates()
     },
   },
 })
@@ -162,25 +172,135 @@ const { execute: deleteRate } = useApiCall({
   fallbackMessage: 'Не удалось удалить запись',
 })
 
-const loadData = async (): Promise<void> => {
+/**
+ * Загружает одну страницу списка норм. Поиск, фильтр по статусу, порядок и срез считает сервер;
+ * счётчики фильтра приходят тем же ответом, поэтому второго запроса на вкладку «Все» нет.
+ */
+const loadRates = async (): Promise<void> => {
   await fetchData(async () => {
-    const [ratesResp, productsResp, workRatesResp] = await Promise.all([
-      productWorkRatesApi.getAll(),
-      catalogProductsApi.getAll(),
-      workRatesApi.getAll(),
-    ])
-    items.value = ratesResp.items
-    products.value = productsResp.items
-    workRates.value = workRatesResp.items
-    return { ratesResp, productsResp, workRatesResp }
+    const response = await productWorkRatesApi.getAll({
+      status: statusByFilter[statusFilter.value],
+      search: searchQuery.value.trim() || undefined,
+      page: pagination.value.pageIndex + 1,
+      pageSize: pagination.value.pageSize,
+      sortBy: 'productName',
+      sortDir: 'asc',
+      includeCounts: true,
+    })
+    items.value = response.items
+    totalCount.value = response.totalCount ?? response.items.length
+    if (response.statusCounts) {
+      statusCounts.value = response.statusCounts
+    }
+    return response
   })
 }
 
-onMounted(loadData)
+/**
+ * Каталог нужен только как признак «есть ли куда заводить норму». Полная выгрузка товаров
+ * на открытие страницы не грузится: хватает одной строки со счётчиками.
+ */
+const loadCatalogProbe = async (): Promise<void> => {
+  try {
+    const probe = await catalogProductsApi.getAll(undefined, {
+      page: 1,
+      pageSize: 1,
+      includeCounts: true,
+    })
+    hasEmptyCatalog.value = (probe.statusCounts?.all ?? 0) === 0
+  } catch {
+    hasEmptyCatalog.value = false
+  }
+}
+
+const loadWorkRates = async (): Promise<void> => {
+  try {
+    const response = await workRatesApi.getAll()
+    workRates.value = response.items
+  } catch {
+    workRates.value = []
+  }
+}
+
+onMounted(async () => {
+  await Promise.all([loadRates(), loadWorkRates(), loadCatalogProbe()])
+})
+
+watch(statusFilter, () => {
+  expandedGroups.value = new Set()
+  pagination.value = { ...pagination.value, pageIndex: 0 }
+  void loadRates()
+})
+
+watch(
+  [() => pagination.value.pageIndex, () => pagination.value.pageSize],
+  ([pageIndex, pageSize], [previousPageIndex, previousPageSize]) => {
+    // Сброс страницы новым поиском не должен сам грузить данные: за это отвечает debounce
+    // поиска, иначе на каждый введённый символ уходило бы два одинаковых запроса.
+    if (pageIndex === previousPageIndex && pageSize === previousPageSize) {
+      return
+    }
+    expandedGroups.value = new Set()
+    void loadRates()
+  },
+)
+
+/**
+ * Поиск уходит на сервер, поэтому запрос отправляем только после паузы в наборе.
+ */
+watch(searchQuery, () => {
+  pagination.value = { ...pagination.value, pageIndex: 0 }
+  expandedGroups.value = new Set()
+  if (searchDebounceTimer !== null) {
+    clearTimeout(searchDebounceTimer)
+  }
+  searchDebounceTimer = setTimeout(() => {
+    searchDebounceTimer = null
+    void loadRates()
+  }, SEARCH_DEBOUNCE_MS)
+})
+
+onUnmounted(() => {
+  if (searchDebounceTimer !== null) {
+    clearTimeout(searchDebounceTimer)
+    searchDebounceTimer = null
+  }
+})
+
+const isGroupExpanded = (productId: string): boolean => {
+  // Под фильтром «Неактивные» архив раскрыт всегда: иначе ни в одной группе не видно ни строки.
+  if (statusFilter.value === 'inactive') {
+    return true
+  }
+  return expandedGroups.value.has(productId)
+}
+
+const toggleGroup = (productId: string): void => {
+  const next = new Set(expandedGroups.value)
+  if (next.has(productId)) {
+    next.delete(productId)
+  } else {
+    next.add(productId)
+  }
+  expandedGroups.value = next
+}
+
+const activeWorkRates = (): WorkRateItem[] => workRates.value.filter(rate => rate.isActive)
+
+const workRateLabel = (id: string): string => {
+  const rate = workRates.value.find(item => item.id === id)
+  if (!rate) {
+    return id.slice(0, 8) + '...'
+  }
+  return `${rate.name} (${formatMoney(rate.dailyWage)}/день)`
+}
+
+const formatDate = (d: string): string =>
+  new Date(d).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' })
 
 const resetCreateForm = (): void => {
   form.value = {
-    productId: products.value[0]?.id ?? '',
+    productId: '',
     workRateId: activeWorkRates()[0]?.id ?? '',
     assemblyRatePerDay: 0,
     validFrom: today(),
@@ -189,10 +309,14 @@ const resetCreateForm = (): void => {
 
 const openCreate = (): void => {
   resetCreateForm()
+  isProductLocked.value = false
+  lockedProductName.value = ''
   createDialogOpen.value = true
 }
 
-/** Новая версия по строке: товар и текущая ставка работы подставляются, дата — сегодня. */
+/**
+ * Новая версия по строке: товар и текущая ставка работы подставляются, дата — сегодня.
+ */
 const openNewRate = (item: ProductWorkRateItem): void => {
   form.value = {
     productId: item.productId,
@@ -200,6 +324,8 @@ const openNewRate = (item: ProductWorkRateItem): void => {
     assemblyRatePerDay: item.assemblyRatePerDay,
     validFrom: today(),
   }
+  isProductLocked.value = true
+  lockedProductName.value = `${item.productName} · ${item.productSku}`
   createDialogOpen.value = true
 }
 
@@ -218,16 +344,12 @@ const openDelete = (item: ProductWorkRateItem): void => {
   deleteDialogOpen.value = true
 }
 
-const isPositiveInteger = (value: number): boolean => Number.isInteger(value) && value > 0
-
 const handleCreate = async (): Promise<void> => {
-  if (!form.value.productId) { toast.error('Выберите товар'); return }
-  if (!form.value.workRateId) { toast.error('Выберите ставку работы'); return }
-  if (!isPositiveInteger(Number(form.value.assemblyRatePerDay))) {
-    toast.error('Укажите количество единиц в день целым числом больше нуля')
+  const validationError = validateCreateForm(form.value)
+  if (validationError) {
+    toast.error(validationError)
     return
   }
-  if (!form.value.validFrom) { toast.error('Укажите дату начала действия'); return }
   isSaving.value = true
   try {
     const payload: CreateProductWorkRateRequest = {
@@ -239,7 +361,7 @@ const handleCreate = async (): Promise<void> => {
     await createRate(() => productWorkRatesApi.create(payload))
     toast.success('Норма выработки добавлена')
     createDialogOpen.value = false
-    await loadData()
+    await loadRates()
   } catch {
     // Ошибка уже обработана в useApiCall
   } finally {
@@ -248,20 +370,17 @@ const handleCreate = async (): Promise<void> => {
 }
 
 const handleUpdate = async (): Promise<void> => {
-  if (!editTarget.value) return
-  if (!editForm.value.workRateId) { toast.error('Выберите ставку работы'); return }
-  if (!isPositiveInteger(Number(editForm.value.assemblyRatePerDay))) {
-    toast.error('Укажите количество единиц в день целым числом больше нуля')
+  if (!editTarget.value) {
     return
   }
-  if (!editForm.value.validFrom) {
-    toast.error('Укажите дату начала действия')
-    return
-  }
-  const others = otherVersionsOf(editTarget.value.productId, editTarget.value.id)
-  const isNotLatest = others.some(o => editForm.value.validFrom <= o.validFrom)
-  if (isNotLatest) {
-    toast.error('Дата начала действия должна быть позже даты всех остальных версий этого товара')
+  const validationError = validateEditForm(
+    items.value,
+    editTarget.value.id,
+    editTarget.value.productId,
+    editForm.value,
+  )
+  if (validationError) {
+    toast.error(validationError)
     return
   }
   isSaving.value = true
@@ -274,7 +393,7 @@ const handleUpdate = async (): Promise<void> => {
     await updateRate(() => productWorkRatesApi.update(editTarget.value!.id, payload))
     toast.success('Норма выработки обновлена')
     editDialogOpen.value = false
-    await loadData()
+    await loadRates()
   } catch {
     // Ошибка уже обработана в useApiCall
   } finally {
@@ -283,13 +402,15 @@ const handleUpdate = async (): Promise<void> => {
 }
 
 const handleDelete = async (): Promise<void> => {
-  if (!deleteTarget.value) return
+  if (!deleteTarget.value) {
+    return
+  }
   isDeleting.value = true
   try {
     await deleteRate(() => productWorkRatesApi.delete(deleteTarget.value!.id))
     toast.success('Запись удалена')
     deleteDialogOpen.value = false
-    await loadData()
+    await loadRates()
   } catch {
     // Ошибка уже обработана в useApiCall
   } finally {
@@ -301,6 +422,7 @@ const dialogContentClass = 'bg-popover text-popover-foreground fixed top-[50%] l
 const fieldClass = 'flex flex-col gap-1'
 const inputClass = 'mt-1'
 const selectClass = 'mt-1 flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring'
+const groupRowClass = 'bg-muted/40 hover:bg-muted/40'
 </script>
 
 <template>
@@ -314,13 +436,20 @@ const selectClass = 'mt-1 flex h-9 w-full rounded-md border border-input bg-tran
         </h1>
         <p class="text-sm text-muted-foreground">Количество единиц товара в день на одного сотрудника по товару</p>
       </div>
-      <Button v-if="canWrite" @click="openCreate" :disabled="products.length === 0" class="gap-2">
+      <Button v-if="canWrite" @click="openCreate" :disabled="hasEmptyCatalog" class="gap-2">
         <Plus class="size-4" />
         Добавить запись
       </Button>
     </div>
 
-    <StatusFilter v-model="statusFilter" :options="filterOptions" />
+    <div class="flex flex-wrap items-center gap-2">
+      <SearchInput
+        v-model="searchQuery"
+        placeholder="Поиск по названию или SKU"
+        class="w-full sm:w-80"
+      />
+      <StatusFilter v-model="statusFilter" :options="filterOptions" />
+    </div>
 
     <!-- Loading -->
     <div v-if="isLoading" class="rounded-xl border border-border bg-card overflow-hidden">
@@ -331,7 +460,7 @@ const selectClass = 'mt-1 flex h-9 w-full rounded-md border border-input bg-tran
 
     <!-- Empty -->
     <div
-      v-else-if="filteredItems.length === 0"
+      v-else-if="groups.length === 0"
       class="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-card py-16 text-center"
     >
       <Gauge class="size-10 text-muted-foreground/40" />
@@ -339,7 +468,7 @@ const selectClass = 'mt-1 flex h-9 w-full rounded-md border border-input bg-tran
         {{ statusFilter === 'inactive' ? 'Нет неактивных записей' : 'Нормы выработки не добавлены' }}
       </p>
       <Button
-        v-if="canWrite && statusFilter !== 'inactive' && products.length > 0"
+        v-if="canWrite && statusFilter !== 'inactive' && !hasEmptyCatalog"
         variant="outline"
         size="sm"
         @click="openCreate"
@@ -347,56 +476,127 @@ const selectClass = 'mt-1 flex h-9 w-full rounded-md border border-input bg-tran
       >
         <Plus class="size-4" /> Добавить первую
       </Button>
-      <p v-if="products.length === 0" class="text-xs text-muted-foreground">Сначала добавьте товары в систему</p>
+      <p v-if="hasEmptyCatalog" class="text-xs text-muted-foreground">
+        Сначала добавьте товары в систему
+      </p>
     </div>
 
     <!-- Table -->
-    <div v-else class="rounded-xl border border-border bg-card overflow-hidden">
-      <Table>
-        <TableHeader>
-          <TableRow class="border-b border-border">
-            <TableHead>Товар</TableHead>
-            <TableHead>Ставка работы</TableHead>
-            <TableHead class="text-right">Норма / день (шт.)</TableHead>
-            <TableHead>Действует с</TableHead>
-            <TableHead>Статус</TableHead>
-            <TableHead>Добавлена</TableHead>
-            <TableHead v-if="canWrite" class="w-32 text-right">Действия</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          <TableRow
-            v-for="item in filteredItems"
-            :key="item.id"
-            class="hover:bg-muted/40 transition-colors"
-          >
-            <TableCell class="font-medium">{{ productName(item.productId) }}</TableCell>
-            <TableCell class="text-muted-foreground">{{ workRateLabel(item.workRateId) }}</TableCell>
-            <TableCell class="text-right tabular-nums font-medium">{{ item.assemblyRatePerDay }}</TableCell>
-            <TableCell class="tabular-nums text-muted-foreground">{{ item.validFrom }}</TableCell>
-            <TableCell>
-              <Badge :variant="item.isActive ? 'success' : 'secondary'">
-                {{ item.isActive ? 'Активна' : 'Неактивна' }}
-              </Badge>
-            </TableCell>
-            <TableCell class="tabular-nums text-muted-foreground text-sm">{{ formatDate(item.createdAt) }}</TableCell>
-            <TableCell v-if="canWrite" class="text-right">
-              <div v-if="item.isActive" class="flex items-center justify-end gap-1">
-                <Button variant="ghost" size="icon-sm" @click="openEdit(item)" title="Изменить">
-                  <Pencil class="size-4" />
-                </Button>
-                <Button variant="ghost" size="icon-sm" @click="openNewRate(item)" title="Новая норма">
-                  <History class="size-4" />
-                </Button>
-                <Button variant="ghost" size="icon-sm" @click="openDelete(item)" title="Удалить">
-                  <Trash2 class="size-4 text-destructive" />
-                </Button>
-              </div>
-              <span v-else class="text-xs text-muted-foreground">—</span>
-            </TableCell>
-          </TableRow>
-        </TableBody>
-      </Table>
+    <div v-else class="flex flex-col gap-4">
+      <div class="rounded-xl border border-border bg-card overflow-hidden">
+        <Table>
+          <TableHeader>
+            <TableRow class="border-b border-border">
+              <TableHead>Товар</TableHead>
+              <TableHead>Ставка работы</TableHead>
+              <TableHead class="text-right">Норма / день (шт.)</TableHead>
+              <TableHead>Действует с</TableHead>
+              <TableHead>Статус</TableHead>
+              <TableHead>Добавлена</TableHead>
+              <TableHead v-if="canWrite" class="w-32 text-right">Действия</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            <template v-for="group in groups" :key="group.productId">
+              <!-- Group header -->
+              <TableRow :class="groupRowClass">
+                <TableCell :colspan="columnCount" class="py-3">
+                  <div class="flex flex-wrap items-center gap-2">
+                    <RouterLink
+                      :to="{ name: 'product-edit', query: { productId: group.productId } }"
+                      class="font-medium hover:underline"
+                    >
+                      {{ group.productName }}
+                    </RouterLink>
+                    <span class="font-mono text-xs text-muted-foreground">{{ group.productSku }}</span>
+                    <span v-if="group.active[0]" class="text-xs text-muted-foreground">
+                      · Активна с {{ formatIsoDate(group.active[0].validFrom) }}
+                    </span>
+                  </div>
+                </TableCell>
+              </TableRow>
+
+              <!-- Active versions -->
+              <TableRow
+                v-for="item in group.active"
+                :key="item.id"
+                class="hover:bg-muted/40 transition-colors"
+              >
+                <TableCell class="text-muted-foreground">—</TableCell>
+                <TableCell class="text-muted-foreground">{{ workRateLabel(item.workRateId) }}</TableCell>
+                <TableCell class="text-right tabular-nums font-medium">{{ item.assemblyRatePerDay }}</TableCell>
+                <TableCell class="tabular-nums text-muted-foreground">{{ formatIsoDate(item.validFrom) }}</TableCell>
+                <TableCell>
+                  <Badge variant="success">Активна</Badge>
+                </TableCell>
+                <TableCell class="tabular-nums text-muted-foreground text-sm">{{ formatDate(item.createdAt) }}</TableCell>
+                <TableCell v-if="canWrite" class="text-right">
+                  <div class="flex items-center justify-end gap-1">
+                    <Button variant="ghost" size="icon-sm" @click="openEdit(item)" title="Изменить">
+                      <Pencil class="size-4" />
+                    </Button>
+                    <Button variant="ghost" size="icon-sm" @click="openNewRate(item)" title="Новая норма">
+                      <History class="size-4" />
+                    </Button>
+                    <Button variant="ghost" size="icon-sm" @click="openDelete(item)" title="Удалить">
+                      <Trash2 class="size-4 text-destructive" />
+                    </Button>
+                  </div>
+                </TableCell>
+              </TableRow>
+
+              <!-- Archive toggle -->
+              <TableRow v-if="countInactive(group) > 0" class="hover:bg-transparent">
+                <TableCell :colspan="columnCount" class="py-2">
+                  <!--
+                    Раскрытие сделано через v-if на TableRow, а не через Collapsible: CollapsibleContent
+                    рендерит div, который внутри tbody невалиден и выносится браузером за пределы таблицы.
+                  -->
+                  <button
+                    type="button"
+                    class="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+                    :aria-expanded="isGroupExpanded(group.productId)"
+                    @click="toggleGroup(group.productId)"
+                  >
+                    <component :is="isGroupExpanded(group.productId) ? ChevronDown : ChevronRight" class="size-3.5" />
+                    {{ isGroupExpanded(group.productId)
+                      ? 'Скрыть архивные версии'
+                      : `Показать ${countInactive(group)} архивных версии` }}
+                  </button>
+                </TableCell>
+              </TableRow>
+
+              <!-- Archived versions -->
+              <template v-if="isGroupExpanded(group.productId)">
+                <TableRow
+                  v-for="item in group.inactive"
+                  :key="item.id"
+                  class="text-muted-foreground hover:bg-muted/40 transition-colors"
+                >
+                  <TableCell class="text-muted-foreground">—</TableCell>
+                  <TableCell class="text-muted-foreground">{{ workRateLabel(item.workRateId) }}</TableCell>
+                  <TableCell class="text-right tabular-nums">{{ item.assemblyRatePerDay }}</TableCell>
+                  <TableCell class="tabular-nums">{{ formatIsoDate(item.validFrom) }}</TableCell>
+                  <TableCell>
+                    <Badge variant="secondary">Неактивна</Badge>
+                  </TableCell>
+                  <TableCell class="tabular-nums text-sm">{{ formatDate(item.createdAt) }}</TableCell>
+                  <TableCell v-if="canWrite" class="text-right">
+                    <span class="text-xs text-muted-foreground">—</span>
+                  </TableCell>
+                </TableRow>
+              </template>
+            </template>
+          </TableBody>
+        </Table>
+      </div>
+
+      <DataGridPagination
+        v-model:pagination="pagination"
+        :total-count="totalCount"
+        :is-loading="isLoading"
+        show-page-size-selector
+      />
     </div>
 
     <!-- Create / New Version Dialog -->
@@ -417,13 +617,11 @@ const selectClass = 'mt-1 flex h-9 w-full rounded-md border border-input bg-tran
 
           <div class="flex flex-col gap-4">
             <div :class="fieldClass">
-              <Label>Товар</Label>
-              <select
-                v-model="form.productId"
-                :class="selectClass"
-              >
-                <option v-for="p in products" :key="p.id" :value="p.id">{{ p.name }}</option>
-              </select>
+              <Label>Товар *</Label>
+              <p v-if="isProductLocked" class="text-sm font-medium mt-1">
+                {{ lockedProductName }}
+              </p>
+              <ProductCombobox v-else v-model="form.productId" />
             </div>
 
             <div :class="fieldClass">
@@ -460,7 +658,7 @@ const selectClass = 'mt-1 flex h-9 w-full rounded-md border border-input bg-tran
             <DialogClose as-child>
               <Button variant="outline">Отмена</Button>
             </DialogClose>
-            <Button @click="handleCreate" :disabled="isSaving || !form.workRateId" class="gap-2">
+            <Button @click="handleCreate" :disabled="isSaving || !form.workRateId || !form.productId" class="gap-2">
               <Spinner v-if="isSaving" class="size-4" />
               Добавить
             </Button>
@@ -491,7 +689,7 @@ const selectClass = 'mt-1 flex h-9 w-full rounded-md border border-input bg-tran
           <div class="flex flex-col gap-4">
             <div :class="fieldClass">
               <Label>Товар</Label>
-              <p class="text-sm font-medium mt-1">{{ editTarget ? productName(editTarget.productId) : '' }}</p>
+              <p class="text-sm font-medium mt-1">{{ editTarget ? editTarget.productName : '' }}</p>
             </div>
 
             <div :class="fieldClass">

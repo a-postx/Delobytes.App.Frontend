@@ -261,6 +261,9 @@ export interface CreateWorkRateVersionRequest {
 export interface ProductWorkRateItem {
   id: string
   productId: string
+  /** Название товара версии. Приходит от бэкенда, чтобы списку не требовался резолвер имён на клиенте. */
+  productName: string
+  productSku: string
   workRateId: string
   assemblyRatePerDay: number
   validFrom: string
@@ -269,8 +272,37 @@ export interface ProductWorkRateItem {
   updatedAt?: string | null
 }
 
+/** Счётчики фильтра считают товары, а не версии: страница нарезается по товарам. */
+export interface ProductWorkRateStatusCounts {
+  active: number
+  inactive: number
+  all: number
+}
+
 export interface GetProductWorkRatesResponse {
+  /**
+   * Строки запрошенной страницы, а при отсутствии `page` — весь список.
+   * Длина не равна `totalCount`, когда у товара больше одной версии.
+   */
   items: ProductWorkRateItem[]
+  totalCount?: number
+  page?: number
+  pageSize?: number
+  statusCounts?: ProductWorkRateStatusCounts
+}
+
+export type ProductWorkRateGroupFilter = 'Active' | 'All' | 'Inactive'
+
+export interface GetProductWorkRatesParams {
+  /** Регистронезависимая подстрока по названию и SKU товара. Пустое значение бэкенд игнорирует. */
+  search?: string
+  status?: ProductWorkRateGroupFilter
+  /** 1-based. Отсутствие значения сохраняет легаси-режим: весь список без Skip/Take. */
+  page?: number
+  pageSize?: number
+  sortBy?: 'productName' | 'updatedAt' | 'validFrom'
+  sortDir?: 'asc' | 'desc'
+  includeCounts?: boolean
 }
 
 export interface CreateProductWorkRateRequest {
@@ -469,9 +501,38 @@ export const workRatesApi = {
 }
 
 export const productWorkRatesApi = {
-  getAll: async (): Promise<GetProductWorkRatesResponse> => {
+  /**
+   * Отсутствующие поля параметров не попадают в query: axios иначе сериализовал бы `undefined`
+   * в пустое значение, и бэкенд прочитал бы его как явный фильтр.
+   */
+  getAll: async (params?: GetProductWorkRatesParams): Promise<GetProductWorkRatesResponse> => {
+    const query: Record<string, string | number | boolean> = {}
+    if (params) {
+      if (params.search !== undefined) {
+        query.search = params.search
+      }
+      if (params.status !== undefined) {
+        query.status = params.status
+      }
+      if (params.page !== undefined) {
+        query.page = params.page
+      }
+      if (params.pageSize !== undefined) {
+        query.pageSize = params.pageSize
+      }
+      if (params.sortBy !== undefined) {
+        query.sortBy = params.sortBy
+      }
+      if (params.sortDir !== undefined) {
+        query.sortDir = params.sortDir
+      }
+      if (params.includeCounts !== undefined) {
+        query.includeCounts = params.includeCounts
+      }
+    }
     const response = await axiosInstance.get<GetProductWorkRatesResponse>(
       '/api/catalogs/product-work-rates',
+      { params: query },
     )
     return response.data
   },
