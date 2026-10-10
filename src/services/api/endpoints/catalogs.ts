@@ -315,7 +315,7 @@ export interface CreateProductWorkRateRequest {
 /**
  * Корректировка существующей (активной) версии нормы на месте, без создания новой записи.
  * Серверный ответ не содержит токен конкурентности — оптимистическая блокировка через xmin
- * целиком на стороне бэкенда и в контракт не выносится (см. ТЗ, раздел про RowVersion).
+ * целиком на стороне бэкенда и в контракт не выносится.
  */
 export interface UpdateProductWorkRateRequest {
   workRateId: string
@@ -530,10 +530,12 @@ export const productWorkRatesApi = {
         query.includeCounts = params.includeCounts
       }
     }
-    const response = await axiosInstance.get<GetProductWorkRatesResponse>(
-      '/api/catalogs/product-work-rates',
-      { params: query },
-    )
+    const url = '/api/catalogs/product-work-rates'
+    // Пустой набор параметров уходит одним аргументом: axios сериализовал бы `{}` в пустой query,
+    // и запрос перестал бы быть неотличим от легаси-вызова без фильтров.
+    const response = Object.keys(query).length > 0
+      ? await axiosInstance.get<GetProductWorkRatesResponse>(url, { params: query })
+      : await axiosInstance.get<GetProductWorkRatesResponse>(url)
     return response.data
   },
 
