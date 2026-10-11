@@ -709,7 +709,7 @@ const inputClass = 'mt-1'
           </div>
           <div>
             <h3 class="font-semibold">
-              {{ searchQuery.trim() ? 'Ничего не найдено по запросу' : 'Нет товаров' }}
+              {{ searchQuery.trim() ? 'Ничего не найдено' : 'Нет товаров' }}
             </h3>
             <p class="text-sm text-muted-foreground">
               <template v-if="searchQuery.trim()">

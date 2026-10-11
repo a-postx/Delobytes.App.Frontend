@@ -445,7 +445,7 @@ const groupRowClass = 'bg-muted/40 hover:bg-muted/40'
     <div class="flex flex-wrap items-center gap-2">
       <SearchInput
         v-model="searchQuery"
-        placeholder="Поиск по названию или SKU"
+        placeholder="Название или SKU"
         class="w-full sm:w-80"
       />
       <StatusFilter v-model="statusFilter" :options="filterOptions" />
@@ -611,8 +611,7 @@ const groupRowClass = 'bg-muted/40 hover:bg-muted/40'
             </DialogClose>
           </div>
           <DialogDescription class="text-sm text-muted-foreground mb-4">
-            Укажите товар, количество единиц в день и дату начала действия нормы. Запись добавляется
-            как новая версия, предыдущая активная версия этого товара будет деактивирована.
+            Запись добавляется как новая версия, предыдущая активная запись для этого товара будет деактивирована.
           </DialogDescription>
 
           <div class="flex flex-col gap-4">
