@@ -146,7 +146,7 @@ describe('LegalEntitySettingsCard', () => {
     it('shows the tenant currency as a read-only line', async () => {
       const wrapper = await mountCard()
 
-      expect(wrapper.text()).toContain('Валюта учёта: RUB (₽)')
+      expect(wrapper.find('#currency').text()).toBe('RUB (₽)')
     })
 
     it('shows no currency input next to the label', async () => {
@@ -160,7 +160,7 @@ describe('LegalEntitySettingsCard', () => {
 
       const wrapper = await mountCard()
 
-      expect(wrapper.text()).toContain('Валюта учёта: KZT')
+      expect(wrapper.find('#currency').text()).toBe('KZT (KZT)')
     })
 
     it('falls back to RUB while the current user is not loaded', async () => {
@@ -168,7 +168,7 @@ describe('LegalEntitySettingsCard', () => {
 
       const wrapper = await mountCard()
 
-      expect(wrapper.text()).toContain('Валюта учёта: RUB')
+      expect(wrapper.find('#currency').text()).toBe('RUB (₽)')
     })
   })
 

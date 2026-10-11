@@ -265,13 +265,29 @@ describe('ProductCombobox', () => {
     expect(productsGet).not.toHaveBeenCalled()
   })
 
-  it('keeps the search box usable after a product is chosen', async () => {
+   /**
+   * После выбора поле поиска уступает место карточке товара: идентификатор из модели
+   * пользователю не показывается ни в одном инпуте.
+   */
+  it('replaces the search box with the chosen product card', async () => {
     const wrapper = mountCombobox()
     await openList(wrapper)
     await clickOption('SKU-002')
 
-    expect(searchInput(wrapper).attributes('disabled')).toBeUndefined()
+    expect(wrapper.find('input[placeholder="Поиск по названию или SKU"]').exists()).toBe(false)
+	expect(wrapper.text()).toContain('Товар Б')
     expect(wrapper.text()).toContain('SKU-002')
+  })
+  
+  it('never exposes the product id in an input after a product is chosen', async () => {
+    const wrapper = mountCombobox()
+    await openList(wrapper)
+    await clickOption('SKU-002')
+
+    wrapper.findAll('input').forEach((input) => {
+      expect(input.element.value).toBe('')
+      expect(input.element.value).not.toContain('p2')
+    })
   })
 
   it('surfaces a load failure with a retry that keeps the list open', async () => {

@@ -101,7 +101,7 @@ describe('LegalEntitySettingsCard with real components', () => {
 
     expect(currencyNode.exists()).toBe(true)
     expect(currencyNode.element.tagName).toBe('P')
-    expect(currencyNode.text()).toBe('Валюта учёта: RUB (₽)')
+    expect(currencyNode.text()).toBe('RUB (₽)')
   })
 
   it('renders the currency code of KZT, which has no narrow symbol in ru-RU', async () => {
@@ -111,7 +111,7 @@ describe('LegalEntitySettingsCard with real components', () => {
     mountedWrappers.push(wrapper)
 
     // ICU подставляет код валюты, поэтому и код, и «символ» здесь — KZT.
-    expect(wrapper.find('#currency').text()).toBe('Валюта учёта: KZT (KZT)')
+    expect(wrapper.find('#currency').text()).toBe('KZT (KZT)')
   })
 
   it('does not render any tax selector, even for an administrator', async () => {

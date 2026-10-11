@@ -183,7 +183,7 @@ const loadRates = async (): Promise<void> => {
       includeCounts: true,
     })
     items.value = response.items
-    totalCount.value = response.totalCount
+    totalCount.value = response.totalCount ?? response.items.length
     if (response.statusCounts) {
       statusCounts.value = {
         active: response.statusCounts.active,
@@ -291,9 +291,6 @@ const workRateLabel = (id: string): string => {
   }
   return `${rate.name} (${formatMoney(rate.dailyWage)}/день)`
 }
-
-const formatDate = (d: string): string =>
-  new Date(d).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' })
 
 const resetCreateForm = (): void => {
   form.value = {
