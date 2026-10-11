@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, computed, watch, onUnmounted, h } from 'vue'
+import { ref, onMounted, computed, watch, onUnmounted, h, type VNode } from 'vue'
 import { Plus, Tag, Gauge, Pencil, Trash2, X, ChevronDown, ChevronRight, SearchX } from 'lucide-vue-next'
 import {
   DialogClose,
@@ -369,7 +369,7 @@ const toWorkRateSortKey = (columnId: string | undefined): 'productName' | 'updat
   return undefined
 }
 
-const renderProductName = (row: GridRow): unknown => {
+const renderProductName = (row: GridRow): VNode => {
   // Подстрока — версия товара, а не товар: имя в ней уже названо родителем, ссылка на карточку
   // товара повторялась бы в каждой строке истории.
   if (row.isVersionRow) {
@@ -386,7 +386,7 @@ const renderProductName = (row: GridRow): unknown => {
 
 const rateLabelOf = (row: GridRow): string => (row.workRateId ? workRateLabel(row.workRateId) : '—')
 
-const actionsFor = (row: GridRow): unknown => {
+const actionsFor = (row: GridRow): VNode | null => {
   if (!canWrite.value || row.isVersionRow) {
     return null
   }

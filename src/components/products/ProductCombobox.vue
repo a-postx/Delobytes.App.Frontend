@@ -129,7 +129,7 @@ const checkExistingRate = async (productId: string): Promise<void> => {
     if (checkId !== rateCheckId) {
       return
     }
-    const active = response.items.find(item => item.isActive)
+    const active = response.items.find(item => item.status === 'Active')
     activeWriteRateFrom.value = active ? active.validFrom : ''
   } catch {
     if (checkId === rateCheckId) {
