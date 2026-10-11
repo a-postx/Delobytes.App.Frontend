@@ -114,9 +114,9 @@ const handleSave = async (): Promise<void> => {
 
           <!-- Валюта задаётся на уровне тенанта и здесь только отображается -->
           <div class="space-y-1.5">
-            <Label for="currency">Валюта учёта</Label>
+            <Label for="currency">Валюта учёта:</Label>
             <p id="currency" class="text-sm text-muted-foreground">
-              Валюта учёта: {{ currency }} ({{ currencySymbol }})
+              {{ currency }} ({{ currencySymbol }})
             </p>
           </div>
 

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, computed, watch, onUnmounted } from 'vue'
-import { Plus, Trash2, Gauge, Pencil, History, X, ChevronDown, ChevronRight } from 'lucide-vue-next'
+import { Plus, Trash2, Gauge, Pencil, History, X, ChevronDown, ChevronRight, SearchX } from 'lucide-vue-next'
 import {
   DialogClose,
   DialogContent,
@@ -62,6 +62,7 @@ import {
   validateCreateForm,
   validateEditForm,
 } from '@/utils/productWorkRates'
+import type { WorkRateGroup } from '@/utils/productWorkRates'
 
 const { canWrite } = useCurrentUser()
 const { formatMoney } = useTenantMoney()
@@ -115,7 +116,9 @@ const groups = computed(() => groupWorkRates(items.value))
 
 const filterOptions = computed(() => filterOptionsFromCounts(statusCounts.value))
 
-const columnCount = computed<number>(() => (canWrite.value ? 7 : 6))
+const columnCount = computed<number>(() => (canWrite.value ? 6 : 5))
+
+const isSearchActive = computed<boolean>(() => searchQuery.value.trim().length > 0)
 
 const isNewRateDateInPast = computed<boolean>(() => {
   if (!form.value.validFrom) {
@@ -137,7 +140,6 @@ const { execute: createRate } = useApiCall({
       toast.error(error.message || 'Версия с такой датой начала уже существует')
     },
     [ErrorCodes.Common.Conflict]: () => {
-      // Конкурентный POST по тому же товару: кто-то успел деактивировать предыдущую версию первым.
       toast.error(conflictMessage)
       createDialogOpen.value = false
       void loadRates()
@@ -160,7 +162,6 @@ const { execute: updateRate } = useApiCall({
       void loadRates()
     },
     [ErrorCodes.Common.Conflict]: () => {
-      // Оптимистическая блокировка (xmin) на сервере: запись успели изменить параллельно.
       toast.error(conflictMessage)
       editDialogOpen.value = false
       void loadRates()
@@ -172,10 +173,6 @@ const { execute: deleteRate } = useApiCall({
   fallbackMessage: 'Не удалось удалить запись',
 })
 
-/**
- * Загружает одну страницу списка норм. Поиск, фильтр по статусу, порядок и срез считает сервер;
- * счётчики фильтра приходят тем же ответом, поэтому второго запроса на вкладку «Все» нет.
- */
 const loadRates = async (): Promise<void> => {
   await fetchData(async () => {
     const response = await productWorkRatesApi.getAll({
@@ -183,14 +180,16 @@ const loadRates = async (): Promise<void> => {
       search: searchQuery.value.trim() || undefined,
       page: pagination.value.pageIndex + 1,
       pageSize: pagination.value.pageSize,
-      sortBy: 'productName',
-      sortDir: 'asc',
       includeCounts: true,
     })
     items.value = response.items
-    totalCount.value = response.totalCount ?? response.items.length
+    totalCount.value = response.totalCount
     if (response.statusCounts) {
-      statusCounts.value = response.statusCounts
+      statusCounts.value = {
+        active: response.statusCounts.active,
+        inactive: response.statusCounts.inactive,
+        all: response.statusCounts.all,
+      }
     }
     return response
   })
@@ -198,7 +197,7 @@ const loadRates = async (): Promise<void> => {
 
 /**
  * Каталог нужен только как признак «есть ли куда заводить норму». Полная выгрузка товаров
- * на открытие страницы не грузится: хватает одной строки со счётчиками.
+ * на открытии страницы не грузится: хватает одной строки со счётчиками.
  */
 const loadCatalogProbe = async (): Promise<void> => {
   try {
@@ -235,8 +234,6 @@ watch(statusFilter, () => {
 watch(
   [() => pagination.value.pageIndex, () => pagination.value.pageSize],
   ([pageIndex, pageSize], [previousPageIndex, previousPageSize]) => {
-    // Сброс страницы новым поиском не должен сам грузить данные: за это отвечает debounce
-    // поиска, иначе на каждый введённый символ уходило бы два одинаковых запроса.
     if (pageIndex === previousPageIndex && pageSize === previousPageSize) {
       return
     }
@@ -245,9 +242,6 @@ watch(
   },
 )
 
-/**
- * Поиск уходит на сервер, поэтому запрос отправляем только после паузы в наборе.
- */
 watch(searchQuery, () => {
   pagination.value = { ...pagination.value, pageIndex: 0 }
   expandedGroups.value = new Set()
@@ -268,11 +262,14 @@ onUnmounted(() => {
 })
 
 const isGroupExpanded = (productId: string): boolean => {
-  // Под фильтром «Неактивные» архив раскрыт всегда: иначе ни в одной группе не видно ни строки.
   if (statusFilter.value === 'inactive') {
     return true
   }
   return expandedGroups.value.has(productId)
+}
+
+const canToggleGroup = (group: WorkRateGroup): boolean => {
+  return statusFilter.value !== 'inactive' && countInactive(group) > 0
 }
 
 const toggleGroup = (productId: string): void => {
@@ -314,9 +311,7 @@ const openCreate = (): void => {
   createDialogOpen.value = true
 }
 
-/**
- * Новая версия по строке: товар и текущая ставка работы подставляются, дата — сегодня.
- */
+/** Новая версия по строке: товар и текущая ставка подставляются, дата — сегодня. */
 const openNewRate = (item: ProductWorkRateItem): void => {
   form.value = {
     productId: item.productId,
@@ -422,7 +417,6 @@ const dialogContentClass = 'bg-popover text-popover-foreground fixed top-[50%] l
 const fieldClass = 'flex flex-col gap-1'
 const inputClass = 'mt-1'
 const selectClass = 'mt-1 flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring'
-const groupRowClass = 'bg-muted/40 hover:bg-muted/40'
 </script>
 
 <template>
@@ -458,7 +452,19 @@ const groupRowClass = 'bg-muted/40 hover:bg-muted/40'
       </div>
     </div>
 
-    <!-- Empty -->
+    <!-- Empty: search returned nothing -->
+    <div
+      v-else-if="groups.length === 0 && isSearchActive"
+      class="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-card py-16 text-center"
+    >
+      <SearchX class="size-10 text-muted-foreground/40" />
+      <div>
+        <p class="text-sm font-medium">Ничего не найдено</p>
+        <p class="text-sm text-muted-foreground">Измените запрос или очистите поле поиска</p>
+      </div>
+    </div>
+
+    <!-- Empty: no data at all -->
     <div
       v-else-if="groups.length === 0"
       class="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-card py-16 text-center"
@@ -481,7 +487,7 @@ const groupRowClass = 'bg-muted/40 hover:bg-muted/40'
       </p>
     </div>
 
-    <!-- Table -->
+    <!-- Master-detail table -->
     <div v-else class="flex flex-col gap-4">
       <div class="rounded-xl border border-border bg-card overflow-hidden">
         <Table>
@@ -492,66 +498,62 @@ const groupRowClass = 'bg-muted/40 hover:bg-muted/40'
               <TableHead class="text-right">Норма / день (шт.)</TableHead>
               <TableHead>Действует с</TableHead>
               <TableHead>Статус</TableHead>
-              <TableHead>Добавлена</TableHead>
               <TableHead v-if="canWrite" class="w-32 text-right">Действия</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             <template v-for="group in groups" :key="group.productId">
-              <!-- Group header -->
-              <TableRow :class="groupRowClass">
-                <TableCell :colspan="columnCount" class="py-3">
-                  <div class="flex flex-wrap items-center gap-2">
+
+              <!-- Master row: active version or placeholder when only inactive exist -->
+              <TableRow class="hover:bg-muted/40 transition-colors">
+                <!-- Product identity: name + SKU, links to product edit -->
+                <TableCell class="py-3">
+                  <div class="flex flex-col gap-0.5">
                     <RouterLink
                       :to="{ name: 'product-edit', query: { productId: group.productId } }"
-                      class="font-medium hover:underline"
+                      class="font-medium hover:underline leading-snug"
                     >
                       {{ group.productName }}
                     </RouterLink>
                     <span class="font-mono text-xs text-muted-foreground">{{ group.productSku }}</span>
-                    <span v-if="group.active[0]" class="text-xs text-muted-foreground">
-                      · Активна с {{ formatIsoDate(group.active[0].validFrom) }}
-                    </span>
                   </div>
                 </TableCell>
+
+                <template v-if="group.active[0]">
+                  <TableCell class="text-muted-foreground">{{ workRateLabel(group.active[0].workRateId) }}</TableCell>
+                  <TableCell class="text-right tabular-nums font-medium">{{ group.active[0].assemblyRatePerDay }}</TableCell>
+                  <TableCell class="tabular-nums text-muted-foreground">{{ formatIsoDate(group.active[0].validFrom) }}</TableCell>
+                  <TableCell><Badge variant="success">Активна</Badge></TableCell>
+                  <TableCell v-if="canWrite" class="text-right">
+                    <div class="flex items-center justify-end gap-1">
+                      <Button variant="ghost" size="icon-sm" @click="openEdit(group.active[0])" title="Изменить">
+                        <Pencil class="size-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon-sm" @click="openNewRate(group.active[0])" title="Новая норма">
+                        <History class="size-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon-sm" @click="openDelete(group.active[0])" title="Удалить">
+                        <Trash2 class="size-4 text-destructive" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </template>
+
+                <!-- No active version: product has only archived records -->
+                <template v-else>
+                  <TableCell colspan="3" class="text-muted-foreground text-sm">—</TableCell>
+                  <TableCell><Badge variant="secondary">Нет активной</Badge></TableCell>
+                  <TableCell v-if="canWrite" class="text-right">
+                    <Button variant="ghost" size="icon-sm" @click="openCreate" title="Добавить норму">
+                      <Plus class="size-4" />
+                    </Button>
+                  </TableCell>
+                </template>
               </TableRow>
 
-              <!-- Active versions -->
-              <TableRow
-                v-for="item in group.active"
-                :key="item.id"
-                class="hover:bg-muted/40 transition-colors"
-              >
-                <TableCell class="text-muted-foreground">—</TableCell>
-                <TableCell class="text-muted-foreground">{{ workRateLabel(item.workRateId) }}</TableCell>
-                <TableCell class="text-right tabular-nums font-medium">{{ item.assemblyRatePerDay }}</TableCell>
-                <TableCell class="tabular-nums text-muted-foreground">{{ formatIsoDate(item.validFrom) }}</TableCell>
-                <TableCell>
-                  <Badge variant="success">Активна</Badge>
-                </TableCell>
-                <TableCell class="tabular-nums text-muted-foreground text-sm">{{ formatDate(item.createdAt) }}</TableCell>
-                <TableCell v-if="canWrite" class="text-right">
-                  <div class="flex items-center justify-end gap-1">
-                    <Button variant="ghost" size="icon-sm" @click="openEdit(item)" title="Изменить">
-                      <Pencil class="size-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon-sm" @click="openNewRate(item)" title="Новая норма">
-                      <History class="size-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon-sm" @click="openDelete(item)" title="Удалить">
-                      <Trash2 class="size-4 text-destructive" />
-                    </Button>
-                  </div>
-                </TableCell>
-              </TableRow>
-
-              <!-- Archive toggle -->
-              <TableRow v-if="countInactive(group) > 0" class="hover:bg-transparent">
-                <TableCell :colspan="columnCount" class="py-2">
-                  <!--
-                    Раскрытие сделано через v-if на TableRow, а не через Collapsible: CollapsibleContent
-                    рендерит div, который внутри tbody невалиден и выносится браузером за пределы таблицы.
-                  -->
+              <!-- History toggle -->
+              <TableRow v-if="canToggleGroup(group)" class="hover:bg-transparent border-0">
+                <TableCell :colspan="columnCount" class="py-1 pl-4">
                   <button
                     type="button"
                     class="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
@@ -560,32 +562,34 @@ const groupRowClass = 'bg-muted/40 hover:bg-muted/40'
                   >
                     <component :is="isGroupExpanded(group.productId) ? ChevronDown : ChevronRight" class="size-3.5" />
                     {{ isGroupExpanded(group.productId)
-                      ? 'Скрыть архивные версии'
-                      : `Показать ${countInactive(group)} архивных версии` }}
+                      ? 'Скрыть историю'
+                      : `История (${countInactive(group)})` }}
                   </button>
                 </TableCell>
               </TableRow>
 
-              <!-- Archived versions -->
+              <!-- Detail rows: archived versions -->
               <template v-if="isGroupExpanded(group.productId)">
                 <TableRow
                   v-for="item in group.inactive"
                   :key="item.id"
-                  class="text-muted-foreground hover:bg-muted/40 transition-colors"
+                  class="bg-muted/20 text-muted-foreground hover:bg-muted/30 transition-colors"
                 >
-                  <TableCell class="text-muted-foreground">—</TableCell>
-                  <TableCell class="text-muted-foreground">{{ workRateLabel(item.workRateId) }}</TableCell>
-                  <TableCell class="text-right tabular-nums">{{ item.assemblyRatePerDay }}</TableCell>
-                  <TableCell class="tabular-nums">{{ formatIsoDate(item.validFrom) }}</TableCell>
-                  <TableCell>
-                    <Badge variant="secondary">Неактивна</Badge>
+                  <TableCell class="pl-8 py-2">
+                    <span class="text-xs text-muted-foreground/60">↳</span>
                   </TableCell>
-                  <TableCell class="tabular-nums text-sm">{{ formatDate(item.createdAt) }}</TableCell>
-                  <TableCell v-if="canWrite" class="text-right">
-                    <span class="text-xs text-muted-foreground">—</span>
+                  <TableCell class="py-2 text-sm">{{ workRateLabel(item.workRateId) }}</TableCell>
+                  <TableCell class="py-2 text-right tabular-nums text-sm">{{ item.assemblyRatePerDay }}</TableCell>
+                  <TableCell class="py-2 tabular-nums text-sm">{{ formatIsoDate(item.validFrom) }}</TableCell>
+                  <TableCell class="py-2"><Badge variant="secondary">Неактивна</Badge></TableCell>
+                  <TableCell v-if="canWrite" class="py-2 text-right">
+                    <Button variant="ghost" size="icon-sm" @click="openDelete(item)" title="Удалить">
+                      <Trash2 class="size-4 text-destructive" />
+                    </Button>
                   </TableCell>
                 </TableRow>
               </template>
+
             </template>
           </TableBody>
         </Table>
@@ -611,7 +615,7 @@ const groupRowClass = 'bg-muted/40 hover:bg-muted/40'
             </DialogClose>
           </div>
           <DialogDescription class="text-sm text-muted-foreground mb-4">
-            Запись добавляется как новая версия, предыдущая активная запись для этого товара будет деактивирована.
+            Запись добавляется как новая версия, предыдущая активная норма по этому товару деактивируется.
           </DialogDescription>
 
           <div class="flex flex-col gap-4">
@@ -707,25 +711,14 @@ const groupRowClass = 'bg-muted/40 hover:bg-muted/40'
             </div>
 
             <div :class="fieldClass">
-              <Label for="edit-rate">Норма в день (шт.) *</Label>
-              <Input
-                id="edit-rate"
-                :class="inputClass"
-                v-model.number="editForm.assemblyRatePerDay"
-                type="number"
-                min="1"
-                step="1"
-              />
+              <Label for="edit-rate-per-day">Норма в день (шт.)</Label>
+              <Input id="edit-rate-per-day" :class="inputClass" v-model.number="editForm.assemblyRatePerDay" type="number" min="1" step="1" />
             </div>
 
             <div :class="fieldClass">
-              <Label for="edit-valid-from">Действует с *</Label>
+              <Label for="edit-valid-from">Действует с</Label>
               <Input id="edit-valid-from" :class="inputClass" v-model="editForm.validFrom" type="date" />
             </div>
-
-            <p v-if="editTarget?.updatedAt" class="text-xs text-muted-foreground">
-              Последнее изменение: {{ formatDate(editTarget.updatedAt) }}
-            </p>
           </div>
 
           <div class="flex justify-end gap-2 mt-6">
@@ -741,14 +734,16 @@ const groupRowClass = 'bg-muted/40 hover:bg-muted/40'
       </DialogPortal>
     </DialogRoot>
 
-    <!-- Delete Dialog -->
+    <!-- Delete Confirmation -->
     <AlertDialogRoot v-model:open="deleteDialogOpen">
       <AlertDialogPortal>
-        <AlertDialogOverlay class="fixed inset-0 bg-black/50 z-[99]" />
-        <AlertDialogContent class="bg-popover text-popover-foreground fixed top-[50%] left-[50%] max-w-[420px] w-[90vw] translate-x-[-50%] translate-y-[-50%] rounded-lg border shadow-lg p-6 z-[100]">
+        <AlertDialogOverlay class="bg-background/80 backdrop-blur-sm fixed inset-0 z-50" />
+        <AlertDialogContent class="bg-popover text-popover-foreground fixed top-[50%] left-[50%] w-[90vw] max-w-[400px] translate-x-[-50%] translate-y-[-50%] rounded-lg border shadow-lg p-6 focus:outline-none z-[100]">
           <AlertDialogTitle class="text-lg font-semibold mb-2">Удалить запись?</AlertDialogTitle>
-          <AlertDialogDescription class="text-sm text-muted-foreground mb-4">
-            Запись будет помечена как неактивная.
+          <AlertDialogDescription class="text-sm text-muted-foreground mb-6">
+            Норма выработки для
+            <span class="font-medium">{{ deleteTarget?.productName }}</span>
+            будет удалена без возможности восстановления.
           </AlertDialogDescription>
           <div class="flex justify-end gap-2">
             <AlertDialogCancel as-child>

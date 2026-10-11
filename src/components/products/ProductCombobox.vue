@@ -37,7 +37,6 @@ const emit = defineEmits<{
 
 const PAGE_SIZE = 20
 const SEARCH_DEBOUNCE_MS = 300
-/** Порог в пикселях от низа списка, после которого подтягивается следующая страница. */
 const SCROLL_THRESHOLD_PX = 48
 
 const results = ref<ProductItem[]>([])
@@ -53,22 +52,10 @@ const activeWriteRateFrom = ref<string>('')
 
 let page = 1
 let searchDebounceTimer: ReturnType<typeof setTimeout> | null = null
-/**
- * Идентификатор последнего отправленного запроса: ответ на устаревший запрос нельзя дописывать
- * в список, иначе результаты поиска перемешаются с предыдущей выдачей.
- */
 let latestRequestId = 0
 let rateCheckId = 0
-/**
- * Сброс строки поиска после выбора меняет `searchTerm`, но пользовательского ввода в этом нет:
- * без флага debounce тут же отправил бы лишний запрос первой страницы без фильтра.
- */
 let ignoreNextSearchChange = false
 
-/**
- * Список приходит с сервера, поэтому собственный фильтр reka-ui нужно отключить:
- * он обрезал бы выданную страницу по локальной подстроке, не зная о пагинации.
- */
 const visibleResults = computed<ProductItem[]>(() => {
   if (!selectedProduct.value) {
     return results.value
@@ -79,6 +66,20 @@ const visibleResults = computed<ProductItem[]>(() => {
 })
 
 const emptyCatalog = computed<boolean>(() => hasLoadedOnce.value && results.value.length === 0 && !searchTerm.value)
+
+/**
+ * После выбора reka-ui вызывает resetSearchTerm и подставляет в инпут
+ * rootContext.modelValue.toString() — то есть Guid. displayValue перехватывает
+ * это и возвращает читаемую строку, которую мы тут же скрываем переключением
+ * в card-режим, но без него инпут на миг показывает Guid.
+ */
+const comboboxDisplayValue = (id: unknown): string => {
+  if (!id || typeof id !== 'string') {
+    return ''
+  }
+  const product = visibleResults.value.find(item => item.id === id)
+  return product ? `${product.name} · ${product.sku}` : ''
+}
 
 const loadPage = async (targetPage: number, term: string, append: boolean): Promise<void> => {
   const requestId = ++latestRequestId
@@ -131,7 +132,6 @@ const checkExistingRate = async (productId: string): Promise<void> => {
     const active = response.items.find(item => item.isActive)
     activeWriteRateFrom.value = active ? active.validFrom : ''
   } catch {
-    // Подсказка не обязана быть точной: её отсутствие не мешает создать норму.
     if (checkId === rateCheckId) {
       activeWriteRateFrom.value = ''
     }
@@ -162,7 +162,6 @@ const handleSelect = (product: ProductItem): void => {
 
 const clearSelection = (): void => {
   selectedProduct.value = null
-  // `select` не эмитится: выбор снят, и вызывающей стороне нечего передавать.
   emit('update:modelValue', '')
   activeWriteRateFrom.value = ''
   rateCheckId++
@@ -183,7 +182,6 @@ const retry = (): void => {
   void loadPage(1, searchTerm.value, false)
 }
 
-/** Сбрасывает строку поиска, не запуская debounce-запрос по этому изменению. */
 const resetSearchTerm = (): void => {
   ignoreNextSearchChange = true
   searchTerm.value = ''
@@ -234,27 +232,59 @@ const optionSkuClass = 'text-xs text-muted-foreground font-mono truncate'
       @update:model-value="(value: unknown) => emit('update:modelValue', String(value ?? ''))"
     >
       <ComboboxAnchor
-        class="relative mt-1 flex h-9 w-full items-center rounded-md border border-input bg-transparent shadow-sm focus-within:ring-1 focus-within:ring-ring"
+        class="relative mt-1 flex min-h-[36px] w-full items-center rounded-md border border-input bg-transparent shadow-sm focus-within:ring-1 focus-within:ring-ring"
         :class="disabled ? 'opacity-60' : ''"
       >
-        <Search class="absolute left-3 size-4 text-muted-foreground pointer-events-none" />
-        <ComboboxInput
-          :model-value="searchTerm"
-          :disabled="disabled"
-          placeholder="Поиск по названию или SKU"
-          class="h-9 w-full bg-transparent pl-9 pr-9 text-sm outline-none placeholder:opacity-50 disabled:cursor-not-allowed"
-          @update:model-value="handleInputUpdate"
-        />
-        <button
-          v-if="selectedProduct && !disabled"
-          type="button"
-          class="absolute right-2 grid size-6 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
-          title="Очистить выбор"
-          aria-label="Очистить выбор"
-          @click="clearSelection"
-        >
-          <X class="size-3.5" />
-        </button>
+        <!-- Card shown after selection -->
+        <template v-if="selectedProduct">
+          <div class="flex flex-1 items-center gap-2 px-3 py-1.5">
+            <div class="size-6 shrink-0 overflow-hidden rounded border border-border bg-muted flex items-center justify-center">
+              <img
+                v-if="selectedProduct.photos && selectedProduct.photos.length > 0"
+                :src="selectedProduct.photos[0].url"
+                :alt="selectedProduct.name"
+                class="size-full object-contain"
+                loading="lazy"
+              />
+              <Package v-else class="size-3 text-muted-foreground/40" />
+            </div>
+            <span class="truncate text-sm font-medium leading-none">{{ selectedProduct.name }}</span>
+            <span class="shrink-0 font-mono text-xs text-muted-foreground">{{ selectedProduct.sku }}</span>
+          </div>
+          <button
+            v-if="!disabled"
+            type="button"
+            class="mr-2 grid size-6 shrink-0 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
+            title="Очистить выбор"
+            aria-label="Очистить выбор"
+            @click.stop="clearSelection"
+          >
+            <X class="size-3.5" />
+          </button>
+          <!-- Hidden input keeps reka-ui state consistent while card is shown -->
+          <ComboboxInput
+            :model-value="searchTerm"
+            :display-value="comboboxDisplayValue"
+            :disabled="disabled"
+            class="sr-only"
+            tabindex="-1"
+            aria-hidden="true"
+            @update:model-value="handleInputUpdate"
+          />
+        </template>
+
+        <!-- Search input shown when nothing is selected -->
+        <template v-else>
+          <Search class="absolute left-3 size-4 text-muted-foreground pointer-events-none" />
+          <ComboboxInput
+            :model-value="searchTerm"
+            :display-value="comboboxDisplayValue"
+            :disabled="disabled"
+            placeholder="Поиск по названию или SKU"
+            class="h-9 w-full bg-transparent pl-9 pr-3 text-sm outline-none placeholder:opacity-50 disabled:cursor-not-allowed"
+            @update:model-value="handleInputUpdate"
+          />
+        </template>
       </ComboboxAnchor>
 
       <ComboboxPortal>
@@ -319,8 +349,11 @@ const optionSkuClass = 'text-xs text-muted-foreground font-mono truncate'
                 В каталоге нет активных товаров.
                 <RouterLink to="/catalogs/products" class="text-primary hover:underline">Перейти в товары</RouterLink>
               </p>
-              <p v-else-if="isLoadingMore" class="px-3 py-2 text-center text-xs text-muted-foreground">
+              <p v-else-if="isLoadingMore" class="py-2 text-center text-xs text-muted-foreground">
                 Загрузка…
+              </p>
+              <p v-else-if="hasMore" class="py-2 text-center text-xs text-muted-foreground">
+                Прокрутите вниз для загрузки
               </p>
             </template>
           </ComboboxViewport>
@@ -328,29 +361,8 @@ const optionSkuClass = 'text-xs text-muted-foreground font-mono truncate'
       </ComboboxPortal>
     </ComboboxRoot>
 
-    <div
-      v-if="selectedProduct"
-      class="flex items-center gap-2 rounded-md border border-border bg-muted/40 px-3 py-2"
-    >
-      <div class="w-10 aspect-[3/4] rounded-md overflow-hidden border border-border bg-muted flex items-center justify-center shrink-0">
-        <img
-          v-if="selectedProduct.photos && selectedProduct.photos.length > 0"
-          :src="selectedProduct.photos[0].url"
-          :alt="selectedProduct.name"
-          class="size-full object-contain"
-          loading="lazy"
-        />
-        <Package v-else class="size-4 text-muted-foreground/40" />
-      </div>
-      <div class="flex min-w-0 flex-col">
-        <span class="truncate text-sm font-medium">{{ selectedProduct.name }}</span>
-        <span class="truncate font-mono text-xs text-muted-foreground">{{ selectedProduct.sku }}</span>
-      </div>
-    </div>
-
-    <p v-if="selectedProduct && activeWriteRateFrom" class="text-xs text-amber-600 dark:text-amber-500">
-      У товара уже есть активная норма с {{ formatIsoDate(activeWriteRateFrom) }}.
-      Она будет деактивирована, но новая запись станет действующей.
+    <p v-if="activeWriteRateFrom" class="text-xs text-amber-600">
+      Уже есть активная норма с {{ formatIsoDate(activeWriteRateFrom) }}. Новая запись деактивирует её.
     </p>
   </div>
 </template>
