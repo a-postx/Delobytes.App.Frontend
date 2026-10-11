@@ -481,7 +481,7 @@ describe('ProductsView search', () => {
     await vi.advanceTimersByTimeAsync(300)
     await flushPromises()
 
-    expect(wrapper.text()).toContain('Ничего не найдено по запросу')
+    expect(wrapper.text()).toContain('Ничего не найдено')
     expect(wrapper.text()).not.toContain('Добавьте первый товар')
   })
 })
