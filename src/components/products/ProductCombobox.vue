@@ -232,12 +232,12 @@ const optionSkuClass = 'text-xs text-muted-foreground font-mono truncate'
       @update:model-value="(value: unknown) => emit('update:modelValue', String(value ?? ''))"
     >
       <ComboboxAnchor
-        class="relative mt-1 flex min-h-[36px] w-full items-center rounded-md border border-input bg-transparent shadow-sm focus-within:ring-1 focus-within:ring-ring"
+        class="relative mt-1 flex min-h-[36px] w-full min-w-0 items-center overflow-hidden rounded-md border border-input bg-transparent shadow-sm focus-within:ring-1 focus-within:ring-ring"
         :class="disabled ? 'opacity-60' : ''"
       >
         <!-- Card shown after selection -->
         <template v-if="selectedProduct">
-          <div class="flex flex-1 items-center gap-2 px-3 py-1.5">
+          <div class="flex min-w-0 flex-1 items-center gap-2 px-3 py-1.5">
             <div class="size-6 shrink-0 overflow-hidden rounded border border-border bg-muted flex items-center justify-center">
               <img
                 v-if="selectedProduct.photos && selectedProduct.photos.length > 0"
@@ -248,8 +248,8 @@ const optionSkuClass = 'text-xs text-muted-foreground font-mono truncate'
               />
               <Package v-else class="size-3 text-muted-foreground/40" />
             </div>
-			<span class="shrink-0 font-mono text-xs text-muted-foreground">{{ selectedProduct.sku }}</span>
-            <span class="truncate text-sm font-medium leading-none">{{ selectedProduct.name }}</span>
+            <span class="shrink-0 font-mono text-xs text-muted-foreground">{{ selectedProduct.sku }}</span>
+            <span class="min-w-0 truncate text-sm font-medium leading-tight">{{ selectedProduct.name }}</span>
           </div>
           <button
             v-if="!disabled"

@@ -280,6 +280,40 @@ describe('ProductCombobox', () => {
     expect(wrapper.text()).toContain('SKU-002')
   })
   
+  /**
+   * Длинное название товара не должно расширять карточку: без `min-w-0` флекс-элементы берут min-content
+   * ширину и `truncate` не срабатывает, из-за чего контейнер с `overflow-y-auto` получает горизонтальный скролл.
+   */
+  it('lets the chosen product name shrink instead of widening the card', async () => {
+    const wrapper = mountCombobox()
+    await openList(wrapper)
+    await clickOption('SKU-002')
+
+    const card = wrapper.get('div.mt-1.flex.min-w-0')
+    const flexChild = card.get('div.flex.min-w-0.flex-1')
+    const name = card.get('span.truncate')
+
+    expect(name.text()).toBe('Товар Б')
+    expect(name.classes()).toContain('min-w-0')
+    expect(flexChild.classes()).toContain('min-w-0')
+    expect(card.classes()).toContain('overflow-hidden')
+  })
+
+  /**
+   * `leading-none` сжимал строку до высоты 1em, а `truncate` обрезал по ней всё, что выходит за
+   * пределы строчного бокса — кириллические хвосты «у», «ц», «щ» теряли нижнюю часть.
+   */
+  it('keeps the chosen product name line height above 1em for descenders', async () => {
+    const wrapper = mountCombobox()
+    await openList(wrapper)
+    await clickOption('SKU-002')
+
+    const name = wrapper.get('span.truncate')
+
+    expect(name.classes()).toContain('leading-tight')
+    expect(name.classes()).not.toContain('leading-none')
+  })
+
   it('never exposes the product id in an input after a product is chosen', async () => {
     const wrapper = mountCombobox()
     await openList(wrapper)
