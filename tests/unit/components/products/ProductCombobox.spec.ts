@@ -50,7 +50,8 @@ const ACTIVE_RATE = {
   workRateId: 'wr-1',
   assemblyRatePerDay: 10,
   validFrom: '2024-03-12',
-  isActive: true,
+  status: 'Active',
+  removedFrom: null,
   createdAt: '2024-03-12',
 }
 
@@ -222,7 +223,7 @@ describe('ProductCombobox', () => {
 
   it('shows no warning when the product has no active rate', async () => {
     ratesGetByProduct.mockResolvedValue({
-      items: [{ ...ACTIVE_RATE, isActive: false }],
+      items: [{ ...ACTIVE_RATE, status: 'Superseded' }],
     })
 
     const wrapper = mountCombobox()
