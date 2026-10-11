@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { 
-  suppliersApi, 
-  componentsApi, 
+import {
+  suppliersApi,
+  componentsApi,
   costTypesApi,
   productChannelCostsApi,
   workRatesApi,
@@ -315,8 +315,8 @@ describe('Catalogs API - Stage 7 & 8', () => {
       )
     })
   })
-
-  describe('productChannelCostsApi', () => {
+  
+    describe('productChannelCostsApi', () => {
     it('should get costs by product', async () => {
       const productId = 'prod-1'
       const mockResponse = {
@@ -505,7 +505,8 @@ describe('Catalogs API - Stage 7 & 8', () => {
             productId: 'prod1',
             assemblyRatePerDay: 100,
             validFrom: '2024-01-01',
-            isActive: true,
+            status: 'Active',
+            removedFrom: null,
             createdAt: '2024-01-01T00:00:00Z'
           }
         ]
@@ -529,7 +530,8 @@ describe('Catalogs API - Stage 7 & 8', () => {
             productId: 'prod1',
             assemblyRatePerDay: 100,
             validFrom: '2024-01-01',
-            isActive: true,
+            status: 'Active',
+            removedFrom: null,
             createdAt: '2024-01-01T00:00:00Z'
           }
         ]
@@ -551,7 +553,8 @@ describe('Catalogs API - Stage 7 & 8', () => {
         productId: 'prod2',
         assemblyRatePerDay: 150,
         validFrom: '2024-02-01',
-        isActive: true,
+        status: 'Active',
+        removedFrom: null,
         createdAt: '2024-02-01T00:00:00Z'
       }
 

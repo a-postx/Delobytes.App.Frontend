@@ -6,13 +6,16 @@ import { describe, it, expect } from 'vitest'
  * валидационная логика из `@/utils/productWorkRates`, без монтирования компонента.
  */
 import {
-  activeVersionOf,
-  countInactive,
+  currentVersionOf,
+  countHistory,
   filterOptionsFromCounts,
   formatIsoDate,
   groupWorkRates,
+  isDateTaken,
   isPositiveInteger,
+  nextFreeDate,
   otherVersionsOf,
+  statusBadge,
   validateCreateForm,
   validateEditForm,
 } from '@/utils/productWorkRates'
@@ -26,7 +29,8 @@ const makeItem = (overrides: Partial<ProductWorkRateItem>): ProductWorkRateItem 
   workRateId: 'wr-1',
   assemblyRatePerDay: 100,
   validFrom: '2024-01-01',
-  isActive: true,
+  status: 'Active',
+  removedFrom: null,
   createdAt: '2024-01-01',
   updatedAt: null,
   ...overrides,
@@ -107,9 +111,9 @@ describe('ProductWorkRatesView form validation', () => {
    */
   describe('edit dialog validation', () => {
     const mockItems: ProductWorkRateItem[] = [
-      makeItem({ id: 'rate-1', productId: 'product-1', workRateId: 'wr-1', assemblyRatePerDay: 100, validFrom: '2024-01-01', isActive: false }),
-      makeItem({ id: 'rate-2', productId: 'product-1', workRateId: 'wr-1', assemblyRatePerDay: 120, validFrom: '2024-02-01', isActive: true }),
-      makeItem({ id: 'rate-3', productId: 'product-2', workRateId: 'wr-2', assemblyRatePerDay: 80, validFrom: '2024-01-15', isActive: true }),
+      makeItem({ id: 'rate-1', productId: 'product-1', workRateId: 'wr-1', assemblyRatePerDay: 100, validFrom: '2024-01-01', status: 'Superseded' }),
+      makeItem({ id: 'rate-2', productId: 'product-1', workRateId: 'wr-1', assemblyRatePerDay: 120, validFrom: '2024-02-01', status: 'Active' }),
+      makeItem({ id: 'rate-3', productId: 'product-2', workRateId: 'wr-2', assemblyRatePerDay: 80, validFrom: '2024-01-15', status: 'Active' }),
     ]
 
     const validateEdit = (editTargetId: string, productId: string, form: { workRateId: string; assemblyRatePerDay: number; validFrom: string }): string | null =>
@@ -170,9 +174,9 @@ describe('isPositiveInteger', () => {
 
 describe('groupWorkRates', () => {
   const items: ProductWorkRateItem[] = [
-    makeItem({ id: 'a2', productId: 'p1', productName: 'Товар A', productSku: 'A-1', validFrom: '2024-02-01', isActive: true }),
-    makeItem({ id: 'a1', productId: 'p1', productName: 'Товар A', productSku: 'A-1', validFrom: '2024-01-01', isActive: false }),
-    makeItem({ id: 'b1', productId: 'p2', productName: 'Товар B', productSku: 'B-1', validFrom: '2024-01-15', isActive: true }),
+    makeItem({ id: 'a2', productId: 'p1', productName: 'Товар A', productSku: 'A-1', validFrom: '2024-02-01', status: 'Active' }),
+    makeItem({ id: 'a1', productId: 'p1', productName: 'Товар A', productSku: 'A-1', validFrom: '2024-01-01', status: 'Superseded' }),
+    makeItem({ id: 'b1', productId: 'p2', productName: 'Товар B', productSku: 'B-1', validFrom: '2024-01-15', status: 'Active' }),
   ]
 
   it('produces one group per product, in server order', () => {
@@ -182,35 +186,53 @@ describe('groupWorkRates', () => {
     expect(groups[0].productSku).toBe('A-1')
   })
 
-  it('splits versions into active and inactive, newest first inside each bucket', () => {
+  it('puts the Active version into current and the superseded one into history', () => {
     const groups = groupWorkRates(items)
-    expect(groups[0].active.map(item => item.id)).toEqual(['a2'])
-    expect(groups[0].inactive.map(item => item.id)).toEqual(['a1'])
+    expect(groups[0].current.map(item => item.id)).toEqual(['a2'])
+    expect(groups[0].history.map(item => item.id)).toEqual(['a1'])
+  })
+
+  it('keeps both a Superseded and a Removed version in history', () => {
+    // Снятая и вытесненная версии неразличимы по признаку «в силе»; разделяет их только статус.
+    const mixed: ProductWorkRateItem[] = [
+      makeItem({ id: 'removed', productId: 'p1', validFrom: '2024-03-01', status: 'Removed', removedFrom: '2024-04-10' }),
+      makeItem({ id: 'superseded', productId: 'p1', validFrom: '2024-02-01', status: 'Superseded' }),
+    ]
+    const groups = groupWorkRates(mixed)
+    expect(groups[0].current).toHaveLength(0)
+    expect(groups[0].history.map(item => item.id)).toEqual(['removed', 'superseded'])
   })
 
   it('sorts several versions of the same status by validFrom descending', () => {
     const many: ProductWorkRateItem[] = [
-      makeItem({ id: 'old', productId: 'p1', validFrom: '2023-05-01', isActive: false }),
-      makeItem({ id: 'new', productId: 'p1', validFrom: '2024-05-01', isActive: false }),
-      makeItem({ id: 'mid', productId: 'p1', validFrom: '2024-01-01', isActive: false }),
+      makeItem({ id: 'old', productId: 'p1', validFrom: '2023-05-01', status: 'Superseded' }),
+      makeItem({ id: 'new', productId: 'p1', validFrom: '2024-05-01', status: 'Superseded' }),
+      makeItem({ id: 'mid', productId: 'p1', validFrom: '2024-01-01', status: 'Superseded' }),
     ]
     const groups = groupWorkRates(many)
-    expect(groups[0].inactive.map(item => item.id)).toEqual(['new', 'mid', 'old'])
+    expect(groups[0].history.map(item => item.id)).toEqual(['new', 'mid', 'old'])
   })
 
   it('returns an empty list for an empty page', () => {
     expect(groupWorkRates([])).toEqual([])
   })
 
-  it('counts archived versions of a group', () => {
+  it('counts versions kept in history', () => {
     const groups = groupWorkRates(items)
-    expect(countInactive(groups[0])).toBe(1)
-    expect(countInactive(groups[1])).toBe(0)
+    expect(countHistory(groups[0])).toBe(1)
+    expect(countHistory(groups[1])).toBe(0)
   })
 
-  it('finds the active version of a product', () => {
-    expect(activeVersionOf(items, 'p1')?.id).toBe('a2')
-    expect(activeVersionOf(items, 'missing')).toBeNull()
+  it('finds the current version of a product', () => {
+    expect(currentVersionOf(items, 'p1')?.id).toBe('a2')
+    expect(currentVersionOf(items, 'missing')).toBeNull()
+  })
+
+  it('reports no current version once the only version was removed', () => {
+    const removedOnly: ProductWorkRateItem[] = [
+      makeItem({ id: 'gone', productId: 'p3', validFrom: '2024-01-01', status: 'Removed', removedFrom: '2024-02-01' }),
+    ]
+    expect(currentVersionOf(removedOnly, 'p3')).toBeNull()
   })
 })
 
@@ -243,5 +265,85 @@ describe('formatIsoDate', () => {
     expect(formatIsoDate('12.03.2024')).toBe('12.03.2024')
     expect(formatIsoDate('2024-03')).toBe('2024-03')
     expect(formatIsoDate('')).toBe('')
+  })
+})
+
+describe('statusBadge', () => {
+  it('renders an active version as a success badge', () => {
+    expect(statusBadge({ status: 'Active', removedFrom: null }))
+      .toEqual({ label: 'Активна', variant: 'success' })
+  })
+
+  it('renders a superseded version as a secondary badge', () => {
+    expect(statusBadge({ status: 'Superseded', removedFrom: null }))
+      .toEqual({ label: 'Вытеснена', variant: 'secondary' })
+  })
+
+  it('dates a removed version, because the date is the boundary from which there is no rate', () => {
+    const badge = statusBadge({ status: 'Removed', removedFrom: '2024-04-10' })
+    expect(badge.label).toBe('Снята с 10.04.2024')
+    expect(badge.variant).toBe('destructive')
+  })
+
+  it('falls back to a dateless label when removedFrom is missing', () => {
+    const badge = statusBadge({ status: 'Removed', removedFrom: null })
+    expect(badge.label).toBe('Снята')
+    expect(badge.variant).toBe('destructive')
+  })
+})
+
+describe('nextFreeDate', () => {
+  const items: ProductWorkRateItem[] = [
+    makeItem({ id: 'a1', productId: 'p1', validFrom: '2024-01-01', status: 'Superseded' }),
+    makeItem({ id: 'a2', productId: 'p1', validFrom: '2024-05-01', status: 'Active' }),
+  ]
+
+  it('returns today for a product with no versions', () => {
+    expect(nextFreeDate(items, 'p2', '2024-05-01')).toBe('2024-05-01')
+  })
+
+  it('returns today for the header button, which has no product yet', () => {
+    expect(nextFreeDate(items, undefined, '2024-05-01')).toBe('2024-05-01')
+  })
+
+  it('returns the day after the latest version when that is later than today', () => {
+    expect(nextFreeDate(items, 'p1', '2024-05-01')).toBe('2024-05-02')
+  })
+
+  it('returns today when today is already past the latest version', () => {
+    expect(nextFreeDate(items, 'p1', '2024-06-15')).toBe('2024-06-15')
+  })
+
+  it('counts a removed version as occupying its date', () => {
+    // Снятие датировано, но не удаляет строку: validFrom снятой версии остаётся занятым на сервере.
+    const removed: ProductWorkRateItem[] = [
+      makeItem({ id: 'gone', productId: 'p3', validFrom: '2024-05-01', status: 'Removed', removedFrom: '2024-06-01' }),
+    ]
+    expect(nextFreeDate(removed, 'p3', '2024-05-01')).toBe('2024-05-02')
+  })
+
+  it('rolls over a month boundary', () => {
+    const endOfMonth: ProductWorkRateItem[] = [
+      makeItem({ id: 'b1', productId: 'p4', validFrom: '2024-01-31', status: 'Active' }),
+    ]
+    expect(nextFreeDate(endOfMonth, 'p4', '2024-01-31')).toBe('2024-02-01')
+  })
+})
+
+describe('isDateTaken', () => {
+  const items: ProductWorkRateItem[] = [
+    makeItem({ id: 'a1', productId: 'p1', validFrom: '2024-01-01', status: 'Active' }),
+  ]
+
+  it('detects a date already used by the same product', () => {
+    expect(isDateTaken(items, 'p1', '2024-01-01')).toBe(true)
+  })
+
+  it('ignores the same date on another product', () => {
+    expect(isDateTaken(items, 'p2', '2024-01-01')).toBe(false)
+  })
+
+  it('returns false for a free date', () => {
+    expect(isDateTaken(items, 'p1', '2024-02-01')).toBe(false)
   })
 })

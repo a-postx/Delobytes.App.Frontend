@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref, onMounted, computed, watch, onUnmounted } from 'vue'
-import { Plus, Trash2, Gauge, Pencil, History, X, ChevronDown, ChevronRight, SearchX } from 'lucide-vue-next'
+import { ref, onMounted, computed, watch, onUnmounted, h } from 'vue'
+import { Plus, Tag, Gauge, Pencil, Trash2, X, ChevronDown, ChevronRight, SearchX } from 'lucide-vue-next'
 import {
   DialogClose,
   DialogContent,
@@ -29,18 +29,18 @@ import { Badge } from '@/components/ui/badge'
 import { Spinner } from '@/components/ui/spinner'
 import { Skeleton } from '@/components/ui/skeleton'
 import { SearchInput } from '@/components/ui/search-input'
-import { DataGridPagination } from '@/components/ui/data-grid'
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
+  DataGrid,
+  type ColumnDef,
+  type ExpandedState,
+  type RowSelectionState,
+  type SortingState,
+  type VisibilityState,
+} from '@/components/ui/data-grid'
 import { StatusFilter } from '@/components/ui/status-filter'
 import ProductCombobox from '@/components/products/ProductCombobox.vue'
 import { toast } from 'vue-sonner'
+import { RouterLink } from 'vue-router'
 import { productWorkRatesApi, catalogProductsApi, workRatesApi } from '@/services/api'
 import type {
   ProductWorkRateItem,
@@ -55,10 +55,12 @@ import { useApiCall } from '@/composables/useApiCall'
 import { ErrorCodes } from '@/types/errors'
 import type { ApiError } from '@/types/errors'
 import {
-  countInactive,
+  isDateTaken,
   filterOptionsFromCounts,
   formatIsoDate,
   groupWorkRates,
+  nextFreeDate,
+  statusBadge,
   validateCreateForm,
   validateEditForm,
 } from '@/utils/productWorkRates'
@@ -66,6 +68,29 @@ import type { WorkRateGroup } from '@/utils/productWorkRates'
 
 const { canWrite } = useCurrentUser()
 const { formatMoney } = useTenantMoney()
+
+/**
+ * Строка грида. Родительская строка — товар: значения колонок берутся у действующей версии, а
+ * вложенные строки приходят из `history`. Поля версии нужны и на подстроке, поэтому тип включает
+ * их сразу, а не описывает два разных вида строк.
+ */
+interface GridRow {
+  id: string
+  productId: string
+  productName: string
+  productSku: string
+  workRateId: string
+  assemblyRatePerDay: number
+  validFrom: string
+  status: ProductWorkRateItem['status']
+  removedFrom?: string | null
+  /** Действующая версия товара или null — источник строковых действий. */
+  current: ProductWorkRateItem | null
+  /** История товара; у подстроки всегда пуста. */
+  history: ProductWorkRateItem[]
+  /** Подстрока, у которой нет собственной истории. */
+  isVersionRow?: boolean
+}
 
 const items = ref<ProductWorkRateItem[]>([])
 const workRates = ref<WorkRateItem[]>([])
@@ -89,13 +114,14 @@ const statusFilter = ref<'all' | 'active' | 'inactive'>('active')
 const searchQuery = ref<string>('')
 
 /**
- * Срез списка считает сервер, поэтому состояние пагинации живёт на странице,
- * а не внутри грида: грид отсутствует, остаётся только футер `DataGridPagination`.
+ * Срез списка считает сервер, поэтому состояние пагинации живёт на странице, а не внутри грида:
+ * грид отсутствует, остаётся только футер грида.
  */
 const pagination = ref<{ pageIndex: number; pageSize: number }>({ pageIndex: 0, pageSize: 25 })
-
-/** Товары, чей архив версий раскрыт вручную. Сбрасывается при смене страницы, фильтра и поиска. */
-const expandedGroups = ref<Set<string>>(new Set())
+const sorting = ref<SortingState>([{ id: 'updatedAt', desc: true }])
+const columnVisibility = ref<VisibilityState>({})
+const rowSelection = ref<RowSelectionState>({})
+const expanded = ref<ExpandedState>({})
 
 let searchDebounceTimer: ReturnType<typeof setTimeout> | null = null
 
@@ -115,8 +141,6 @@ const editForm = ref({ workRateId: '', assemblyRatePerDay: 0, validFrom: '' })
 const groups = computed(() => groupWorkRates(items.value))
 
 const filterOptions = computed(() => filterOptionsFromCounts(statusCounts.value))
-
-const columnCount = computed<number>(() => (canWrite.value ? 6 : 5))
 
 const isSearchActive = computed<boolean>(() => searchQuery.value.trim().length > 0)
 
@@ -170,16 +194,26 @@ const { execute: updateRate } = useApiCall({
 })
 
 const { execute: deleteRate } = useApiCall({
-  fallbackMessage: 'Не удалось удалить запись',
+  fallbackMessage: 'Не удалось снять норму',
+  errorHandlers: {
+    [ErrorCodes.Common.Conflict]: () => {
+      toast.error(conflictMessage)
+      deleteDialogOpen.value = false
+      void loadRates()
+    },
+  },
 })
 
 const loadRates = async (): Promise<void> => {
   await fetchData(async () => {
+    const sort = sorting.value[0]
     const response = await productWorkRatesApi.getAll({
       status: statusByFilter[statusFilter.value],
       search: searchQuery.value.trim() || undefined,
       page: pagination.value.pageIndex + 1,
       pageSize: pagination.value.pageSize,
+      sortBy: toWorkRateSortKey(sort?.id),
+      sortDir: sort?.desc ? 'desc' : 'asc',
       includeCounts: true,
     })
     items.value = response.items
@@ -226,7 +260,8 @@ onMounted(async () => {
 })
 
 watch(statusFilter, () => {
-  expandedGroups.value = new Set()
+  rowSelection.value = {}
+  expanded.value = {}
   pagination.value = { ...pagination.value, pageIndex: 0 }
   void loadRates()
 })
@@ -237,14 +272,24 @@ watch(
     if (pageIndex === previousPageIndex && pageSize === previousPageSize) {
       return
     }
-    expandedGroups.value = new Set()
+    expanded.value = {}
     void loadRates()
   },
 )
 
+/**
+ * Порядок строк считает сервер, поэтому смена ключа — это новый запрос, а не перестановка
+ * загруженного набора. Страница при этом сбрасывается: старая относилась к прежнему порядку.
+ */
+watch(sorting, () => {
+  expanded.value = {}
+  pagination.value = { ...pagination.value, pageIndex: 0 }
+  void loadRates()
+})
+
 watch(searchQuery, () => {
   pagination.value = { ...pagination.value, pageIndex: 0 }
-  expandedGroups.value = new Set()
+  expanded.value = {}
   if (searchDebounceTimer !== null) {
     clearTimeout(searchDebounceTimer)
   }
@@ -261,27 +306,6 @@ onUnmounted(() => {
   }
 })
 
-const isGroupExpanded = (productId: string): boolean => {
-  if (statusFilter.value === 'inactive') {
-    return true
-  }
-  return expandedGroups.value.has(productId)
-}
-
-const canToggleGroup = (group: WorkRateGroup): boolean => {
-  return statusFilter.value !== 'inactive' && countInactive(group) > 0
-}
-
-const toggleGroup = (productId: string): void => {
-  const next = new Set(expandedGroups.value)
-  if (next.has(productId)) {
-    next.delete(productId)
-  } else {
-    next.add(productId)
-  }
-  expandedGroups.value = next
-}
-
 const activeWorkRates = (): WorkRateItem[] => workRates.value.filter(rate => rate.isActive)
 
 const workRateLabel = (id: string): string => {
@@ -292,12 +316,239 @@ const workRateLabel = (id: string): string => {
   return `${rate.name} (${formatMoney(rate.dailyWage)}/день)`
 }
 
+/**
+ * Строки грида: одна родительская строка на товар, версии — её подстроки. Отдельная строка-переключатель
+ * истории не нужна, поэтому раскрытие живёт в `expanded` и в модели строк TanStack.
+ */
+const gridRows = computed<GridRow[]>(() => groups.value.map((group: WorkRateGroup) => {
+  const current = group.current[0] ?? null
+  const newest = current ?? group.history[0]
+  return {
+    id: group.productId,
+    productId: group.productId,
+    productName: group.productName,
+    productSku: group.productSku,
+    workRateId: newest?.workRateId ?? '',
+    assemblyRatePerDay: newest?.assemblyRatePerDay ?? 0,
+    validFrom: newest?.validFrom ?? '',
+    status: newest?.status ?? 'Active',
+    removedFrom: newest?.removedFrom ?? null,
+    current,
+    history: group.history,
+  }
+}))
+
+const subRowsOf = (row: GridRow): GridRow[] | undefined => {
+  if (row.isVersionRow || row.history.length === 0) {
+    return undefined
+  }
+  return row.history.map(version => ({
+    id: version.id,
+    productId: version.productId,
+    productName: version.productName,
+    productSku: version.productSku,
+    workRateId: version.workRateId,
+    assemblyRatePerDay: version.assemblyRatePerDay,
+    validFrom: version.validFrom,
+    status: version.status,
+    removedFrom: version.removedFrom,
+    current: null,
+    history: [],
+    isVersionRow: true,
+  }))
+}
+
+/**
+ * id колонки грида → ключ сортировки API. Для неизвестного id возвращаем undefined: запрос уйдёт
+ * без sortBy, и сервер применит порядок по умолчанию, а не отсортирует не по тому полю.
+ */
+const toWorkRateSortKey = (columnId: string | undefined): 'productName' | 'updatedAt' | 'validFrom' | undefined => {
+  if (columnId === 'productName' || columnId === 'updatedAt' || columnId === 'validFrom') {
+    return columnId
+  }
+  return undefined
+}
+
+const renderProductName = (row: GridRow): unknown => {
+  // Подстрока — версия товара, а не товар: имя в ней уже названо родителем, ссылка на карточку
+  // товара повторялась бы в каждой строке истории.
+  if (row.isVersionRow) {
+    return h('span', { class: 'px-2 text-xs text-muted-foreground/60' }, '↳')
+  }
+  return h('div', { class: 'flex flex-col gap-0.5' }, [
+    h(RouterLink, {
+      to: { name: 'product-edit', query: { productId: row.productId } },
+      class: 'font-medium hover:underline leading-snug',
+    }, () => row.productName),
+    h('span', { class: 'font-mono text-xs text-muted-foreground' }, row.productSku),
+  ])
+}
+
+const rateLabelOf = (row: GridRow): string => (row.workRateId ? workRateLabel(row.workRateId) : '—')
+
+const actionsFor = (row: GridRow): unknown => {
+  if (!canWrite.value || row.isVersionRow) {
+    return null
+  }
+  const current = row.current
+  if (!current) {
+    return h('div', { class: 'flex items-center justify-end gap-1' }, [
+      h(Button, {
+        variant: 'ghost',
+        size: 'icon-sm',
+        title: 'Добавить норму',
+        onClick: () => openCreateForProduct(row.productId, `${row.productName} · ${row.productSku}`),
+      }, () => h(Plus, { class: 'size-4' })),
+    ])
+  }
+  // Снятая версия не возвращается в силу, а вытесненная не влияет на расчёт, поэтому снятие
+  // предлагается только действующей версии; товару без неё — завод новой нормы.
+  return h('div', { class: 'flex items-center justify-end gap-1' }, [
+    h(Button, {
+      variant: 'ghost',
+      size: 'icon-sm',
+      title: 'Изменить',
+      onClick: () => openEdit(current),
+    }, () => h(Pencil, { class: 'size-4' })),
+    h(Button, {
+      variant: 'ghost',
+      size: 'icon-sm',
+      title: 'Новая норма',
+      onClick: () => openNewRate(current),
+    }, () => h(Tag, { class: 'size-4' })),
+    h(Button, {
+      variant: 'ghost',
+      size: 'icon-sm',
+      title: 'Снять норму',
+      onClick: () => openDelete(current),
+    }, () => h(Trash2, { class: 'size-4 text-destructive' })),
+  ])
+}
+
+const columns = computed<ColumnDef<GridRow, unknown>[]>(() => [
+  {
+    id: 'productName',
+    accessorKey: 'productName',
+    enableSorting: true,
+    enableHiding: false,
+    meta: { title: 'Товар' },
+    header: 'Товар',
+    cell: ({ row }) => {
+      const toggle = row.getCanExpand()
+        ? h('button', {
+          type: 'button',
+          class: 'flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground',
+          'aria-expanded': row.getIsExpanded(),
+          // У иконки нет текста: без aria-label экранный диктор не назовёт назначение кнопки.
+          'aria-label': row.getIsExpanded() ? 'Скрыть историю' : 'Показать историю',
+          onClick: (event: Event) => {
+            event.stopPropagation()
+            row.toggleExpanded()
+          },
+        }, [h(row.getIsExpanded() ? ChevronDown : ChevronRight, { class: 'size-4' })])
+        : h('span', { class: 'size-6 shrink-0', 'aria-hidden': 'true' })
+      return h('div', { class: 'flex items-center gap-2' }, [toggle, renderProductName(row.original)])
+    },
+  },
+  {
+    id: 'workRateId',
+    accessorKey: 'workRateId',
+    enableSorting: false,
+    enableHiding: true,
+    meta: { title: 'Ставка работы' },
+    header: 'Ставка работы',
+    cell: ({ row }) => h('span', { class: 'text-muted-foreground' }, rateLabelOf(row.original)),
+  },
+  {
+    id: 'assemblyRatePerDay',
+    accessorKey: 'assemblyRatePerDay',
+    enableSorting: false,
+    enableHiding: true,
+    meta: { title: 'Норма / день (шт.)' },
+    header: 'Норма / день (шт.)',
+    cell: ({ row }) => h('div', { class: 'text-right tabular-nums font-medium' }, String(row.original.assemblyRatePerDay)),
+  },
+  {
+    id: 'validFrom',
+    accessorKey: 'validFrom',
+    enableSorting: true,
+    enableHiding: true,
+    meta: { title: 'Действует с' },
+    header: 'Действует с',
+    cell: ({ row }) => h(
+      'span',
+      { class: 'tabular-nums text-muted-foreground' },
+      row.original.validFrom ? formatIsoDate(row.original.validFrom) : '—',
+    ),
+  },
+  {
+    id: 'status',
+    accessorKey: 'status',
+    enableSorting: false,
+    enableHiding: true,
+    meta: { title: 'Статус' },
+    header: 'Статус',
+    cell: ({ row }) => {
+      if (row.original.isVersionRow) {
+        const badge = statusBadge(row.original)
+        return h(Badge, { variant: badge.variant }, () => badge.label)
+      }
+      if (row.original.current) {
+        const badge = statusBadge({ status: 'Active', removedFrom: null })
+        return h(Badge, { variant: badge.variant }, () => badge.label)
+      }
+      // У товара нет действующей версии: показывать статус снятой истории в колонке товара
+      // значило бы утверждать, что норма действует.
+      return h(Badge, { variant: 'secondary' }, () => 'Нет активной')
+    },
+  },
+  {
+    id: 'actions',
+    enableSorting: false,
+    enableHiding: false,
+    meta: { title: 'Действия' },
+    header: () => h('span', { class: 'sr-only' }, 'Действия'),
+    cell: ({ row }) => actionsFor(row.original),
+  },
+])
+
+/**
+ * Прибавляет к `YYYY-MM-DD` указанное число дней. Арифметика идёт в UTC: локальная полночь
+ * сдвигала бы результат на день назад в отрицательных часовых поясах.
+ */
+const addDaysIso = (isoDate: string, days: number): string => {
+  const parts: string[] = isoDate.split('-')
+  if (parts.length !== 3) {
+    return isoDate
+  }
+  const shifted = new Date(Date.UTC(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]) + days))
+  return shifted.toISOString().slice(0, 10)
+}
+
+const effectiveRemovalDate = computed<string>(() => {
+  const target = deleteTarget.value
+  if (!target) {
+    return today()
+  }
+  // Зеркало серверного правила: версия может выйти из силы только с даты, на которой она уже
+  // начала действовать, иначе снятие заявило бы, что её никогда не было.
+  const now = today()
+  return now > target.validFrom ? now : addDaysIso(target.validFrom, 1)
+})
+
+const deletionSummary = computed<string>(() => {
+  if (!deleteTarget.value) {
+    return ''
+  }
+  return `Норма выработки для ${deleteTarget.value.productName} будет снята с ${formatIsoDate(effectiveRemovalDate.value)}. С этой даты у товара нет нормы, и трудозатраты не рассчитываются. Расчёты за более ранние периоды не меняются.`
+})
+
 const resetCreateForm = (): void => {
   form.value = {
     productId: '',
     workRateId: activeWorkRates()[0]?.id ?? '',
     assemblyRatePerDay: 0,
-    validFrom: today(),
+    validFrom: nextFreeDate(items.value, undefined, today()),
   }
 }
 
@@ -308,16 +559,29 @@ const openCreate = (): void => {
   createDialogOpen.value = true
 }
 
-/** Новая версия по строке: товар и текущая ставка подставляются, дата — сегодня. */
+/** Новая версия по строке: товар и текущая ставка подставляются, дата — первая свободная. */
 const openNewRate = (item: ProductWorkRateItem): void => {
   form.value = {
     productId: item.productId,
     workRateId: item.workRateId,
     assemblyRatePerDay: item.assemblyRatePerDay,
-    validFrom: today(),
+    validFrom: nextFreeDate(items.value, item.productId, today()),
   }
   isProductLocked.value = true
   lockedProductName.value = `${item.productName} · ${item.productSku}`
+  createDialogOpen.value = true
+}
+
+/** Завод нормы товару без действующей версии: дата тоже подставляется, чтобы не ловить 409. */
+const openCreateForProduct = (productId: string, label: string): void => {
+  resetCreateForm()
+  form.value = {
+    ...form.value,
+    productId,
+    validFrom: nextFreeDate(items.value, productId, today()),
+  }
+  isProductLocked.value = true
+  lockedProductName.value = label
   createDialogOpen.value = true
 }
 
@@ -340,6 +604,12 @@ const handleCreate = async (): Promise<void> => {
   const validationError = validateCreateForm(form.value)
   if (validationError) {
     toast.error(validationError)
+    return
+  }
+  // Занятая дата отклоняется сервером; здесь она отсекается до запроса, чтобы отказ не приходил
+  // тостом после круга до сервера.
+  if (isDateTaken(items.value, form.value.productId, form.value.validFrom)) {
+    toast.error('Версия с такой датой начала уже существует')
     return
   }
   isSaving.value = true
@@ -400,7 +670,7 @@ const handleDelete = async (): Promise<void> => {
   isDeleting.value = true
   try {
     await deleteRate(() => productWorkRatesApi.delete(deleteTarget.value!.id))
-    toast.success('Запись удалена')
+    toast.success('Норма снята')
     deleteDialogOpen.value = false
     await loadRates()
   } catch {
@@ -451,7 +721,7 @@ const selectClass = 'mt-1 flex h-9 w-full rounded-md border border-input bg-tran
 
     <!-- Empty: search returned nothing -->
     <div
-      v-else-if="groups.length === 0 && isSearchActive"
+      v-else-if="gridRows.length === 0 && isSearchActive"
       class="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-card py-16 text-center"
     >
       <SearchX class="size-10 text-muted-foreground/40" />
@@ -461,144 +731,41 @@ const selectClass = 'mt-1 flex h-9 w-full rounded-md border border-input bg-tran
       </div>
     </div>
 
-    <!-- Empty: no data at all -->
-    <div
-      v-else-if="groups.length === 0"
-      class="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-card py-16 text-center"
+    <!-- Grid: one row per product, versions as sub-rows -->
+    <DataGrid
+      v-else
+      v-model:pagination="pagination"
+      v-model:sorting="sorting"
+      v-model:column-visibility="columnVisibility"
+      v-model:row-selection="rowSelection"
+      v-model:expanded="expanded"
+      :data="gridRows"
+      :columns="columns"
+      :total-count="totalCount"
+      :is-loading="isLoading"
+      :selectable="false"
+      :get-sub-rows="subRowsOf"
+      :empty-title="statusFilter === 'inactive' ? 'Нет неактивных записей' : 'Нормы выработки не добавлены'"
+      empty-description="Норма задаёт количество единиц товара в день на одного сотрудника"
+      actions-column-id="actions"
     >
-      <Gauge class="size-10 text-muted-foreground/40" />
-      <p class="text-sm text-muted-foreground">
-        {{ statusFilter === 'inactive' ? 'Нет неактивных записей' : 'Нормы выработки не добавлены' }}
-      </p>
-      <Button
-        v-if="canWrite && statusFilter !== 'inactive' && !hasEmptyCatalog"
-        variant="outline"
-        size="sm"
-        @click="openCreate"
-        class="gap-2"
-      >
-        <Plus class="size-4" /> Добавить первую
-      </Button>
-      <p v-if="hasEmptyCatalog" class="text-xs text-muted-foreground">
-        Сначала добавьте товары в систему
-      </p>
-    </div>
-
-    <!-- Master-detail table -->
-    <div v-else class="flex flex-col gap-4">
-      <div class="rounded-xl border border-border bg-card overflow-hidden">
-        <Table>
-          <TableHeader>
-            <TableRow class="border-b border-border">
-              <TableHead>Товар</TableHead>
-              <TableHead>Ставка работы</TableHead>
-              <TableHead class="text-right">Норма / день (шт.)</TableHead>
-              <TableHead>Действует с</TableHead>
-              <TableHead>Статус</TableHead>
-              <TableHead v-if="canWrite" class="w-32 text-right">Действия</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            <template v-for="group in groups" :key="group.productId">
-
-              <!-- Master row: active version or placeholder when only inactive exist -->
-              <TableRow class="hover:bg-muted/40 transition-colors">
-                <!-- Product identity: name + SKU, links to product edit -->
-                <TableCell class="py-3">
-                  <div class="flex flex-col gap-0.5">
-                    <RouterLink
-                      :to="{ name: 'product-edit', query: { productId: group.productId } }"
-                      class="font-medium hover:underline leading-snug"
-                    >
-                      {{ group.productName }}
-                    </RouterLink>
-                    <span class="font-mono text-xs text-muted-foreground">{{ group.productSku }}</span>
-                  </div>
-                </TableCell>
-
-                <template v-if="group.active[0]">
-                  <TableCell class="text-muted-foreground">{{ workRateLabel(group.active[0].workRateId) }}</TableCell>
-                  <TableCell class="text-right tabular-nums font-medium">{{ group.active[0].assemblyRatePerDay }}</TableCell>
-                  <TableCell class="tabular-nums text-muted-foreground">{{ formatIsoDate(group.active[0].validFrom) }}</TableCell>
-                  <TableCell><Badge variant="success">Активна</Badge></TableCell>
-                  <TableCell v-if="canWrite" class="text-right">
-                    <div class="flex items-center justify-end gap-1">
-                      <Button variant="ghost" size="icon-sm" @click="openEdit(group.active[0])" title="Изменить">
-                        <Pencil class="size-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon-sm" @click="openNewRate(group.active[0])" title="Новая норма">
-                        <History class="size-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon-sm" @click="openDelete(group.active[0])" title="Удалить">
-                        <Trash2 class="size-4 text-destructive" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </template>
-
-                <!-- No active version: product has only archived records -->
-                <template v-else>
-                  <TableCell colspan="3" class="text-muted-foreground text-sm">—</TableCell>
-                  <TableCell><Badge variant="secondary">Нет активной</Badge></TableCell>
-                  <TableCell v-if="canWrite" class="text-right">
-                    <Button variant="ghost" size="icon-sm" @click="openCreate" title="Добавить норму">
-                      <Plus class="size-4" />
-                    </Button>
-                  </TableCell>
-                </template>
-              </TableRow>
-
-              <!-- History toggle -->
-              <TableRow v-if="canToggleGroup(group)" class="hover:bg-transparent border-0">
-                <TableCell :colspan="columnCount" class="py-1 pl-4">
-                  <button
-                    type="button"
-                    class="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
-                    :aria-expanded="isGroupExpanded(group.productId)"
-                    @click="toggleGroup(group.productId)"
-                  >
-                    <component :is="isGroupExpanded(group.productId) ? ChevronDown : ChevronRight" class="size-3.5" />
-                    {{ isGroupExpanded(group.productId)
-                      ? 'Скрыть историю'
-                      : `История (${countInactive(group)})` }}
-                  </button>
-                </TableCell>
-              </TableRow>
-
-              <!-- Detail rows: archived versions -->
-              <template v-if="isGroupExpanded(group.productId)">
-                <TableRow
-                  v-for="item in group.inactive"
-                  :key="item.id"
-                  class="bg-muted/20 text-muted-foreground hover:bg-muted/30 transition-colors"
-                >
-                  <TableCell class="pl-8 py-2">
-                    <span class="text-xs text-muted-foreground/60">↳</span>
-                  </TableCell>
-                  <TableCell class="py-2 text-sm">{{ workRateLabel(item.workRateId) }}</TableCell>
-                  <TableCell class="py-2 text-right tabular-nums text-sm">{{ item.assemblyRatePerDay }}</TableCell>
-                  <TableCell class="py-2 tabular-nums text-sm">{{ formatIsoDate(item.validFrom) }}</TableCell>
-                  <TableCell class="py-2"><Badge variant="secondary">Неактивна</Badge></TableCell>
-                  <TableCell v-if="canWrite" class="py-2 text-right">
-                    <Button variant="ghost" size="icon-sm" @click="openDelete(item)" title="Удалить">
-                      <Trash2 class="size-4 text-destructive" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              </template>
-
-            </template>
-          </TableBody>
-        </Table>
-      </div>
-
-      <DataGridPagination
-        v-model:pagination="pagination"
-        :total-count="totalCount"
-        :is-loading="isLoading"
-        show-page-size-selector
-      />
-    </div>
+      <template #empty>
+        <div class="flex flex-col items-center gap-3">
+          <Button
+            v-if="canWrite && statusFilter !== 'inactive' && !hasEmptyCatalog"
+            variant="outline"
+            size="sm"
+            class="gap-2"
+            @click="openCreate"
+          >
+            <Plus class="size-4" /> Добавить первую
+          </Button>
+          <p v-if="hasEmptyCatalog" class="text-xs text-muted-foreground">
+            Сначала добавьте товары в систему
+          </p>
+        </div>
+      </template>
+    </DataGrid>
 
     <!-- Create / New Version Dialog -->
     <DialogRoot v-model:open="createDialogOpen">
@@ -612,7 +779,7 @@ const selectClass = 'mt-1 flex h-9 w-full rounded-md border border-input bg-tran
             </DialogClose>
           </div>
           <DialogDescription class="text-sm text-muted-foreground mb-4">
-            Запись добавляется как новая версия, предыдущая активная норма по этому товару деактивируется.
+            Запись добавляется как новая версия, предыдущая активная норма по этому товару становится вытесненной.
           </DialogDescription>
 
           <div class="flex flex-col gap-4">
@@ -649,7 +816,7 @@ const selectClass = 'mt-1 flex h-9 w-full rounded-md border border-input bg-tran
               <Label>Действует с</Label>
               <Input :class="inputClass" v-model="form.validFrom" type="date" />
               <p v-if="isNewRateDateInPast" class="text-xs text-amber-600 mt-1">
-                Дата в прошлом изменит расчёты себестоимости за прошлые периоды
+                Дата в прошлом изменит расчёты себестоимости задним числом
               </p>
             </div>
           </div>
@@ -731,16 +898,14 @@ const selectClass = 'mt-1 flex h-9 w-full rounded-md border border-input bg-tran
       </DialogPortal>
     </DialogRoot>
 
-    <!-- Delete Confirmation -->
+    <!-- Removal Confirmation -->
     <AlertDialogRoot v-model:open="deleteDialogOpen">
       <AlertDialogPortal>
         <AlertDialogOverlay class="bg-background/80 backdrop-blur-sm fixed inset-0 z-50" />
         <AlertDialogContent class="bg-popover text-popover-foreground fixed top-[50%] left-[50%] w-[90vw] max-w-[400px] translate-x-[-50%] translate-y-[-50%] rounded-lg border shadow-lg p-6 focus:outline-none z-[100]">
-          <AlertDialogTitle class="text-lg font-semibold mb-2">Удалить запись?</AlertDialogTitle>
+          <AlertDialogTitle class="text-lg font-semibold mb-2">Снять норму?</AlertDialogTitle>
           <AlertDialogDescription class="text-sm text-muted-foreground mb-6">
-            Норма выработки для
-            <span class="font-medium">{{ deleteTarget?.productName }}</span>
-            будет удалена без возможности восстановления.
+            {{ deletionSummary }}
           </AlertDialogDescription>
           <div class="flex justify-end gap-2">
             <AlertDialogCancel as-child>
@@ -749,7 +914,7 @@ const selectClass = 'mt-1 flex h-9 w-full rounded-md border border-input bg-tran
             <AlertDialogAction as-child>
               <Button variant="destructive" @click="handleDelete" :disabled="isDeleting" class="gap-2">
                 <Spinner v-if="isDeleting" class="size-4" />
-                Удалить
+                Снять
               </Button>
             </AlertDialogAction>
           </div>

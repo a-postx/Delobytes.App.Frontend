@@ -1,6 +1,7 @@
 import type { Component } from 'vue'
 import type {
   ColumnDef,
+  ExpandedState,
   Row,
   RowData,
   RowSelectionState,
@@ -52,14 +53,22 @@ export interface DataGridProps<T extends DataGridRow> {
   actionsColumnId?: string
   /** Показывает выбор размера страницы в футере. */
   showPageSizeSelector?: boolean
+  /**
+   * Подстроки, рендерящиеся прямо под родительской, без собственной пагинации. Используется для
+   * истории версий товара: сервер страничит товары, так что страница всегда несёт каждую версию
+   * товаров на ней.
+   */
+  getSubRows?: (row: T) => T[] | undefined
+  /** Подсвечивает вложенные строки, чтобы строка деталей не читалась как ровня родительской. */
+  subRowsClassName?: string
 }
 
 export const DATA_GRID_PAGE_SIZES: readonly number[] = [10, 25, 50, 100]
 
-/** Id служебной колонки с чекбоксами: в `columns` её не передают, оболочка рендерит сама. */
+/** Id служебной колонки с чекбоксами: в `columns` её не передают, обёртка рендерит сама. */
 export const DATA_GRID_SELECT_COLUMN_ID = '__select'
 
 export const DATA_GRID_EMPTY_TITLE = 'Нет товаров'
 export const DATA_GRID_EMPTY_DESCRIPTION = 'В этом разделе пока ничего нет'
 
-export type { ColumnDef, Row, RowSelectionState, SortingState, VisibilityState }
+export type { ColumnDef, ExpandedState, Row, RowSelectionState, SortingState, VisibilityState }

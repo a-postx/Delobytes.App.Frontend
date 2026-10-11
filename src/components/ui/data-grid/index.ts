@@ -15,6 +15,7 @@ export type {
   DataGridPaginationState,
   DataGridProps,
   DataGridRow,
+  ExpandedState,
   Row,
   RowSelectionState,
   SortingState,

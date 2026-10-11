@@ -71,6 +71,7 @@ export type {
   UpdateWorkRateRequest,
   CreateWorkRateVersionRequest,
   ProductWorkRateItem,
+  ProductWorkRateStatus,
   ProductWorkRateStatusCounts,
   ProductWorkRateGroupFilter,
   GetProductWorkRatesParams,

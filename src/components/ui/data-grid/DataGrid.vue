@@ -1,6 +1,6 @@
 <script setup lang="ts" generic="T extends DataGridRow">
-import type { ColumnDef, RowSelectionState, SortingState, VisibilityState } from '@tanstack/vue-table'
-import { FlexRender, getCoreRowModel, useVueTable } from '@tanstack/vue-table'
+import type { ColumnDef, ExpandedState, RowSelectionState, SortingState, VisibilityState } from '@tanstack/vue-table'
+import { FlexRender, getCoreRowModel, getExpandedRowModel, useVueTable } from '@tanstack/vue-table'
 import { Check, Minus, Package } from 'lucide-vue-next'
 import { computed, toRef } from 'vue'
 import { CheckboxIndicator, CheckboxRoot } from '@/components/ui/checkbox'
@@ -30,6 +30,10 @@ interface Props {
   /** Id колонки действий: она остаётся видимой и не попадает в меню видимости. */
   actionsColumnId?: string
   showPageSizeSelector?: boolean
+  /** Подстроки без собственной пагинации; см. {@link DataGridProps.getSubRows} в types.ts. */
+  getSubRows?: (row: T) => T[] | undefined
+  /** Подсвечивает вложенные строки (строки с `row.depth > 0`). */
+  subRowsClassName?: string
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -48,6 +52,8 @@ const pagination = defineModel<DataGridPaginationState>('pagination', { required
 const sorting = defineModel<SortingState>('sorting', { required: true })
 const columnVisibility = defineModel<VisibilityState>('columnVisibility', { required: true })
 const rowSelection = defineModel<RowSelectionState>('rowSelection', { required: true })
+/** Раскрытые строки под-строк; не задействован вызывающей стороной без `getSubRows`. */
+const expanded = defineModel<ExpandedState>('expanded', { default: () => ({}) })
 
 const rows = toRef(props, 'data')
 
@@ -81,6 +87,8 @@ const table = useVueTable({
   },
   getRowId: (row: T): string => row.id,
   getCoreRowModel: getCoreRowModel(),
+  getExpandedRowModel: getExpandedRowModel(),
+  getSubRows: props.getSubRows,
   manualSorting: true,
   manualPagination: true,
   manualFiltering: true,
@@ -101,6 +109,9 @@ const table = useVueTable({
     get pagination() {
       return pagination.value
     },
+    get expanded() {
+      return expanded.value
+    },
   },
   onSortingChange: (updater) => {
     sorting.value = typeof updater === 'function' ? updater(sorting.value) : updater
@@ -117,6 +128,9 @@ const table = useVueTable({
   },
   onPaginationChange: (updater) => {
     pagination.value = typeof updater === 'function' ? updater(pagination.value) : updater
+  },
+  onExpandedChange: (updater) => {
+    expanded.value = typeof updater === 'function' ? updater(expanded.value) : updater
   },
 })
 
@@ -263,7 +277,10 @@ const summaryClass = 'text-xs text-muted-foreground'
           v-for="row in table.getRowModel().rows"
           :key="row.id"
           class="hover:bg-muted/40 transition-colors"
-          :class="row.getIsSelected() ? 'bg-muted/60' : undefined"
+          :class="[
+            row.depth > 0 ? (props.subRowsClassName ?? 'bg-muted/20 text-muted-foreground') : undefined,
+            row.depth === 0 && row.getIsSelected() ? 'bg-muted/60' : undefined,
+          ]"
         >
           <TableCell
             v-if="props.selectable"

@@ -258,6 +258,9 @@ export interface CreateWorkRateVersionRequest {
 
 // ---------- Product Work Rates ----------
 
+/** Lifecycle of one rate version; mirrors the backend ProductWorkRateStatus enum. */
+export type ProductWorkRateStatus = 'Active' | 'Superseded' | 'Removed'
+
 export interface ProductWorkRateItem {
   id: string
   productId: string
@@ -267,7 +270,9 @@ export interface ProductWorkRateItem {
   workRateId: string
   assemblyRatePerDay: number
   validFrom: string
-  isActive: boolean
+  status: ProductWorkRateStatus
+  /** Первая дата, с которой версия не действует; null, если версия не была снята. */
+  removedFrom?: string | null
   createdAt: string
   updatedAt?: string | null
 }
