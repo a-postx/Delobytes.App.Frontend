@@ -248,8 +248,8 @@ const optionSkuClass = 'text-xs text-muted-foreground font-mono truncate'
               />
               <Package v-else class="size-3 text-muted-foreground/40" />
             </div>
+			<span class="shrink-0 font-mono text-xs text-muted-foreground">{{ selectedProduct.sku }}</span>
             <span class="truncate text-sm font-medium leading-none">{{ selectedProduct.name }}</span>
-            <span class="shrink-0 font-mono text-xs text-muted-foreground">{{ selectedProduct.sku }}</span>
           </div>
           <button
             v-if="!disabled"
