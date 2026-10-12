@@ -693,11 +693,12 @@ const selectClass = 'mt-1 flex h-9 w-full rounded-md border border-input bg-tran
  * Заголовок и описание пустого состояния нужны и пропсам грида, и его слоту `#empty`:
  * кастомный слот полностью замещает дефолтный, вместе с иконкой и текстами.
  */
-const emptyTitle = computed<string>(() =>
-  statusFilter.value === 'inactive' ? 'Нет неактивных записей' : 'Нормы выработки не добавлены',
-)
-const emptyDescription = 'Норма задаёт количество единиц товара в день на одного сотрудника'
-</script>
+const emptyText = computed<string>(() => {
+  if (hasEmptyCatalog.value) {
+    return 'Сначала добавьте товары в систему'
+  }
+  return statusFilter.value === 'inactive' ? 'Нет неактивных записей' : 'Нормы выработки не добавлены'
+})
 
 <template>
   <div class="flex flex-col gap-6 p-6">
@@ -758,17 +759,12 @@ const emptyDescription = 'Норма задаёт количество един�
       :is-loading="isLoading"
       :selectable="false"
       :get-sub-rows="subRowsOf"
-      :empty-title="emptyTitle"
-      :empty-description="emptyDescription"
       actions-column-id="actions"
     >
       <template #empty>
-        <div class="flex flex-col items-center gap-3 text-center">
+        <div class="flex flex-col items-center justify-center gap-3 text-center">
           <Gauge class="size-10 text-muted-foreground/40" />
-          <p class="text-sm font-medium">{{ emptyTitle }}</p>
-          <p class="text-sm text-muted-foreground">
-            {{ hasEmptyCatalog ? 'Сначала добавьте товары в систему' : emptyDescription }}
-          </p>
+          <p class="text-sm text-muted-foreground">{{ emptyText }}</p>
           <Button
             v-if="canWrite && statusFilter !== 'inactive' && !hasEmptyCatalog"
             variant="outline"
