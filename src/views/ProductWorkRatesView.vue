@@ -84,7 +84,7 @@ interface GridRow {
   validFrom: string
   status: ProductWorkRateItem['status']
   removedFrom?: string | null
-  /** Действующая версия товара или null — источник строковых действий. */
+  /** Действующая версия товара или null — источник строчных действий. */
   current: ProductWorkRateItem | null
   /** История товара; у подстроки всегда пуста. */
   history: ProductWorkRateItem[]
@@ -688,6 +688,15 @@ const dialogContentClass = 'bg-popover text-popover-foreground fixed top-[50%] l
 const fieldClass = 'flex min-w-0 flex-col gap-1'
 const inputClass = 'mt-1'
 const selectClass = 'mt-1 flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring'
+
+/**
+ * Заголовок и описание пустого состояния нужны и пропсам грида, и его слоту `#empty`:
+ * кастомный слот полностью замещает дефолтный, вместе с иконкой и текстами.
+ */
+const emptyTitle = computed<string>(() =>
+  statusFilter.value === 'inactive' ? 'Нет неактивных записей' : 'Нормы выработки не добавлены',
+)
+const emptyDescription = 'Норма задаёт количество единиц товара в день на одного сотрудника'
 </script>
 
 <template>
@@ -749,12 +758,17 @@ const selectClass = 'mt-1 flex h-9 w-full rounded-md border border-input bg-tran
       :is-loading="isLoading"
       :selectable="false"
       :get-sub-rows="subRowsOf"
-      :empty-title="statusFilter === 'inactive' ? 'Нет неактивных записей' : 'Нормы выработки не добавлены'"
-      empty-description="Норма задаёт количество единиц товара в день на одного сотрудника"
+      :empty-title="emptyTitle"
+      :empty-description="emptyDescription"
       actions-column-id="actions"
     >
       <template #empty>
-        <div class="flex flex-col items-center gap-3">
+        <div class="flex flex-col items-center gap-3 text-center">
+          <Gauge class="size-10 text-muted-foreground/40" />
+          <p class="text-sm font-medium">{{ emptyTitle }}</p>
+          <p class="text-sm text-muted-foreground">
+            {{ hasEmptyCatalog ? 'Сначала добавьте товары в систему' : emptyDescription }}
+          </p>
           <Button
             v-if="canWrite && statusFilter !== 'inactive' && !hasEmptyCatalog"
             variant="outline"
@@ -764,9 +778,6 @@ const selectClass = 'mt-1 flex h-9 w-full rounded-md border border-input bg-tran
           >
             <Plus class="size-4" /> Добавить первую
           </Button>
-          <p v-if="hasEmptyCatalog" class="text-xs text-muted-foreground">
-            Сначала добавьте товары в систему
-          </p>
         </div>
       </template>
     </DataGrid>
