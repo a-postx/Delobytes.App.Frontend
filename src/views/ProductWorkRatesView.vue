@@ -540,7 +540,7 @@ const deletionSummary = computed<string>(() => {
   if (!deleteTarget.value) {
     return ''
   }
-  return `Норма выработки для ${deleteTarget.value.productName} будет снята с ${formatIsoDate(effectiveRemovalDate.value)}. С этой даты у товара нет нормы, и трудозатраты не рассчитываются. Расчёты за более ранние периоды не меняются.`
+  return `Норма выработки для ${deleteTarget.value.productName} будет снята с ${formatIsoDate(effectiveRemovalDate.value)}. С этой даты трудозатраты товара не рассчитываются.`
 })
 
 const resetCreateForm = (): void => {
@@ -568,7 +568,7 @@ const openNewRate = (item: ProductWorkRateItem): void => {
     validFrom: nextFreeDate(items.value, item.productId, today()),
   }
   isProductLocked.value = true
-  lockedProductName.value = `${item.productName} · ${item.productSku}`
+  lockedProductName.value = `${item.productSku} · ${item.productName}`
   createDialogOpen.value = true
 }
 
