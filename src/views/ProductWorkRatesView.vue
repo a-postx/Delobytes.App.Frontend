@@ -700,6 +700,8 @@ const emptyText = computed<string>(() => {
   return statusFilter.value === 'inactive' ? 'Нет неактивных записей' : 'Нормы выработки не добавлены'
 })
 
+</script>
+
 <template>
   <div class="flex flex-col gap-6 p-6">
     <!-- Header -->

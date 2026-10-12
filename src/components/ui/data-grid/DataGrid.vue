@@ -312,7 +312,10 @@ const summaryClass = 'text-xs text-muted-foreground'
       </TableBody>
     </Table>
 
-    <div class="flex flex-wrap items-center justify-between gap-3 border-t border-border px-3 py-2.5">
+    <div
+      v-if="!isEmpty"
+      class="flex flex-wrap items-center justify-between gap-3 border-t border-border px-3 py-2.5"
+    >
       <!-- Точка расширения под массовые операции: сейчас здесь только сводка по выбору. -->
       <p
         v-if="props.selectable"
