@@ -214,11 +214,14 @@ describe('ComponentsView server-side paging and sorting', () => {
     expect(getComponents).toHaveBeenCalledTimes(callsBefore)
   })
 
-  it('requests nothing from the server for the actions column', async () => {
+  it('keeps the actions column out of the server query', async () => {
     const wrapper = factory()
     await flushPromises()
 
-    expect(sortHeader(wrapper, 'Действия')).toBeDefined()
+    // The actions column never reaches the server: its header carries the column-visibility
+    // gear instead of a sortable title, and the sort key stays on the default column.
+    expect(wrapper.find('[aria-label="Настроить колонки"]').exists()).toBe(true)
+    expect(sortHeader(wrapper, 'Действия')).toBeUndefined()
     expect(lastCall()).toMatchObject({ sortBy: 'name' })
   })
 })
@@ -276,89 +279,90 @@ describe('ComponentsView column visibility', () => {
   })
 })
 
-  beforeEach(() => {
-    vi.useFakeTimers()
-    vi.clearAllMocks()
-    canWrite.value = true
-    getSuppliers.mockResolvedValue({ items: [] })
-    getComponents.mockResolvedValue(response([component()]))
-  })
+describe('ComponentsView server-side search', () => {
+    beforeEach(() => {
+      vi.useFakeTimers()
+      vi.clearAllMocks()
+      canWrite.value = true
+      getSuppliers.mockResolvedValue({ items: [] })
+      getComponents.mockResolvedValue(response([component()]))
+    })
 
-  afterEach(() => {
-    vi.useRealTimers()
-  })
+    afterEach(() => {
+      vi.useRealTimers()
+    })
 
-  it('sends the trimmed search to the server after the debounce', async () => {
-    const wrapper = factory()
-    await flushPromises()
-    expect(getComponents).toHaveBeenCalledTimes(1)
+    it('sends the trimmed search to the server after the debounce', async () => {
+      const wrapper = factory()
+      await flushPromises()
+      expect(getComponents).toHaveBeenCalledTimes(1)
 
-    await searchField(wrapper).setValue('  картон  ')
-    expect(getComponents).toHaveBeenCalledTimes(1)
+      await searchField(wrapper).setValue('  картон  ')
+      expect(getComponents).toHaveBeenCalledTimes(1)
 
-    await vi.advanceTimersByTimeAsync(300)
-    await flushPromises()
+      await vi.advanceTimersByTimeAsync(300)
+      await flushPromises()
 
-    expect(getComponents).toHaveBeenCalledTimes(2)
-    expect(lastCall()).toMatchObject({ search: 'картон' })
-  })
+      expect(getComponents).toHaveBeenCalledTimes(2)
+      expect(lastCall()).toMatchObject({ search: 'картон' })
+    })
 
-  it('sends one request for a burst of keystrokes', async () => {
-    const wrapper = factory()
-    await flushPromises()
+    it('sends one request for a burst of keystrokes', async () => {
+      const wrapper = factory()
+      await flushPromises()
 
-    const field = searchField(wrapper)
-    await field.setValue('к')
-    await field.setValue('ка')
-    await field.setValue('кар')
-    await vi.advanceTimersByTimeAsync(300)
-    await flushPromises()
+      const field = searchField(wrapper)
+      await field.setValue('к')
+      await field.setValue('ка')
+      await field.setValue('кар')
+      await vi.advanceTimersByTimeAsync(300)
+      await flushPromises()
 
-    expect(getComponents).toHaveBeenCalledTimes(2)
-  })
+      expect(getComponents).toHaveBeenCalledTimes(2)
+    })
 
-  it('drops a whitespace-only search', async () => {
-    const wrapper = factory()
-    await flushPromises()
+    it('drops a whitespace-only search', async () => {
+      const wrapper = factory()
+      await flushPromises()
 
-    await searchField(wrapper).setValue('   ')
-    await vi.advanceTimersByTimeAsync(300)
-    await flushPromises()
+      await searchField(wrapper).setValue('   ')
+      await vi.advanceTimersByTimeAsync(300)
+      await flushPromises()
 
-    expect(lastCall()?.search).toBeUndefined()
-  })
+      expect(lastCall()?.search).toBeUndefined()
+    })
 
-  it('does not claim the catalog is empty when the search found nothing', async () => {
-    getComponents.mockResolvedValue(response([], { totalCount: 0 }))
+    it('does not claim the catalog is empty when the search found nothing', async () => {
+      getComponents.mockResolvedValue(response([], { totalCount: 0 }))
 
-    const wrapper = factory()
-    await flushPromises()
+      const wrapper = factory()
+      await flushPromises()
 
-    expect(wrapper.text()).toContain('Компоненты не добавлены')
-    expect(wrapper.text()).toContain('Добавить первый')
+      expect(wrapper.text()).toContain('Компоненты не добавлены')
+      expect(wrapper.text()).toContain('Добавить первый')
 
-    await searchField(wrapper).setValue('нет-такого-компонента')
-    await vi.advanceTimersByTimeAsync(300)
-    await flushPromises()
+      await searchField(wrapper).setValue('нет-такого-компонента')
+      await vi.advanceTimersByTimeAsync(300)
+      await flushPromises()
 
-    expect(wrapper.text()).toContain('Ничего не найдено')
-    expect(wrapper.text()).not.toContain('Добавить первый')
-  })
+      expect(wrapper.text()).toContain('Ничего не найдено')
+      expect(wrapper.text()).not.toContain('Добавить первый')
+    })
 
-  it('keeps the typed search when a status tab is switched', async () => {
-    const wrapper = factory()
-    await flushPromises()
+    it('keeps the typed search when a status tab is switched', async () => {
+      const wrapper = factory()
+      await flushPromises()
 
-    await searchField(wrapper).setValue('картон')
-    await vi.advanceTimersByTimeAsync(300)
-    await flushPromises()
+      await searchField(wrapper).setValue('картон')
+      await vi.advanceTimersByTimeAsync(300)
+      await flushPromises()
 
-    const allTab = wrapper.findAll('button').find(button => button.text().includes('Все'))
-    await allTab?.trigger('click')
-    await flushPromises()
+      const allTab = wrapper.findAll('button').find(button => button.text().includes('Все'))
+      await allTab?.trigger('click')
+      await flushPromises()
 
-    expect(searchField(wrapper).element.value).toBe('картон')
-    expect(lastCall()).toMatchObject({ search: 'картон' })
-    expect(lastCall()?.isActive).toBeUndefined()
-  })
+      expect(searchField(wrapper).element.value).toBe('картон')
+      expect(lastCall()).toMatchObject({ search: 'картон' })
+      expect(lastCall()?.isActive).toBeUndefined()
+    })
 })
