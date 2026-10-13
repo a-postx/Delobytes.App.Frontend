@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch, onUnmounted, h } from 'vue'
 import { Plus, Trash2, PackageOpen, Pencil, Undo2, Tag } from 'lucide-vue-next'
 import {
   DialogClose,
@@ -27,20 +27,21 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Spinner } from '@/components/ui/spinner'
-import { Skeleton } from '@/components/ui/skeleton'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
 import { StatusFilter } from '@/components/ui/status-filter'
+import { SearchInput } from '@/components/ui/search-input'
+import {
+  DataGrid,
+  type ColumnDef,
+  type RowSelectionState,
+  type SortingState,
+  type VisibilityState,
+} from '@/components/ui/data-grid'
 import { toast } from 'vue-sonner'
-import { componentsApi, suppliersApi, Unit } from '@/services/api'
+import { componentsApi, suppliersApi, Unit, isComponentSortKey } from '@/services/api'
 import type {
   ComponentItem,
+  ComponentSortKey,
+  ComponentStatusCounts,
   CreateComponentRequest,
   CreateComponentPriceRequest,
   SupplierItem,
@@ -58,6 +59,7 @@ const { formatMoney } = useTenantMoney()
 
 const items = ref<ComponentItem[]>([])
 const suppliers = ref<SupplierItem[]>([])
+const isLoading = ref<boolean>(true)
 
 const createDialogOpen = ref<boolean>(false)
 const editDialogOpen = ref<boolean>(false)
@@ -73,6 +75,49 @@ const isSaving = ref<boolean>(false)
 const isDeleting = ref<boolean>(false)
 
 const statusFilter = ref<'all' | 'active' | 'inactive'>('active')
+const searchQuery = ref<string>('')
+
+/**
+ * Поиск уходит на сервер, поэтому запрос отправляем только после паузы в наборе:
+ * иначе каждая буква названия — отдельный запрос к каталогу.
+ */
+const SEARCH_DEBOUNCE_MS = 300
+
+/**
+ * Состояние грида принадлежит странице, потому что сортировку и нарезку на страницы
+ * выполняет сервер: грид показывает ровно тот набор строк, который пришёл в ответе.
+ */
+const pagination = ref<{ pageIndex: number; pageSize: number }>({ pageIndex: 0, pageSize: 25 })
+const sorting = ref<SortingState>([{ id: 'name', desc: false }])
+const columnVisibility = ref<VisibilityState>({})
+const rowSelection = ref<RowSelectionState>({})
+const totalCount = ref<number>(0)
+const statusCounts = ref<ComponentStatusCounts>({ active: 0, inactive: 0, all: 0 })
+
+const COLUMN_VISIBILITY_KEY = 'delobytes.components.columns'
+
+const readStoredColumnVisibility = (): VisibilityState => {
+  try {
+    const raw = localStorage.getItem(COLUMN_VISIBILITY_KEY)
+    if (!raw) {
+      return {}
+    }
+    const parsed: unknown = JSON.parse(raw)
+    if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      return {}
+    }
+    return parsed as VisibilityState
+  } catch {
+    // Повреждённое значение в хранилище не должно ломать страницу: откатываемся к умолчаниям.
+    return {}
+  }
+}
+
+columnVisibility.value = readStoredColumnVisibility()
+
+watch(columnVisibility, (value: VisibilityState) => {
+  localStorage.setItem(COLUMN_VISIBILITY_KEY, JSON.stringify(value))
+}, { deep: true })
 
 const today = (): string => new Date().toISOString().slice(0, 10)
 
@@ -99,21 +144,11 @@ const priceForm = ref({
   validFrom: today(),
 })
 
-const activeCount = computed(() => items.value.filter(i => i.isActive).length)
-const inactiveCount = computed(() => items.value.filter(i => !i.isActive).length)
-const totalCount = computed(() => items.value.length)
-
 const filterOptions = computed(() => [
-  { value: 'active', label: 'Активные', count: activeCount.value },
-  { value: 'all', label: 'Все', count: totalCount.value },
-  { value: 'inactive', label: 'Неактивные', count: inactiveCount.value },
+  { value: 'active', label: 'Активные', count: statusCounts.value.active },
+  { value: 'all', label: 'Все', count: statusCounts.value.all },
+  { value: 'inactive', label: 'Неактивные', count: statusCounts.value.inactive },
 ])
-
-const filteredItems = computed(() => {
-  if (statusFilter.value === 'all') return items.value
-  if (statusFilter.value === 'active') return items.value.filter(i => i.isActive)
-  return items.value.filter(i => !i.isActive)
-})
 
 const unitOptions = [
   { value: Unit.Piece, label: 'шт.' },
@@ -150,9 +185,300 @@ const isPriceDateInPast = computed<boolean>(() => {
   return priceForm.value.validFrom < today()
 })
 
-const { loading: isLoading, execute: fetchData } = useApiCall({
-  fallbackMessage: 'Не удалось загрузить данные',
+/**
+ * id колонки грида → ключ сортировки API. Для неизвестного id возвращаем undefined: запрос уйдёт
+ * без sortBy, и сервер применит свой порядок по умолчанию, а не отсортирует не по тому полю.
+ */
+const toComponentSortKey = (columnId: string | undefined): ComponentSortKey | undefined =>
+  isComponentSortKey(columnId) ? columnId : undefined
+
+/** id колонок, которые принимает меню видимости; заданы явно, чтобы совпадать с whitelist. */
+const columns = computed<ColumnDef<ComponentItem, unknown>[]>(() => {
+  const definitions: ColumnDef<ComponentItem, unknown>[] = [
+    {
+      id: 'name',
+      accessorKey: 'name',
+      enableSorting: true,
+      enableHiding: false,
+      meta: { title: 'Название' },
+      header: 'Название',
+      cell: ({ row }) => h('div', [
+        h('span', { class: 'font-medium' }, row.original.name),
+        row.original.description
+          ? h('p', { class: 'text-xs text-muted-foreground mt-0.5' }, row.original.description)
+          : null,
+      ]),
+    },
+    {
+      id: 'unit',
+      accessorKey: 'unit',
+      enableSorting: false,
+      enableHiding: true,
+      meta: { title: 'Единица' },
+      header: 'Единица',
+      cell: ({ row }) => h('span', { class: 'text-sm' }, unitLabel(row.original.unit)),
+    },
+    {
+      id: 'category',
+      accessorKey: 'category',
+      enableSorting: false,
+      enableHiding: true,
+      meta: { title: 'Категория' },
+      header: 'Категория',
+      cell: ({ row }) => h(
+        Badge,
+        { variant: categoryBadgeVariant[row.original.category] ?? 'secondary' },
+        () => categoryLabel(row.original.category),
+      ),
+    },
+    {
+      id: 'price',
+      accessorFn: (item: ComponentItem) => item.activePrice?.pricePerUnit ?? null,
+      enableSorting: false,
+      enableHiding: true,
+      meta: { title: 'Цена/ед.' },
+      header: 'Цена/ед.',
+      cell: ({ row }) => h(
+        'div',
+        { class: 'text-right tabular-nums' },
+        formatMoney(row.original.activePrice?.pricePerUnit ?? 0),
+      ),
+    },
+    {
+      id: 'supplier',
+      accessorFn: (item: ComponentItem) => item.activePrice?.supplierName ?? null,
+      enableSorting: true,
+      enableHiding: true,
+      meta: { title: 'Поставщик' },
+      header: 'Поставщик',
+      cell: ({ row }) => h(
+        'span',
+        { class: 'text-sm' },
+        row.original.activePrice?.supplierName || '—',
+      ),
+    },
+    {
+      id: 'validFrom',
+      accessorFn: (item: ComponentItem) => item.activePrice?.validFrom ?? null,
+      enableSorting: true,
+      enableHiding: true,
+      meta: { title: 'Действует с' },
+      header: 'Действует с',
+      cell: ({ row }) => h(
+        'span',
+        { class: 'text-sm text-muted-foreground tabular-nums' },
+        row.original.activePrice ? formatDate(row.original.activePrice.validFrom) : '—',
+      ),
+    },
+    {
+      id: 'status',
+      accessorKey: 'isActive',
+      enableSorting: false,
+      enableHiding: true,
+      meta: { title: 'Статус' },
+      header: 'Статус',
+      cell: ({ row }) => h(
+        Badge,
+        { variant: row.original.isActive ? 'success' : 'secondary' },
+        () => (row.original.isActive ? 'Активен' : 'Неактивен'),
+      ),
+    },
+    {
+      id: 'createdAt',
+      accessorKey: 'createdAt',
+      enableSorting: true,
+      enableHiding: true,
+      meta: { title: 'Добавлен' },
+      header: 'Добавлен',
+      cell: ({ row }) => h(
+        'span',
+        { class: 'text-sm text-muted-foreground tabular-nums' },
+        formatDate(row.original.createdAt),
+      ),
+    },
+  ]
+
+  /**
+   * Колонка действий существует независимо от прав: в её заголовке живёт кнопка настройки
+   * колонок, нужная и читателю, и редактору. Сами кнопки рисуются только при праве на запись.
+   */
+  definitions.push({
+    id: 'actions',
+    enableSorting: false,
+    enableHiding: false,
+    meta: { title: 'Действия' },
+    header: () => h('span', { class: 'sr-only' }, 'Действия'),
+    cell: ({ row }) => (canWrite.value ? renderActions(row.original) : null),
+  })
+
+  return definitions
 })
+
+const renderActions = (item: ComponentItem): unknown => {
+  const editButton = h(
+    Button,
+    {
+      variant: 'ghost',
+      size: 'icon-sm',
+      title: 'Редактировать',
+      onClick: () => openEdit(item),
+    },
+    () => h(Pencil, { class: 'size-4' }),
+  )
+
+  const priceButton = item.isActive
+    ? h(
+      Button,
+      {
+        variant: 'ghost',
+        size: 'icon-sm',
+        title: 'Новая цена',
+        onClick: () => openNewPrice(item),
+      },
+      () => h(Tag, { class: 'size-4' }),
+    )
+    : null
+
+  const deleteButton = item.isActive
+    ? h(
+      Button,
+      {
+        variant: 'ghost',
+        size: 'icon-sm',
+        title: 'Деактивировать',
+        onClick: () => openDelete(item),
+      },
+      () => h(Trash2, { class: 'size-4 text-destructive' }),
+    )
+    : null
+
+  const restoreButton = item.isActive
+    ? null
+    : h(
+      Button,
+      {
+        variant: 'ghost',
+        size: 'icon-sm',
+        title: 'Восстановить',
+        onClick: () => openRestore(item),
+      },
+      () => h(Undo2, { class: 'size-4 text-green-600' }),
+    )
+
+  return h('div', { class: 'flex items-center justify-end gap-1' }, [
+    editButton,
+    priceButton,
+    deleteButton,
+    restoreButton,
+  ])
+}
+
+/**
+ * Загружает одну страницу: фильтр по статусу, поиск, порядок и смещение считает сервер.
+ * Счётчики вкладок приходят тем же ответом, поэтому отдельного запроса на «Все» больше нет.
+ */
+const loadItems = async (): Promise<void> => {
+  isLoading.value = true
+  try {
+    const sort = sorting.value[0]
+    const resp = await componentsApi.getAll({
+      isActive: statusFilter.value === 'all' ? undefined : statusFilter.value === 'active',
+      search: searchQuery.value.trim() || undefined,
+      page: pagination.value.pageIndex + 1,
+      pageSize: pagination.value.pageSize,
+      sortBy: toComponentSortKey(sort?.id),
+      sortDir: sort?.desc ? 'desc' : 'asc',
+      includeCounts: true,
+    })
+    items.value = resp.items
+    totalCount.value = resp.totalCount ?? resp.items.length
+    if (resp.statusCounts) {
+      statusCounts.value = resp.statusCounts
+    }
+  } catch {
+    toast.error('Не удалось загрузить компоненты')
+    return
+  } finally {
+    isLoading.value = false
+  }
+}
+
+/**
+ * Список поставщиков нужен только диалогам создания и новой цены и от фильтров не зависит,
+ * поэтому запрашивается один раз при монтировании, а не вместе со каждой страницей компонентов.
+ */
+const loadSuppliers = async (): Promise<void> => {
+  try {
+    const resp = await suppliersApi.getAll()
+    suppliers.value = resp.items
+  } catch {
+    toast.error('Не удалось загрузить поставщиков')
+  }
+}
+
+const refreshList = async (): Promise<void> => {
+  await loadItems()
+  if (items.value.length === 0 && pagination.value.pageIndex > 0) {
+    pagination.value = { ...pagination.value, pageIndex: pagination.value.pageIndex - 1 }
+    await loadItems()
+  }
+}
+
+watch(statusFilter, () => {
+  rowSelection.value = {}
+  pagination.value = { ...pagination.value, pageIndex: 0 }
+  loadItems()
+})
+
+watch(
+  [() => pagination.value.pageIndex, () => pagination.value.pageSize],
+  ([pageIndex, pageSize], [previousPageIndex, previousPageSize]) => {
+    // Сброс страницы при новом поиске не должен сам грузить данные: за это отвечает debounce
+    // поиска, иначе на каждый введённый символ уходило бы два одинаковых запроса.
+    if (pageIndex === previousPageIndex && pageSize === previousPageSize) {
+      return
+    }
+    rowSelection.value = {}
+    loadItems()
+  },
+)
+
+watch(sorting, () => {
+  rowSelection.value = {}
+  pagination.value = { ...pagination.value, pageIndex: 0 }
+  loadItems()
+}, { deep: true })
+
+/**
+ * Поиск меняет набор строк, поэтому выделение и страница сбрасываются сразу, а запрос уходит
+ * после паузы в наборе. Смена вкладки и сортировки строку поиска не трогает: она не часть
+ * их состояния.
+ */
+watch(searchQuery, () => {
+  rowSelection.value = {}
+  pagination.value = { ...pagination.value, pageIndex: 0 }
+  if (searchDebounceTimer !== null) {
+    clearTimeout(searchDebounceTimer)
+  }
+  searchDebounceTimer = setTimeout(() => {
+    searchDebounceTimer = null
+    loadItems()
+  }, SEARCH_DEBOUNCE_MS)
+})
+
+onMounted(() => {
+  loadItems()
+  loadSuppliers()
+})
+
+onUnmounted(() => {
+  if (searchDebounceTimer !== null) {
+    clearTimeout(searchDebounceTimer)
+    searchDebounceTimer = null
+  }
+})
+
+let searchDebounceTimer: ReturnType<typeof setTimeout> | null = null
 
 const { execute: createComponent } = useApiCall({
   fallbackMessage: 'Не удалось создать компонент',
@@ -173,20 +499,6 @@ const { execute: deleteComponent } = useApiCall({
 const { execute: restoreComponent } = useApiCall({
   fallbackMessage: 'Не удалось восстановить компонент',
 })
-
-const loadData = async (): Promise<void> => {
-  await fetchData(async () => {
-    const [componentsResp, suppliersResp] = await Promise.all([
-      componentsApi.getAll(),
-      suppliersApi.getAll(),
-    ])
-    items.value = componentsResp.items
-    suppliers.value = suppliersResp.items
-    return { componentsResp, suppliersResp }
-  })
-}
-
-onMounted(loadData)
 
 const resetForm = (): void => {
   form.value = {
@@ -254,7 +566,7 @@ const handleCreate = async (): Promise<void> => {
     await createComponent(() => componentsApi.create(payload))
     toast.success('Компонент добавлен')
     createDialogOpen.value = false
-    await loadData()
+    await refreshList()
   } catch {
     // Ошибка уже обработана в useApiCall
   } finally {
@@ -279,7 +591,7 @@ const handleUpdate = async (): Promise<void> => {
     await updateComponent(() => componentsApi.update(editTarget.value!.id, payload))
     toast.success('Компонент обновлён')
     editDialogOpen.value = false
-    await loadData()
+    await refreshList()
   } catch {
     // Ошибка уже обработана в useApiCall
   } finally {
@@ -307,7 +619,7 @@ const handleCreatePrice = async (): Promise<void> => {
     await addComponentPrice(() => componentsApi.createPrice(priceTarget.value!.id, payload))
     toast.success('Новая цена добавлена')
     priceDialogOpen.value = false
-    await loadData()
+    await refreshList()
   } catch {
     // Ошибка уже обработана в useApiCall
   } finally {
@@ -322,7 +634,7 @@ const handleDelete = async (): Promise<void> => {
     await deleteComponent(() => componentsApi.delete(deleteTarget.value!.id))
     toast.success('Компонент деактивирован')
     deleteDialogOpen.value = false
-    await loadData()
+    await refreshList()
   } catch {
     // Ошибка уже обработана в useApiCall
   } finally {
@@ -337,7 +649,7 @@ const handleRestore = async (): Promise<void> => {
     await restoreComponent(() => componentsApi.restore(restoreTarget.value!.id))
     toast.success('Компонент восстановлен')
     restoreDialogOpen.value = false
-    await loadData()
+    await refreshList()
   } catch {
     // Ошибка уже обработана в useApiCall
   } finally {
@@ -367,91 +679,57 @@ const selectClass = 'flex h-10 w-full rounded-md border border-input bg-backgrou
       </Button>
     </div>
 
-    <StatusFilter v-model="statusFilter" :options="filterOptions" />
-
-    <div v-if="isLoading" class="rounded-xl border border-border bg-card overflow-hidden">
-      <div class="p-4 flex flex-col gap-3">
-        <Skeleton v-for="n in 5" :key="n" class="h-10 w-full rounded-lg" />
-      </div>
+    <div class="flex flex-wrap items-center gap-2">
+      <SearchInput
+        v-model="searchQuery"
+        placeholder="Поиск по названию"
+        class="w-full sm:w-80"
+      />
+      <StatusFilter v-model="statusFilter" :options="filterOptions" />
     </div>
 
-    <div
-      v-else-if="filteredItems.length === 0"
-      class="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-card py-16 text-center"
+    <DataGrid
+      v-model:pagination="pagination"
+      v-model:sorting="sorting"
+      v-model:column-visibility="columnVisibility"
+      v-model:row-selection="rowSelection"
+      :data="items"
+      :columns="columns"
+      :total-count="totalCount"
+      :is-loading="isLoading"
+      :selectable="false"
+      actions-column-id="actions"
     >
-      <PackageOpen class="size-10 text-muted-foreground/40" />
-      <p class="text-sm text-muted-foreground">
-        {{ statusFilter === 'inactive' ? 'Нет неактивных компонентов' : 'Компоненты не добавлены' }}
-      </p>
-      <Button v-if="canWrite && statusFilter !== 'inactive'" variant="outline" size="sm" @click="openCreate" class="gap-2">
-        <Plus class="size-4" /> Добавить первый
-      </Button>
-    </div>
-
-    <div v-else class="rounded-xl border border-border bg-card overflow-hidden">
-      <Table>
-        <TableHeader>
-          <TableRow class="border-b border-border">
-            <TableHead>Название</TableHead>
-            <TableHead>Единица</TableHead>
-            <TableHead>Категория</TableHead>
-            <TableHead class="text-right">Цена/ед.</TableHead>
-            <TableHead>Поставщик</TableHead>
-            <TableHead>Действует с</TableHead>
-            <TableHead>Статус</TableHead>
-            <TableHead>Добавлен</TableHead>
-            <TableHead v-if="canWrite" class="w-32 text-right">Действия</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          <TableRow
-            v-for="item in filteredItems"
-            :key="item.id"
-            class="hover:bg-muted/40 transition-colors"
+      <template #empty>
+        <div class="flex flex-col items-center justify-center gap-3 text-center">
+          <div class="size-12 rounded-full bg-muted flex items-center justify-center">
+            <PackageOpen class="size-6 text-muted-foreground" />
+          </div>
+          <div>
+            <h3 class="font-semibold">
+              {{ searchQuery.trim() ? 'Ничего не найдено' : 'Компоненты не добавлены' }}
+            </h3>
+            <p class="text-sm text-muted-foreground">
+              <template v-if="searchQuery.trim()">
+                Измените запрос или очистите поле поиска
+              </template>
+              <template v-else>
+                {{ statusFilter === 'inactive' ? 'Нет неактивных компонентов' : 'Добавьте первый компонент' }}
+              </template>
+            </p>
+          </div>
+          <div
+            v-if="canWrite && statusFilter !== 'inactive' && !searchQuery.trim()"
+            class="flex flex-col sm:flex-row gap-2 mt-2"
           >
-            <TableCell class="font-medium">
-              {{ item.name }}
-              <p v-if="item.description" class="text-xs text-muted-foreground mt-0.5 font-normal">{{ item.description }}</p>
-            </TableCell>
-            <TableCell class="text-sm">{{ unitLabel(item.unit) }}</TableCell>
-            <TableCell>
-              <Badge :variant="categoryBadgeVariant[item.category] ?? 'secondary'">
-                {{ categoryLabel(item.category) }}
-              </Badge>
-            </TableCell>
-            <TableCell class="text-right tabular-nums">{{ formatMoney(item.activePrice?.pricePerUnit ?? 0) }}</TableCell>
-            <TableCell class="text-sm">
-              {{ item.activePrice?.supplierName || '—' }}
-            </TableCell>
-            <TableCell class="text-sm text-muted-foreground tabular-nums">
-              {{ item.activePrice ? formatDate(item.activePrice.validFrom) : '—' }}
-            </TableCell>
-            <TableCell>
-              <Badge :variant="item.isActive ? 'success' : 'secondary'">
-                {{ item.isActive ? 'Активен' : 'Неактивен' }}
-              </Badge>
-            </TableCell>
-            <TableCell class="text-sm text-muted-foreground tabular-nums">{{ formatDate(item.createdAt) }}</TableCell>
-            <TableCell v-if="canWrite" class="text-right">
-              <div class="flex items-center justify-end gap-1">
-                <Button variant="ghost" size="icon-sm" @click="openEdit(item)" title="Редактировать">
-                  <Pencil class="size-4" />
-                </Button>
-                <Button v-if="item.isActive" variant="ghost" size="icon-sm" @click="openNewPrice(item)" title="Новая цена">
-                  <Tag class="size-4" />
-                </Button>
-                <Button v-if="item.isActive" variant="ghost" size="icon-sm" @click="openDelete(item)">
-                  <Trash2 class="size-4 text-destructive" />
-                </Button>
-                <Button v-else variant="ghost" size="icon-sm" @click="openRestore(item)" title="Восстановить">
-                  <Undo2 class="size-4 text-green-600" />
-                </Button>
-              </div>
-            </TableCell>
-          </TableRow>
-        </TableBody>
-      </Table>
-    </div>
+            <Button @click="openCreate" variant="outline" class="gap-2">
+              <Plus class="size-4" />
+              Добавить первый
+            </Button>
+          </div>
+        </div>
+      </template>
+    </DataGrid>
 
     <!-- Create Dialog -->
     <DialogRoot v-model:open="createDialogOpen">

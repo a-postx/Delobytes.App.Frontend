@@ -67,8 +67,51 @@ export interface ComponentItem {
   createdAt: string
 }
 
+/**
+ * Счётчики вкладок статуса считаются на сервере по всему отфильтрованному набору,
+ * а не по загруженной странице: иначе после включения пагинации они показывали бы
+ * числа только для видимых строк.
+ */
+export interface ComponentStatusCounts {
+  active: number
+  inactive: number
+  all: number
+}
+
+/**
+ * Ключи сортировки совпадают с id колонок грида и с белым списком бэкенда.
+ * Неизвестное значение бэкенд молча заменяет на сортировку по названию.
+ */
+export type ComponentSortKey = 'name' | 'supplier' | 'validFrom' | 'createdAt'
+
+const COMPONENT_SORT_KEYS: readonly string[] = ['name', 'supplier', 'validFrom', 'createdAt']
+
+export function isComponentSortKey(value: unknown): value is ComponentSortKey {
+  return typeof value === 'string' && COMPONENT_SORT_KEYS.includes(value)
+}
+
+export interface GetComponentsParams {
+  /** Статус компонента; отсутствие ключа означает «все компоненты», а не «активные». */
+  isActive?: boolean
+  /** Регистронезависимая подстрока по названию. Пустое значение бэкенд игнорирует. */
+  search?: string
+  /** Номер страницы, начиная с 1. Без него бэкенд отдаёт весь список. */
+  page?: number
+  pageSize?: number
+  sortBy?: ComponentSortKey
+  sortDir?: 'asc' | 'desc'
+  /** Добавляет `statusCounts`, посчитанные по всему отфильтрованному набору. */
+  includeCounts?: boolean
+}
+
 export interface GetComponentsResponse {
+  /** Строки запрошенной страницы, а без `page` — весь список. */
   items: ComponentItem[]
+  /** Число строк после фильтрации, без учёта разбиения на страницы. */
+  totalCount?: number
+  page?: number
+  pageSize?: number
+  statusCounts?: ComponentStatusCounts
 }
 
 export interface CreateComponentRequest {
@@ -414,8 +457,44 @@ export const suppliersApi = {
 }
 
 export const componentsApi = {
-  getAll: async (): Promise<GetComponentsResponse> => {
-    const response = await axiosInstance.get<GetComponentsResponse>('/api/catalogs/components')
+  /**
+   * `params` необязателен, поэтому старые вызовы без аргументов (например, из BOM-редактора,
+   * которому нужен полный список) продолжают получать весь каталог. Ключи с `undefined` не
+   * попадают в query: axios сериализовал бы их пустой строкой, и бэкенд прочитал бы это как
+   * реальный фильтр.
+   */
+  getAll: async (params?: GetComponentsParams): Promise<GetComponentsResponse> => {
+    if (!params) {
+      const response = await axiosInstance.get<GetComponentsResponse>('/api/catalogs/components')
+      return response.data
+    }
+
+    const query: Record<string, string | number | boolean> = {}
+    if (params.isActive !== undefined) {
+      query.isActive = params.isActive
+    }
+    if (params.search !== undefined) {
+      query.search = params.search
+    }
+    if (params.page !== undefined) {
+      query.page = params.page
+    }
+    if (params.pageSize !== undefined) {
+      query.pageSize = params.pageSize
+    }
+    if (params.sortBy !== undefined) {
+      query.sortBy = params.sortBy
+    }
+    if (params.sortDir !== undefined) {
+      query.sortDir = params.sortDir
+    }
+    if (params.includeCounts !== undefined) {
+      query.includeCounts = params.includeCounts
+    }
+
+    const response = await axiosInstance.get<GetComponentsResponse>('/api/catalogs/components', {
+      params: query,
+    })
     return response.data
   },
 

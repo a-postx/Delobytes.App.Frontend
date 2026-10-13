@@ -28,6 +28,7 @@ export {
   productChannelCostsApi,
   workRatesApi,
   productWorkRatesApi,
+  isComponentSortKey,
 } from './endpoints/catalogs'
 export { bomApi, productCostApi } from './endpoints/bom'
 export type {
@@ -53,6 +54,9 @@ export type {
   UpdateSupplierRequest,
   ComponentItem,
   ComponentPriceDto,
+  ComponentStatusCounts,
+  ComponentSortKey,
+  GetComponentsParams,
   GetComponentsResponse,
   CreateComponentRequest,
   UpdateComponentRequest,

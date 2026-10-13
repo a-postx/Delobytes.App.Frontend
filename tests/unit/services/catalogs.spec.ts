@@ -156,6 +156,52 @@ describe('Catalogs API - Stage 7 & 8', () => {
       expect(result.items[0].activePrice?.pricePerUnit).toBe(100)
     })
 
+    it('should build a query object with one key per supplied parameter', async () => {
+      vi.mocked(axiosInstance.get).mockResolvedValue({ data: { items: [] } })
+
+      await componentsApi.getAll({
+        isActive: true,
+        search: 'screw',
+        page: 2,
+        pageSize: 50,
+        sortBy: 'supplier',
+        sortDir: 'desc',
+        includeCounts: true
+      })
+
+      expect(axiosInstance.get).toHaveBeenCalledWith('/api/catalogs/components', {
+        params: {
+          isActive: true,
+          search: 'screw',
+          page: 2,
+          pageSize: 50,
+          sortBy: 'supplier',
+          sortDir: 'desc',
+          includeCounts: true
+        }
+      })
+    })
+
+    it('should omit undefined keys from the query object', async () => {
+      vi.mocked(axiosInstance.get).mockResolvedValue({ data: { items: [] } })
+
+      await componentsApi.getAll({ search: 'screw' })
+
+      expect(axiosInstance.get).toHaveBeenCalledWith('/api/catalogs/components', {
+        params: { search: 'screw' }
+      })
+    })
+
+    it('should serialize isActive: false instead of dropping it', async () => {
+      vi.mocked(axiosInstance.get).mockResolvedValue({ data: { items: [] } })
+
+      await componentsApi.getAll({ isActive: false })
+
+      expect(axiosInstance.get).toHaveBeenCalledWith('/api/catalogs/components', {
+        params: { isActive: false }
+      })
+    })
+
     it('should create a component with initial price', async () => {
       const newComponent: ComponentItem = {
         id: '2',
