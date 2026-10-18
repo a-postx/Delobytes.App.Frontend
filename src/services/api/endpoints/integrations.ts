@@ -5,11 +5,12 @@ import type {
   Connection,
   CreateConnectionPayload,
   CreateConnectionResult,
+  ProductImportJob,
   ProductImportCreateResponse,
   GetProductImportsResponse,
-  GetProductImportResponse,
   StartProductImportRequest,
 } from '@/types'
+import { PRODUCTS_IMPORT_JOB_TYPE } from '@/types'
 
 interface ChannelsResponse {
   items: AvailableChannel[]
@@ -58,11 +59,14 @@ export const integrationsApi = {
     await axiosInstance.delete(`/api/integrations/connections/${id}`)
   },
 
-  /** Запуск импорта товаров из внешней системы (Wildberries) */
+  /**
+   * Запуск импорта товаров из внешней системы (Wildberries).
+   * Унифицированный Jobs API (Stage 13): POST /api/integrations/jobs/{type}.
+   */
   createProductImport: async (payload: StartProductImportRequest): Promise<ProductImportCreateResponse> => {
     try {
       const response = await axiosInstance.post<ProductImportCreateResponse>(
-        '/api/integrations/product-imports',
+        `/api/integrations/jobs/${PRODUCTS_IMPORT_JOB_TYPE}`,
         payload,
       )
       return response.data
@@ -77,22 +81,24 @@ export const integrationsApi = {
     }
   },
 
-  /** Получить список задач импорта */
+  /** Получить список задач импорта товаров (унифицированный Jobs API, отфильтрованный по типу). */
   getProductImports: async (): Promise<GetProductImportsResponse> => {
-    const response = await axiosInstance.get<GetProductImportsResponse>('/api/integrations/product-imports')
+    const response = await axiosInstance.get<GetProductImportsResponse>('/api/integrations/jobs', {
+      params: { type: PRODUCTS_IMPORT_JOB_TYPE },
+    })
     return response.data
   },
 
-  /** Получить детали задачи импорта */
-  getProductImport: async (id: string): Promise<GetProductImportResponse> => {
-    const response = await axiosInstance.get<GetProductImportResponse>(`/api/integrations/product-imports/${id}`)
+  /** Получить детали задачи импорта по идентификатору. */
+  getProductImport: async (id: string): Promise<ProductImportJob> => {
+    const response = await axiosInstance.get<ProductImportJob>(`/api/integrations/jobs/${id}`)
     return response.data
   },
 
-  /** Отменить задачу импорта */
+  /** Отменить задачу импорта. */
   cancelProductImport: async (id: string): Promise<void> => {
     try {
-      await axiosInstance.post(`/api/integrations/product-imports/${id}/cancel`)
+      await axiosInstance.delete(`/api/integrations/jobs/${id}/cancel`)
     } catch (error: unknown) {
       const axiosError = error as AxiosError<ApiErrorResponse>
       const status = axiosError.response?.status

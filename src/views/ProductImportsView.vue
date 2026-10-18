@@ -43,6 +43,14 @@ const connectionById = computed<Map<string, Connection>>(
   () => new Map(connections.value.map(c => [c.id, c])),
 )
 
+/**
+ * Backend JobDto больше не содержит агрегированного RecordsProcessed (Stage 13): счётчик
+ * восстанавливается на фронтенде как сумма Created/Updated/Skipped/Failed.
+ */
+const recordsProcessed = (job: ProductImportJob): number => {
+  return job.recordsCreated + job.recordsUpdated + job.recordsSkipped + job.recordsFailed
+}
+
 const formatDate = (dateStr: string | null): string => {
   if (!dateStr) return '—'
   return new Date(dateStr).toLocaleString('ru-RU', {
@@ -64,8 +72,6 @@ const getStatusBadgeVariant = (
       return 'secondary'
     case ProductImportStatus.Failed:
       return 'destructive'
-    case ProductImportStatus.PartialSuccess:
-      return 'warning'
     default:
       return 'secondary'
   }
@@ -76,7 +82,6 @@ const getStatusLabel = (status: string): string => {
     case ProductImportStatus.Pending: return 'Ожидание'
     case ProductImportStatus.Running: return 'Выполняется'
     case ProductImportStatus.Success: return 'Успешно'
-    case ProductImportStatus.PartialSuccess: return 'Частичный успех'
     case ProductImportStatus.Failed: return 'Ошибка'
     case ProductImportStatus.Cancelled: return 'Отменено'
     default: return status
@@ -94,7 +99,7 @@ const loadConnections = async (): Promise<void> => {
 const loadJobs = async (): Promise<void> => {
   try {
     const response = await integrationsApi.getProductImports()
-    jobs.value = response.items
+    jobs.value = response.jobs
   } catch (error) {
     console.error('Failed to load import jobs:', error)
     toast.error('Не удалось загрузить задачи импорта')
@@ -288,7 +293,7 @@ onMounted(async () => {
               {{ formatDate(job.completedAt) }}
             </TableCell>
             <TableCell class="text-right tabular-nums text-sm">
-              {{ job.recordsProcessed }}
+              {{ recordsProcessed(job) }}
             </TableCell>
             <TableCell class="text-right tabular-nums text-sm">
               {{ job.recordsCreated }}
