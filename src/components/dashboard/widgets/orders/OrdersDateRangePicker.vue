@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
-import type { ComputedRef, Ref } from 'vue'
+import { computed, ref, shallowRef, watch } from 'vue'
+import type { ComputedRef, Ref, ShallowRef } from 'vue'
 import type { DateValue } from 'reka-ui'
 import { useMediaQuery } from '@vueuse/core'
 import { CalendarDays } from 'lucide-vue-next'
@@ -30,12 +30,12 @@ interface PendingRange {
   end: CalendarDate | undefined
 }
 
-const pendingRange: Ref<PendingRange> = ref({
+const pendingRange: ShallowRef<PendingRange> = shallowRef({
   start: modelValue.value.from,
   end: modelValue.value.to,
 })
 
-const placeholder: Ref<CalendarDate> = ref(modelValue.value.to)
+const placeholder: ShallowRef<CalendarDate> = shallowRef(modelValue.value.to)
 
 const isWide: Ref<boolean> = useMediaQuery('(min-width: 768px)')
 const numberOfMonths: ComputedRef<number> = computed<number>(() => (isWide.value ? 2 : 1))

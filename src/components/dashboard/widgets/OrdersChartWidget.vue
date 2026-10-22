@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
-import type { ComputedRef, Ref } from 'vue'
+import { computed, onMounted, ref, shallowRef, watch } from 'vue'
+import type { ComputedRef, Ref, ShallowRef } from 'vue'
 import { VisArea, VisAxis, VisLine, VisTooltip, VisXYContainer } from '@unovis/vue'
 import { CurveType } from '@unovis/ts'
 import { useElementSize } from '@vueuse/core'
@@ -43,7 +43,7 @@ const today: ComputedRef<CalendarDate> = computed<CalendarDate>(() => getTenantT
 
 const initialRange = resolvePreset('week', getTenantToday(resolveTenantTimeZone()))
 
-const range: Ref<{ from: CalendarDate; to: CalendarDate }> = ref(initialRange)
+const range: ShallowRef<{ from: CalendarDate; to: CalendarDate }> = shallowRef(initialRange)
 const granularity: Ref<OrdersChartGranularity | null> = ref(null)
 const channelId: Ref<string | null> = ref(null)
 const metric: Ref<OrdersMetric> = ref('quantity')
@@ -134,21 +134,21 @@ watch(
   { deep: true },
 )
 
-function handlePresetClick(value: string): void {
+function handlePresetClick(value: string | undefined): void {
   if (!value) {
     return
   }
   range.value = resolvePreset(value as OrdersPeriodPresetId, today.value)
 }
 
-function handleGranularityClick(value: string): void {
+function handleGranularityClick(value: string | undefined): void {
   if (!value) {
     return
   }
   granularity.value = value as OrdersChartGranularity
 }
 
-function handleMetricClick(value: string): void {
+function handleMetricClick(value: string | undefined): void {
   if (!value) {
     return
   }
@@ -251,21 +251,22 @@ function yTickFormat(value: number): string {
   return formatCompactNumber(value, metric.value, currencySymbol.value)
 }
 
-function tooltipTemplate(point: ChartPoint): string {
+function tooltipTemplate(point: unknown): string {
   const data = response.value
   if (!data) {
     return ''
   }
 
-  const incomplete: boolean = isLastBucketIncomplete.value && point.idx === data.points.length - 1
-  const header: string = formatBucketLabel(point.periodStart, data.granularity, {
+  const chartPoint: ChartPoint = point as ChartPoint
+  const incomplete: boolean = isLastBucketIncomplete.value && chartPoint.idx === data.points.length - 1
+  const header: string = formatBucketLabel(chartPoint.periodStart, data.granularity, {
     from: data.from,
     to: data.to,
     short: false,
     showYear: true,
   })
 
-  const formattedValue: string = metric.value === 'quantity' ? formatQuantity(point.value) : formatMoney(point.value)
+  const formattedValue: string = metric.value === 'quantity' ? formatQuantity(chartPoint.value) : formatMoney(chartPoint.value)
 
   return componentToString(ChartTooltipContent, {
     title: incomplete ? `${header} (неполный период)` : header,
