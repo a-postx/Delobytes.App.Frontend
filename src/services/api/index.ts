@@ -31,6 +31,14 @@ export {
   isComponentSortKey,
 } from './endpoints/catalogs'
 export { bomApi, productCostApi } from './endpoints/bom'
+export { salesOrdersApi } from './endpoints/sales'
+export type {
+  OrdersChartGranularity,
+  OrdersChartPoint,
+  OrdersChartTotals,
+  GetOrdersChartParams,
+  GetOrdersChartResponse,
+} from '@/types/sales'
 export type {
   PreviewProductBomCostLine,
   PreviewProductBomCostRequest,
