@@ -280,8 +280,10 @@ function selectPreset(id: OrdersPeriodPresetId): void {
       </Button>
     </PopoverTrigger>
     <PopoverContent
-      class="w-[520px] p-0"
+      class="w-[520px] p-0 shadow-sm"
       align="start"
+      prioritize-position
+      sticky="always"
     >
       <div class="flex">
         <div class="flex min-w-0 flex-1 flex-col border-r border-border p-3">
