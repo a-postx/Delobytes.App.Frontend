@@ -13,16 +13,15 @@ import {
 } from '@/components/ui/chart'
 import type { ChartConfig } from '@/components/ui/chart'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { useCurrentUser } from '@/composables/useCurrentUser'
 import { useTenantMoney } from '@/composables/useTenantMoney'
 import { extractErrorMessage } from '@/composables/useApi'
 import { channelsApi, salesOrdersApi } from '@/services/api'
 import type { ChannelItem } from '@/services/api'
+import { channelDisplay } from '@/utils/channelBadges'
 import { formatBucketLabel, formatCompactNumber, formatQuantity } from './orders/ordersChartFormat'
-import { ORDERS_PERIOD_PRESETS, matchPreset, resolvePreset } from './orders/ordersPeriodPresets'
-import type { OrdersPeriodPresetId } from './orders/ordersPeriodPresets'
-import OrdersDateRangePicker from './orders/OrdersDateRangePicker.vue'
+import { resolvePreset } from './orders/ordersPeriodPresets'
+import OrdersCalendarPicker from './orders/OrdersCalendarPicker.vue'
 import { getTenantToday, parseIsoDate, toIsoDate } from '@/utils/dateRange'
 import type { CalendarDate } from '@internationalized/date'
 import type { GetOrdersChartResponse, OrdersChartGranularity } from '@/types/sales'
@@ -56,13 +55,20 @@ const channels: Ref<ChannelItem[]> = ref([])
 
 let activeController: AbortController | null = null
 
-const activePreset: ComputedRef<OrdersPeriodPresetId | null> = computed<OrdersPeriodPresetId | null>(
-  () => matchPreset(range.value.from, range.value.to, today.value),
-)
-
 const effectiveGranularity: ComputedRef<OrdersChartGranularity | null> = computed<OrdersChartGranularity | null>(
   () => granularity.value ?? response.value?.granularity ?? null,
 )
+
+const GRANULARITY_LABELS: Record<OrdersChartGranularity, string> = {
+  Day: 'День',
+  Week: 'Неделя',
+  Month: 'Месяц',
+}
+
+const METRIC_LABELS: Record<OrdersMetric, string> = {
+  quantity: 'Штуки',
+  amount: 'Рубли',
+}
 
 const channelSelectValue: ComputedRef<string> = computed<string>(() => channelId.value ?? ALL_CHANNELS_VALUE)
 
@@ -74,6 +80,14 @@ const channelOptions: ComputedRef<{ value: string; label: string }[]> = computed
       label: channel.isActive ? channel.name : `${channel.name} (неактивен)`,
     }))
   },
+)
+
+const selectedChannel: ComputedRef<ChannelItem | null> = computed<ChannelItem | null>(
+  () => channels.value.find((channel) => channel.id === channelId.value) ?? null,
+)
+
+const isWildberriesChannelSelected: ComputedRef<boolean> = computed<boolean>(
+  () => channelDisplay(selectedChannel.value?.code).variant === 'marketplace-wb',
 )
 
 async function loadChannels(): Promise<void> {
@@ -134,24 +148,11 @@ watch(
   { deep: true },
 )
 
-function handlePresetClick(value: string | undefined): void {
-  if (!value) {
-    return
-  }
-  range.value = resolvePreset(value as OrdersPeriodPresetId, today.value)
-}
-
-function handleGranularityClick(value: string | undefined): void {
-  if (!value) {
-    return
-  }
+function handleGranularityChange(value: string): void {
   granularity.value = value as OrdersChartGranularity
 }
 
-function handleMetricClick(value: string | undefined): void {
-  if (!value) {
-    return
-  }
+function handleMetricChange(value: string): void {
   metric.value = value as OrdersMetric
 }
 
@@ -216,22 +217,20 @@ const dashedLineData: ComputedRef<ChartPoint[]> = computed<ChartPoint[]>(() =>
   isLastBucketIncomplete.value && chartPoints.value.length > 1 ? chartPoints.value.slice(-2) : [],
 )
 
-const seriesColor: ComputedRef<string> = computed<string>(() => chartConfig[metric.value]?.color ?? 'hsl(var(--chart-1))')
-const areaGradientId: ComputedRef<string> = computed<string>(() => `orders-chart-fill-${metric.value}`)
+const seriesColor: ComputedRef<string> = computed<string>(() =>
+  isWildberriesChannelSelected.value
+    ? 'hsl(var(--chart-wildberries))'
+    : chartConfig[metric.value]?.color ?? 'hsl(var(--chart-1))',
+)
+const areaGradientId: ComputedRef<string> = computed<string>(() =>
+  isWildberriesChannelSelected.value ? 'orders-chart-fill-wildberries' : `orders-chart-fill-${metric.value}`,
+)
 const areaFill: ComputedRef<string> = computed<string>(() => `url(#${areaGradientId.value})`)
 
 const chartContainerRef: Ref<HTMLElement | null> = ref(null)
 const { width: chartWidth } = useElementSize(chartContainerRef)
 
 const numTicks: ComputedRef<number> = computed<number>(() => Math.max(2, Math.floor(chartWidth.value / 80)))
-
-const showYearInLabels: ComputedRef<boolean> = computed<boolean>(() => {
-  const data = response.value
-  if (!data) {
-    return false
-  }
-  return parseIsoDate(data.from).year !== parseIsoDate(data.to).year
-})
 
 function xTickFormat(idx: number): string {
   const data = response.value
@@ -243,7 +242,6 @@ function xTickFormat(idx: number): string {
     from: data.from,
     to: data.to,
     short: true,
-    showYear: showYearInLabels.value,
   })
 }
 
@@ -263,7 +261,6 @@ function tooltipTemplate(point: unknown): string {
     from: data.from,
     to: data.to,
     short: false,
-    showYear: true,
   })
 
   const formattedValue: string = metric.value === 'quantity' ? formatQuantity(chartPoint.value) : formatMoney(chartPoint.value)
@@ -300,46 +297,19 @@ const isInitialLoading: ComputedRef<boolean> = computed<boolean>(() => loading.v
     @retry="loadChart"
   >
     <template #actions>
-      <ToggleGroup
-        type="single"
-        :model-value="activePreset ?? ''"
-        @update:model-value="handlePresetClick"
-      >
-        <ToggleGroupItem
-          v-for="preset in ORDERS_PERIOD_PRESETS"
-          :key="preset.id"
-          :value="preset.id"
-        >
-          {{ preset.label }}
-        </ToggleGroupItem>
-      </ToggleGroup>
-
-      <OrdersDateRangePicker
+      <OrdersCalendarPicker
         v-model="range"
         :time-zone="timeZone"
       />
-
-      <ToggleGroup
-        type="single"
-        :model-value="effectiveGranularity ?? ''"
-        @update:model-value="handleGranularityClick"
-      >
-        <ToggleGroupItem value="Day">
-          День
-        </ToggleGroupItem>
-        <ToggleGroupItem value="Week">
-          Неделя
-        </ToggleGroupItem>
-        <ToggleGroupItem value="Month">
-          Месяц
-        </ToggleGroupItem>
-      </ToggleGroup>
 
       <Select
         :model-value="channelSelectValue"
         @update:model-value="(value) => handleChannelChange(String(value))"
       >
-        <SelectTrigger class="w-[180px]">
+        <SelectTrigger
+          class="w-[160px]"
+          size="sm"
+        >
           <SelectValue placeholder="Все каналы" />
         </SelectTrigger>
         <SelectContent>
@@ -356,18 +326,47 @@ const isInitialLoading: ComputedRef<boolean> = computed<boolean>(() => loading.v
         </SelectContent>
       </Select>
 
-      <ToggleGroup
-        type="single"
-        :model-value="metric"
-        @update:model-value="handleMetricClick"
+      <Select
+        :model-value="effectiveGranularity ?? undefined"
+        @update:model-value="(value) => handleGranularityChange(String(value))"
       >
-        <ToggleGroupItem value="quantity">
-          Штуки
-        </ToggleGroupItem>
-        <ToggleGroupItem value="amount">
-          Рубли
-        </ToggleGroupItem>
-      </ToggleGroup>
+        <SelectTrigger
+          class="w-[120px]"
+          size="sm"
+        >
+          <SelectValue placeholder="Период" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem
+            v-for="(label, value) in GRANULARITY_LABELS"
+            :key="value"
+            :value="value"
+          >
+            {{ label }}
+          </SelectItem>
+        </SelectContent>
+      </Select>
+
+      <Select
+        :model-value="metric"
+        @update:model-value="(value) => handleMetricChange(String(value))"
+      >
+        <SelectTrigger
+          class="w-[110px]"
+          size="sm"
+        >
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem
+            v-for="(label, value) in METRIC_LABELS"
+            :key="value"
+            :value="value"
+          >
+            {{ label }}
+          </SelectItem>
+        </SelectContent>
+      </Select>
     </template>
 
     <div class="flex flex-col gap-3">
@@ -421,6 +420,24 @@ const isInitialLoading: ComputedRef<boolean> = computed<boolean>(() => loading.v
                   stop-opacity="0.05"
                 />
               </linearGradient>
+              <linearGradient
+                id="orders-chart-fill-wildberries"
+                x1="0"
+                y1="0"
+                x2="0"
+                y2="1"
+              >
+                <stop
+                  offset="5%"
+                  stop-color="hsl(var(--chart-wildberries))"
+                  stop-opacity="0.4"
+                />
+                <stop
+                  offset="95%"
+                  stop-color="hsl(var(--chart-wildberries))"
+                  stop-opacity="0.05"
+                />
+              </linearGradient>
             </defs>
           </svg>
           <VisXYContainer
@@ -456,6 +473,7 @@ const isInitialLoading: ComputedRef<boolean> = computed<boolean>(() => loading.v
               type="x"
               :num-ticks="numTicks"
               :tick-format="xTickFormat"
+              :grid-line="false"
             />
             <VisAxis
               type="y"

@@ -1,7 +1,6 @@
 import type { CalendarDate } from '@internationalized/date'
 import {
   formatDayMonth,
-  formatDayMonthShortYear,
   formatFullDate,
   parseIsoDate,
 } from '@/utils/dateRange'
@@ -11,7 +10,6 @@ export interface FormatBucketLabelContext {
   from: string
   to: string
   short: boolean
-  showYear: boolean
 }
 
 function maxDate(a: CalendarDate, b: CalendarDate): CalendarDate {
@@ -24,10 +22,6 @@ function minDate(a: CalendarDate, b: CalendarDate): CalendarDate {
 
 function lastDayOfMonth(d: CalendarDate): CalendarDate {
   return d.add({ months: 1 }).set({ day: 1 }).subtract({ days: 1 })
-}
-
-function formatShort(d: CalendarDate, showYear: boolean): string {
-  return showYear ? formatDayMonthShortYear(d) : formatDayMonth(d)
 }
 
 export function formatBucketLabel(
@@ -50,19 +44,19 @@ export function formatBucketLabel(
   const clippedEnd: CalendarDate = minDate(bucketEnd, rangeTo)
 
   if (granularity === 'Day') {
-    return ctx.short ? formatShort(clippedStart, ctx.showYear) : formatFullDate(clippedStart)
+    return ctx.short ? formatDayMonth(clippedStart) : formatFullDate(clippedStart)
   }
 
   if (granularity === 'Week') {
     if (ctx.short) {
-      return `${formatShort(clippedStart, ctx.showYear)} – ${formatShort(clippedEnd, ctx.showYear)}`
+      return `${formatDayMonth(clippedStart)} – ${formatDayMonth(clippedEnd)}`
     }
     return `${formatDayMonth(clippedStart)} – ${formatFullDate(clippedEnd)}`
   }
 
   // Month
   if (ctx.short) {
-    return formatShort(clippedStart, ctx.showYear)
+    return formatDayMonth(clippedStart)
   }
   return `${formatDayMonth(clippedStart)} – ${formatFullDate(clippedEnd)}`
 }

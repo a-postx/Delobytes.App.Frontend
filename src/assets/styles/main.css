@@ -37,6 +37,7 @@
     --chart-1: 14 65% 55%;
     --chart-2: 150 30% 55%;
     --chart-3: 35 80% 60%;
+    --chart-wildberries: 273 67% 39%;
     --success: 142 45% 48%;
     --warning: 35 90% 55%;
     --info: 210 75% 58%;
@@ -77,6 +78,7 @@
     --chart-1: 14 65% 58%;
     --chart-2: 150 30% 52%;
     --chart-3: 35 75% 58%;
+    --chart-wildberries: 270 95% 75%;
     --success: 142 40% 45%;
     --warning: 35 85% 55%;
     --info: 210 70% 58%;
@@ -105,6 +107,22 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
+}
+
+/* Unovis рисует для тултипа собственную обёртку (фон/рамка/тень). Наш ChartTooltipContent
+   уже является самостоятельной карточкой, поэтому внешнюю обёртку делаем прозрачной,
+   чтобы не получалось "карточка в карточке". */
+html body [data-slot="chart"] {
+  --vis-tooltip-padding: 0px;
+  --vis-tooltip-border-radius: 0px;
+  --vis-tooltip-border-color: transparent;
+  --vis-dark-tooltip-border-color: transparent;
+  --vis-tooltip-box-shadow: none;
+  --vis-tooltip-background-color: transparent;
+  --vis-dark-tooltip-background-color: transparent;
+  --vis-tooltip-text-color: inherit;
+  --vis-dark-tooltip-text-color: inherit;
+  --vis-tooltip-backdrop-filter: none;
 }
 
 @layer utilities {

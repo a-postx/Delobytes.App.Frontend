@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import type { ComputedRef, Ref } from 'vue'
 import { Minus, TrendingDown, TrendingUp } from 'lucide-vue-next'
 import DashboardWidget from '@/components/dashboard/DashboardWidget.vue'
+import { Badge } from '@/components/ui/badge'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { useCurrentUser } from '@/composables/useCurrentUser'
 import { useTenantMoney } from '@/composables/useTenantMoney'
@@ -91,7 +92,7 @@ async function load(): Promise<void> {
 onMounted(load)
 
 const title: ComputedRef<string> = computed<string>(() => TITLES[props.metric])
-const subtitle: ComputedRef<string> = computed<string>(() => `за ${props.days} дней`)
+const periodCaption: ComputedRef<string> = computed<string>(() => `за ${props.days} дней`)
 
 const formattedValue: ComputedRef<string> = computed<string>(() => {
   if (currentValue.value === null) {
@@ -148,20 +149,20 @@ const delta: ComputedRef<DeltaInfo> = computed<DeltaInfo>(() => {
     return { kind: 'positive', text: `+${rounded} %` }
   }
   if (percent < 0) {
-    return { kind: 'negative', text: `\u2212${rounded} %` }
+    return { kind: 'negative', text: `−${rounded} %` }
   }
   return { kind: 'neutral', text: '0,0 %' }
 })
 
-const deltaColorClass: ComputedRef<string> = computed<string>(() => {
+const deltaBadgeVariant: ComputedRef<'success' | 'destructive' | 'secondary'> = computed(() => {
   switch (delta.value.kind) {
     case 'positive':
     case 'new':
-      return 'text-emerald-600 dark:text-emerald-400'
+      return 'success'
     case 'negative':
-      return 'text-destructive'
+      return 'destructive'
     default:
-      return 'text-muted-foreground'
+      return 'secondary'
   }
 })
 </script>
@@ -169,43 +170,48 @@ const deltaColorClass: ComputedRef<string> = computed<string>(() => {
 <template>
   <DashboardWidget
     :title="title"
-    :description="subtitle"
     compact
     :loading="loading && currentValue === null && !errorMessage"
     :error="errorMessage"
     @retry="load"
   >
-    <div class="flex flex-col gap-2">
-      <p class="text-2xl font-semibold tabular-nums">
-        {{ formattedValue }}
-      </p>
+    <template #actions>
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger as-child>
-            <div
-              :class="['flex w-fit items-center gap-1 text-sm', deltaColorClass]"
+            <Badge
+              :variant="deltaBadgeVariant"
+              class="flex items-center gap-1"
             >
               <TrendingUp
                 v-if="delta.kind === 'positive' || delta.kind === 'new'"
-                class="size-4"
+                class="size-3.5"
               />
               <TrendingDown
                 v-else-if="delta.kind === 'negative'"
-                class="size-4"
+                class="size-3.5"
               />
               <Minus
                 v-else
-                class="size-4"
+                class="size-3.5"
               />
               <span>{{ delta.text }}</span>
-              <span class="text-muted-foreground">к пред. {{ days }} дням</span>
-            </div>
+            </Badge>
           </TooltipTrigger>
           <TooltipContent>
             Пред. период {{ previousRangeLabel }}: {{ formattedPreviousValue }}
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
+    </template>
+
+    <div class="flex flex-col gap-1">
+      <p class="text-2xl font-semibold tabular-nums">
+        {{ formattedValue }}
+      </p>
+      <p class="text-sm text-muted-foreground">
+        {{ periodCaption }}
+      </p>
     </div>
   </DashboardWidget>
 </template>
