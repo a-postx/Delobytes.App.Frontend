@@ -2,7 +2,7 @@
 import {
   ChevronRight,
   BookOpen,
-  Settings,
+  ChevronsLeftRightEllipsis,
   Layers,
   LayoutDashboard,
   PackageOpen,
@@ -15,6 +15,7 @@ import {
   ShoppingCart,
   Factory,
   Download,
+  GalleryHorizontalEnd,
 } from 'lucide-vue-next'
 import { RouterLink } from 'vue-router'
 import {
@@ -88,7 +89,8 @@ const referenceItems = [
             <SidebarMenuSub>
               <SidebarMenuSubItem>
                 <SidebarMenuSubButton as-child>
-                  <RouterLink to="/catalogs/products">
+                  <RouterLink to="/catalogs/products" class="flex items-center gap-2">
+                    <GalleryHorizontalEnd class="size-3.5 shrink-0" />
                     <span>Каталог</span>
                   </RouterLink>
                 </SidebarMenuSubButton>
@@ -224,9 +226,9 @@ const referenceItems = [
       >
         <SidebarMenuItem>
           <CollapsibleTrigger as-child>
-            <SidebarMenuButton :tooltip="'Настройки'">
-              <Settings />
-              <span>Настройки</span>
+            <SidebarMenuButton :tooltip="'Подключения'">
+              <ChevronsLeftRightEllipsis />
+              <span>Подключения</span>
               <ChevronRight class="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
             </SidebarMenuButton>
           </CollapsibleTrigger>

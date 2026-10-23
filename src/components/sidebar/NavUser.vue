@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { BadgeCheck, LogOut, Moon, Sun } from 'lucide-vue-next'
+import { LogOut, Moon, Settings, Sun } from 'lucide-vue-next'
 import {
   Avatar,
   AvatarFallback,
@@ -88,7 +88,7 @@ const { isMobile } = useSidebar()
           <DropdownMenuSeparator />
           <DropdownMenuGroup>
             <DropdownMenuItem @click="emit('tenantSettings')">
-              <BadgeCheck />
+              <Settings />
               Настройки пространства
             </DropdownMenuItem>
             <DropdownMenuItem @click="toggleTheme">
