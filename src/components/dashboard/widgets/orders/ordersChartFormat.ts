@@ -49,7 +49,7 @@ export function formatBucketLabel(
 
   if (granularity === 'Week') {
     if (ctx.short) {
-      return `${formatDayMonth(clippedStart)} – ${formatDayMonth(clippedEnd)}`
+      return formatDayMonth(clippedStart)
     }
     return `${formatDayMonth(clippedStart)} – ${formatFullDate(clippedEnd)}`
   }

@@ -26,7 +26,7 @@ const emit = defineEmits<{
 
 <template>
   <Card class="flex flex-col">
-    <CardHeader :class="cn('flex flex-row flex-nowrap items-start justify-between gap-3', props.compact ? 'p-4' : undefined)">
+    <CardHeader :class="cn('flex flex-row flex-wrap items-start justify-between gap-3', props.compact ? 'p-4' : undefined)">
       <div class="flex min-w-0 flex-col gap-1">
         <CardTitle :class="props.compact ? 'text-base' : undefined">
           {{ props.title }}
@@ -38,7 +38,7 @@ const emit = defineEmits<{
           {{ props.description }}
         </p>
       </div>
-      <div class="flex shrink-0 flex-wrap items-center justify-end gap-2">
+      <div class="flex w-full min-w-0 flex-wrap items-center justify-end gap-2 sm:w-auto">
         <slot name="actions" />
       </div>
     </CardHeader>
