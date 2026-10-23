@@ -256,7 +256,6 @@ function tooltipTemplate(point: unknown): string {
   }
 
   const chartPoint: ChartPoint = point as ChartPoint
-  const incomplete: boolean = isLastBucketIncomplete.value && chartPoint.idx === data.points.length - 1
   const header: string = formatBucketLabel(chartPoint.periodStart, data.granularity, {
     from: data.from,
     to: data.to,
@@ -266,7 +265,7 @@ function tooltipTemplate(point: unknown): string {
   const formattedValue: string = metric.value === 'quantity' ? formatQuantity(chartPoint.value) : formatMoney(chartPoint.value)
 
   return componentToString(ChartTooltipContent, {
-    title: incomplete ? `${header} (неполный период)` : header,
+    title: header,
     items: [
       {
         key: metric.value,
