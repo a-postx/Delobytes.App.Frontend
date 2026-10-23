@@ -16,9 +16,9 @@ export const dashboardWidgetRegistry: DashboardWidgetDefinition[] = [
     span: 'quarter',
   },
   {
-    id: 'orders-kpi-avg-price-7d',
+    id: 'orders-kpi-avg-check-7d',
     component: OrdersKpiWidget,
-    props: { metric: 'avgPrice', days: 7 },
+    props: { metric: 'avgCheck', days: 7 },
     span: 'quarter',
   },
   {

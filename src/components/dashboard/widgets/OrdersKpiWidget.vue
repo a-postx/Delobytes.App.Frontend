@@ -13,7 +13,7 @@ import type { CalendarDate } from '@internationalized/date'
 import type { GetOrdersChartResponse } from '@/types/sales'
 import type { ApiError } from '@/types/errors'
 
-type KpiMetric = 'quantity' | 'amount' | 'avgPrice'
+type KpiMetric = 'quantity' | 'amount' | 'avgCheck'
 
 interface Props {
   metric: KpiMetric
@@ -28,7 +28,7 @@ const { formatMoney } = useTenantMoney()
 const TITLES: Record<KpiMetric, string> = {
   quantity: 'Заказано товаров',
   amount: 'Сумма заказов',
-  avgPrice: 'Средняя цена товара',
+  avgCheck: 'Средний чек',
 }
 
 const loading: Ref<boolean> = ref(false)
@@ -48,7 +48,7 @@ function metricFromTotals(response: GetOrdersChartResponse): number | null {
   if (props.metric === 'amount') {
     return response.totals.amount
   }
-  return response.totals.quantity > 0 ? response.totals.amount / response.totals.quantity : null
+  return response.totals.orderCount > 0 ? response.totals.amount / response.totals.orderCount : null
 }
 
 async function load(): Promise<void> {
@@ -101,7 +101,7 @@ const formattedValue: ComputedRef<string> = computed<string>(() => {
   if (props.metric === 'amount') {
     return formatMoney(currentValue.value)
   }
-  if (props.metric === 'avgPrice') {
+  if (props.metric === 'avgCheck') {
     return formatMoney(currentValue.value)
   }
   return `${new Intl.NumberFormat('ru-RU').format(currentValue.value)} шт`

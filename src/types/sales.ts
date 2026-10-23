@@ -4,11 +4,13 @@ export interface OrdersChartPoint {
   periodStart: string
   quantity: number
   amount: number
+  orderCount: number
 }
 
 export interface OrdersChartTotals {
   quantity: number
   amount: number
+  orderCount: number
 }
 
 export interface GetOrdersChartParams {
