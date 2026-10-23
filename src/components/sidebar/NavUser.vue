@@ -1,6 +1,7 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { BadgeCheck, LogOut } from 'lucide-vue-next'
+import { BadgeCheck, LogOut, Moon, Sun } from 'lucide-vue-next'
 import {
   Avatar,
   AvatarFallback,
@@ -20,8 +21,13 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from '@/components/ui/sidebar'
+import { useTheme } from '@/composables/useTheme'
 
 const router = useRouter()
+const { isDark, toggleTheme } = useTheme()
+
+const themeIcon = computed(() => (isDark.value ? Sun : Moon))
+const themeLabel = computed(() => (isDark.value ? 'Светлая тема' : 'Тёмная тема'))
 
 defineProps<{
   user: {
@@ -84,6 +90,10 @@ const { isMobile } = useSidebar()
             <DropdownMenuItem @click="emit('tenantSettings')">
               <BadgeCheck />
               Настройки пространства
+            </DropdownMenuItem>
+            <DropdownMenuItem @click="toggleTheme">
+              <component :is="themeIcon" />
+              {{ themeLabel }}
             </DropdownMenuItem>
           </DropdownMenuGroup>
           <DropdownMenuSeparator />
