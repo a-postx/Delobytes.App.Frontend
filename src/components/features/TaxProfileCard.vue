@@ -73,6 +73,19 @@ const deleteDialogOpen: Ref<boolean> = ref(false)
 
 const deleteTarget: Ref<TenantTaxProfileItem | null> = ref(null)
 
+/** Форматирует дату в YYYY-MM-DD по локальным компонентам (без прохода через UTC через toISOString). */
+const formatIsoDate = (date: Date): string => {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+
+  return `${year}-${month}-${day}`
+}
+
+function today(): string {
+  return formatIsoDate(new Date())
+}
+
 const form = ref<{
   regime: TaxRegime
   ratePercent: string | number
@@ -84,10 +97,6 @@ const form = ref<{
   vat: VatType.None,
   validFrom: today(),
 })
-
-function today(): string {
-  return new Date().toISOString().slice(0, 10)
-}
 
 /** Бэкенд отдаёт версии по убыванию даты, но порядок ответа — не контракт. */
 const sortedItems: ComputedRef<TenantTaxProfileItem[]> = computed(() =>
@@ -167,7 +176,7 @@ const minValidFrom: ComputedRef<string> = computed(() => {
 
   latest.setDate(latest.getDate() + 1)
 
-  return latest.toISOString().slice(0, 10)
+  return formatIsoDate(latest)
 })
 
 const dateBlocked: ComputedRef<boolean> = computed(() => {
