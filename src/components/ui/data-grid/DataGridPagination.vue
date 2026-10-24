@@ -76,8 +76,8 @@ const rangeText = computed<string>(() => {
   return `${firstRow.value}–${lastRow.value} из ${props.totalCount}`
 })
 
-const navButtonClass = 'grid size-8 place-items-center rounded-md text-foreground hover:bg-muted disabled:opacity-40 focus:outline-none focus:ring-2 focus:ring-primary/40 transition-colors'
-const pageItemClass = 'grid size-8 place-items-center rounded-md text-sm text-foreground hover:bg-muted data-[selected]:bg-primary data-[selected]:text-primary-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 transition-colors'
+const navButtonClass = 'grid size-8 place-items-center p-0 rounded-md text-foreground hover:bg-muted disabled:opacity-40 focus:outline-none focus:ring-2 focus:ring-primary/40 transition-colors'
+const pageItemClass = 'grid size-8 place-items-center p-0 rounded-md text-sm leading-none text-foreground hover:bg-muted data-[selected]:bg-primary data-[selected]:text-primary-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 transition-colors'
 </script>
 
 <template>
