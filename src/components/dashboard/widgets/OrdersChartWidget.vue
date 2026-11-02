@@ -89,6 +89,9 @@ const selectedChannel: ComputedRef<ChannelItem | null> = computed<ChannelItem | 
 const isWildberriesChannelSelected: ComputedRef<boolean> = computed<boolean>(
   () => channelDisplay(selectedChannel.value?.code).variant === 'marketplace-wb',
 )
+const isOzonChannelSelected: ComputedRef<boolean> = computed<boolean>(
+  () => channelDisplay(selectedChannel.value?.code).variant === 'marketplace-oz',
+)
 
 async function loadChannels(): Promise<void> {
   try {
@@ -220,10 +223,16 @@ const dashedLineData: ComputedRef<ChartPoint[]> = computed<ChartPoint[]>(() =>
 const seriesColor: ComputedRef<string> = computed<string>(() =>
   isWildberriesChannelSelected.value
     ? 'hsl(var(--chart-wildberries))'
-    : chartConfig[metric.value]?.color ?? 'hsl(var(--chart-1))',
+    : isOzonChannelSelected.value
+      ? 'hsl(var(--info))'
+      : chartConfig[metric.value]?.color ?? 'hsl(var(--chart-1))',
 )
 const areaGradientId: ComputedRef<string> = computed<string>(() =>
-  isWildberriesChannelSelected.value ? 'orders-chart-fill-wildberries' : `orders-chart-fill-${metric.value}`,
+  isWildberriesChannelSelected.value
+    ? 'orders-chart-fill-wildberries'
+    : isOzonChannelSelected.value
+      ? 'orders-chart-fill-ozon'
+      : `orders-chart-fill-${metric.value}`,
 )
 const areaFill: ComputedRef<string> = computed<string>(() => `url(#${areaGradientId.value})`)
 
@@ -434,6 +443,24 @@ const isInitialLoading: ComputedRef<boolean> = computed<boolean>(() => loading.v
                 <stop
                   offset="95%"
                   stop-color="hsl(var(--chart-wildberries))"
+                  stop-opacity="0.05"
+                />
+              </linearGradient>
+              <linearGradient
+                id="orders-chart-fill-ozon"
+                x1="0"
+                y1="0"
+                x2="0"
+                y2="1"
+              >
+                <stop
+                  offset="5%"
+                  stop-color="hsl(var(--info))"
+                  stop-opacity="0.4"
+                />
+                <stop
+                  offset="95%"
+                  stop-color="hsl(var(--info))"
                   stop-opacity="0.05"
                 />
               </linearGradient>
