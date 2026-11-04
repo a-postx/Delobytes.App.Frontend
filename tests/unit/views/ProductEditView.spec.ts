@@ -103,14 +103,14 @@ describe('ProductEditView SKU editing', () => {
     expect(sku.disabled).toBe(false)
   })
 
-  it('keeps the imported fields disabled and shows the save button', async () => {
+  it('keeps the imported fields disabled, shows the save button and hides the read-only note', async () => {
     const wrapper = await mountWith(linkedProduct)
 
     expect((wrapper.find('#name').element as HTMLInputElement).disabled).toBe(true)
     expect((wrapper.find('#description').element as HTMLTextAreaElement).disabled).toBe(true)
     expect((wrapper.find('input[placeholder="Длина"]').element as HTMLInputElement).disabled).toBe(true)
 
-    expect(wrapper.text()).toContain('Данные получены из Wildberries')
+    expect(wrapper.text()).not.toContain('Данные получены из')
     expect(saveButton(wrapper)).toBeTruthy()
   })
 

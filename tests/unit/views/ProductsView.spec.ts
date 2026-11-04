@@ -21,7 +21,23 @@ vi.mock('@/services/api', () => ({
 vi.mock('@/composables/useCurrentUser', () => ({
   useCurrentUser: () => ({ canWrite: computed(() => canWrite.value) }),
 }))
-vi.mock('vue-router', () => ({ useRouter: () => ({ push: vi.fn() }) }))
+vi.mock('vue-router', () => ({
+  useRouter: () => ({ push: vi.fn() }),
+  RouterLink: {
+    props: ['to'],
+    template: '<a :href="href"><slot /></a>',
+    computed: {
+      href(): string {
+        const to = this.to as { name?: string; query?: Record<string, string> } | string
+        if (typeof to === 'string') {
+          return to
+        }
+        const query = Object.entries(to.query ?? {}).map(([key, value]) => `${key}=${value}`).join('&')
+        return query ? `/${to.name}?${query}` : `/${to.name}`
+      },
+    },
+  },
+}))
 vi.mock('vue-sonner', () => ({ toast: { error: vi.fn(), success: vi.fn(), info: vi.fn() } }))
 
 import { catalogProductsApi, integrationsApi } from '@/services/api'
@@ -297,6 +313,45 @@ describe('ProductsView channel links', () => {
     await flushPromises()
 
     expect(wrapper.find('tbody [data-slot="dropdown-menu-trigger"]').exists()).toBe(true)
+  })
+
+  it('renders the product name as a link to the edit page', async () => {
+    getProducts.mockResolvedValue(response([productWithLink]))
+
+    const wrapper = factory()
+    await flushPromises()
+
+    const link = wrapper.find('tbody a[href="/product-edit?productId=product-1"]')
+
+    expect(link.exists()).toBe(true)
+    expect(link.text()).toBe('Товар со связью')
+    expect(link.classes()).toContain('no-underline')
+    expect(link.classes()).toContain('hover:text-info')
+    expect(link.classes()).not.toContain('text-primary')
+  })
+
+  it('keeps the name link for read-only users', async () => {
+    canWrite.value = false
+    getProducts.mockResolvedValue(response([productWithLink]))
+
+    const wrapper = factory()
+    await flushPromises()
+
+    expect(wrapper.find('tbody a[href="/product-edit?productId=product-1"]').exists()).toBe(true)
+  })
+
+  it('does not offer the edit action in the row menu', async () => {
+    getProducts.mockResolvedValue(response([productWithLink]))
+
+    const wrapper = factory()
+    await flushPromises()
+
+    await wrapper.find('tbody [data-slot="dropdown-menu-trigger"]').trigger('click')
+
+    const menu = document.body.querySelector('[role="menu"]')
+    expect(menu).not.toBeNull()
+    expect(menu!.textContent).not.toContain('Изменить')
+    expect(menu!.textContent).toContain('Архивировать')
   })
 })
 

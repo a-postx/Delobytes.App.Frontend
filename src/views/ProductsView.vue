@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, computed, watch, onUnmounted, h } from 'vue'
-import { Plus, Pencil, Trash2, Archive, Undo2, Package, MoreHorizontal, X as XIcon, Download } from 'lucide-vue-next'
+import { Plus, Trash2, Archive, Undo2, Package, MoreHorizontal, X as XIcon, Download } from 'lucide-vue-next'
 import {
   DialogClose,
   DialogContent,
@@ -52,7 +52,7 @@ import type { ProductItem, CreateProductRequest, ProductBarcode, PackingUnit, Pr
 import type { Connection } from '@/types'
 import { ProductStatus, isProductSortKey } from '@/types/products'
 import { useCurrentUser } from '@/composables/useCurrentUser'
-import { useRouter } from 'vue-router'
+import { RouterLink, useRouter } from 'vue-router'
 import { X } from 'lucide-vue-next'
 
 const { canWrite } = useCurrentUser()
@@ -234,7 +234,14 @@ const columns = computed<ColumnDef<ProductItem, unknown>[]>(() => {
       enableHiding: true,
       meta: { title: 'Название' },
       header: 'Название',
-      cell: ({ row }) => h('span', { class: 'font-medium' }, row.original.name),
+      cell: ({ row }) => h(
+        RouterLink,
+        {
+          to: { name: 'product-edit', query: { productId: row.original.id } },
+          class: 'font-medium no-underline hover:text-info',
+        },
+        () => row.original.name,
+      ),
     },
     {
       id: 'channelLinks',
@@ -317,10 +324,6 @@ const columns = computed<ColumnDef<ProductItem, unknown>[]>(() => {
 })
 
 const renderActions = (item: ProductItem): unknown => {
-  const editItem = h(DropdownMenuItem, { onClick: () => openEdit(item) }, () => [
-    h(Pencil, { class: 'size-4 mr-2' }),
-    'Изменить',
-  ])
   const archiveItem = h(DropdownMenuItem, { onClick: () => openArchive(item) }, () => [
     h(Archive, { class: 'size-4 mr-2' }),
     'Архивировать',
@@ -342,7 +345,7 @@ const renderActions = (item: ProductItem): unknown => {
   ])
 
   if (item.status === ProductStatus.Active) {
-    return menu([editItem, archiveItem, deleteItem])
+    return menu([archiveItem, deleteItem])
   }
 
   if (item.status === ProductStatus.Archived) {
@@ -532,10 +535,6 @@ const openCreate = (): void => {
   form.value = emptyForm()
   newBarcode.value = { value: '', type: '', isDefault: false }
   createDialogOpen.value = true
-}
-
-const openEdit = (item: ProductItem): void => {
-  window.open(`/catalogs/product?productId=${item.id}`, '_blank')
 }
 
 const openDelete = (item: ProductItem): void => {

@@ -39,11 +39,6 @@ const product = ref<GetProductResponse | null>(null)
 // штрихкоду, но не по Product.Sku), поэтому SKU открыт для правки и у связанных товаров.
 // Когда появится write-back, отключение снять со всех полей.
 const isLinked = computed<boolean>(() => (product.value?.channelLinks?.length ?? 0) > 0)
-const linkedChannelMessage = computed<string>(() => {
-  const links = product.value?.channelLinks ?? []
-  return links.length === 1 ? links[0].channelName : 'маркетплейсов'
-})
-
 // Поля формы — числовые значения хранятся как строка до отправки
 type PackingUnitForm = {
   [K in keyof Required<PackingUnit>]: string
@@ -250,10 +245,6 @@ onMounted(() => {
         <div class="flex flex-col gap-6">
           <div class="rounded-xl border border-border bg-card p-6 flex flex-col gap-4">
             <h2 class="text-lg font-bold">Основные данные</h2>
-
-            <p v-if="isLinked" class="text-sm text-muted-foreground">
-              Данные получены из {{ linkedChannelMessage }}, редактировать можно только SKU.
-            </p>
 
             <div class="flex flex-col gap-1">
               <Label for="sku">SKU *</Label>
