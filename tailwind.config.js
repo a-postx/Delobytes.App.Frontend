@@ -35,8 +35,8 @@ export default {
         },
         warning: 'hsl(var(--warning))',
         info: 'hsl(var(--info))',
-		pending: 'hsl(var(--pending))',
-		completed: 'hsl(var(--completed))',
+        pending: 'hsl(var(--pending))',
+        completed: 'hsl(var(--completed))',
         accent: {
           DEFAULT: 'hsl(var(--accent))',
           foreground: 'hsl(var(--accent-foreground))',
@@ -93,12 +93,12 @@ export default {
         sm: 'calc(var(--radius) - 4px)',
         xs: 'calc(var(--radius) - 6px)',
       },
-	  ringWidth: {
+      ringWidth: {
         3: '3px',
       },
-	  boxShadow: {
-		xs: '0 1px 2px 0 rgb(0 0 0 / 0.05)',
-	  },
+      boxShadow: {
+        xs: '0 1px 2px 0 rgb(0 0 0 / 0.05)',
+      },
       height: {
         svh: '100svh',
       },
