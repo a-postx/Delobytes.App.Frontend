@@ -238,7 +238,7 @@ const columns = computed<ColumnDef<ProductItem, unknown>[]>(() => {
         RouterLink,
         {
           to: { name: 'product-edit', query: { productId: row.original.id } },
-          class: 'font-medium no-underline hover:text-info',
+          class: 'font-medium no-underline hover:text-primary',
         },
         () => row.original.name,
       ),
