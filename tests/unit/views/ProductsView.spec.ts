@@ -326,8 +326,7 @@ describe('ProductsView channel links', () => {
     expect(link.exists()).toBe(true)
     expect(link.text()).toBe('Товар со связью')
     expect(link.classes()).toContain('no-underline')
-    expect(link.classes()).toContain('hover:text-info')
-    expect(link.classes()).not.toContain('text-primary')
+    expect(link.classes()).toContain('hover:text-primary')
   })
 
   it('keeps the name link for read-only users', async () => {
