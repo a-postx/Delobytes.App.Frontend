@@ -29,7 +29,11 @@ export default {
           DEFAULT: 'hsl(var(--muted))',
           foreground: 'hsl(var(--muted-foreground))',
         },
+		success: 'hsl(var(--success))',
+		warning: 'hsl(var(--warning))',
         info: 'hsl(var(--info))',
+		pending: 'hsl(var(--pending))',
+		completed: 'hsl(var(--completed))',
         accent: {
           DEFAULT: 'hsl(var(--accent))',
           foreground: 'hsl(var(--accent-foreground))',
