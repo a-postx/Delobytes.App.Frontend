@@ -20,7 +20,7 @@ const props = withDefaults(defineProps<SidebarProps>(), {
 })
 
 const router = useRouter()
-const { currentUser, fetchCurrentUser } = useCurrentUser()
+const { currentUser, fetchCurrentUser, clearCurrentUser } = useCurrentUser()
 
 onMounted(async () => {
   if (!currentUser.value) {
@@ -45,6 +45,8 @@ function handleLogout(): void {
   localStorage.removeItem('accessToken')
   localStorage.removeItem('userId')
   localStorage.removeItem('tenantId')
+  localStorage.removeItem('currentUser')
+  clearCurrentUser()
   window.location.href = '/login'
 }
 

@@ -24,6 +24,7 @@
     --input: 30 10% 88%;
     --ring: 14 65% 55%;
     --radius: 0.5rem;
+	color-scheme: light;
 
     --sidebar-background: 0 0% 100%;
     --sidebar-foreground: 20 10% 30%;
@@ -79,6 +80,7 @@
     --border: 160 8% 28%;
     --input: 160 8% 28%;
     --ring: 14 65% 58%;
+	color-scheme: dark;
 
     --sidebar-background: 160 10% 14%;
     --sidebar-foreground: 30 12% 78%;
@@ -118,6 +120,9 @@
 @layer base {
   * {
     @apply border-border;
+  }
+  html {
+    @apply bg-background;
   }
   body {
     @apply bg-background text-foreground;

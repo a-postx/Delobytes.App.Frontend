@@ -2,8 +2,20 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<!-- Ключ и класс синхронизированы с src/composables/useTheme.ts -->
+    <script>
+      ;(function () {
+        try {
+          var stored = localStorage.getItem('app-theme')
+          var isDark = stored === 'dark' || stored === '"dark"'
+          document.documentElement.classList.toggle('dark', isDark)
+        } catch (error) {
+          // Storage недоступен (приватный режим, запрет cookies) — остаёмся на светлой теме по умолчанию.
+        }
+      })()
+    </script>
+	<link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <title>Delobytes Margin Accounting</title>
   </head>
   <body>
