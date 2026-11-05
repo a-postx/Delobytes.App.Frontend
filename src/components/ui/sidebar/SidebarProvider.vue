@@ -1,4 +1,5 @@
 <script setup lang="ts">
+/* eslint-disable vue/require-default-prop -- необязательность выражена типом; default изменил бы контракт пропса */
 import type { HTMLAttributes, Ref } from "vue"
 import { defaultDocument, useEventListener, useMediaQuery, useVModel } from "@vueuse/core"
 import { TooltipProvider } from "reka-ui"

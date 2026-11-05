@@ -1,4 +1,5 @@
 <script setup lang="ts" generic="T extends DataGridRow">
+/* eslint-disable vue/require-default-prop -- необязательность выражена типом; default изменил бы контракт пропса */
 import type { ColumnDef, ExpandedState, RowSelectionState, SortingState, VisibilityState } from '@tanstack/vue-table'
 import { FlexRender, getCoreRowModel, getExpandedRowModel, useVueTable } from '@tanstack/vue-table'
 import { Check, Minus, Package } from 'lucide-vue-next'

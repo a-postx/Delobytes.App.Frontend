@@ -1,4 +1,5 @@
 <script setup lang="ts">
+/* eslint-disable vue/require-default-prop -- необязательность выражена типом; default изменил бы контракт пропса */
 import { Copy, Check } from 'lucide-vue-next'
 import { ref } from 'vue'
 import type { HTMLAttributes } from 'vue'

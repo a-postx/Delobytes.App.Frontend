@@ -1,4 +1,5 @@
 <script setup lang="ts">
+/* eslint-disable vue/require-default-prop -- необязательность выражена типом; default изменил бы контракт пропса */
 import type { HTMLAttributes } from "vue"
 import type { RadioGroupItemProps } from "reka-ui"
 import { RadioGroupIndicator, RadioGroupItem, useForwardProps } from "reka-ui"

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+/* eslint-disable vue/require-default-prop -- необязательность выражена типом; default изменил бы контракт пропса */
 import type { SeparatorProps } from "reka-ui"
 import type { HTMLAttributes } from "vue"
 import { reactiveOmit } from "@vueuse/core"
