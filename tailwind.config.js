@@ -64,6 +64,12 @@ export default {
         sm: 'calc(var(--radius) - 4px)',
         xs: 'calc(var(--radius) - 6px)',
       },
+	  ringWidth: {
+        3: '3px',
+      },
+	  boxShadow: {
+		xs: '0 1px 2px 0 rgb(0 0 0 / 0.05)',
+	  },
       height: {
         svh: '100svh',
       },
