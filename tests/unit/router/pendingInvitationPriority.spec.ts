@@ -6,11 +6,9 @@ import { dirname, resolve } from 'node:path'
 /**
  * Структурная проверка «сквозного инварианта».
  *
- * Баг был класса «забыли повторить правило в одной из точек входа»: парольный
- * вход приглашение обрабатывал, а callback'и Яндекс ID и Google ID — нет.
- * Юнит-тесты поведения каждой вью такие пробелы ловят только если их успели
- * написать. Здесь проверяется сам факт, что все точки входа читают отложенный
- * токен — это страховка на случай добавления нового провайдера.
+ * Баг был класса «забыли повторить правило в одной из точек входа»: парольный вход приглашение
+ * обрабатывал, а callback'и Яндекс ID и Google ID — нет. После объединения callback'ов точка входа
+ * одна, но список файлов сохранён: он стережёт появление новых провайдеров.
  */
 
 const currentDir: string = dirname(fileURLToPath(import.meta.url))
@@ -23,8 +21,7 @@ function readSource(relativePath: string): string {
 /** Файлы, через которые пользователь попадает в приложение после аутентификации. */
 const AUTH_ENTRY_POINTS: ReadonlyArray<string> = [
   'views/LoginView.vue',
-  'views/YandexCallbackView.vue',
-  'views/GoogleCallbackView.vue',
+  'views/OAuthCallbackView.vue',
   'views/SetupTenantView.vue',
 ]
 
@@ -51,23 +48,18 @@ describe('Приглашение: приоритет во всех точках 
     for (const entryPoint of AUTH_ENTRY_POINTS) {
       const source: string = readSource(entryPoint)
 
-      // Литерал допустим только в описании самой утилиты, но не в её потребителях:
-      // расхождение литералов — это ровно тот дефект, из-за которого баг жил.
       expect(source).not.toContain("'pendingInvitationToken'")
     }
   })
 
-  it('callback\'и не записывают tenantId до проверки приглашения', () => {
-    for (const entryPoint of ['views/YandexCallbackView.vue', 'views/GoogleCallbackView.vue']) {
-      const source: string = readSource(entryPoint)
+  it('callback не записывает tenantId до проверки приглашения', () => {
+    const source: string = readSource('views/OAuthCallbackView.vue')
 
-      const invitationCheckIndex: number = source.indexOf('if (pendingInvitationToken)')
-      const tenantIdWriteIndex: number = source.indexOf("setItem('tenantId'")
+    const invitationCheckIndex: number = source.indexOf('if (pendingInvitationToken)')
+    const tenantIdWriteIndex: number = source.indexOf("setItem('tenantId'")
 
-      expect(invitationCheckIndex).toBeGreaterThan(-1)
-      expect(tenantIdWriteIndex).toBeGreaterThan(-1)
-      // Пустой tenantId из ответа бэкенда не должен опережать проверку приглашения.
-      expect(invitationCheckIndex).toBeLessThan(tenantIdWriteIndex)
-    }
+    expect(invitationCheckIndex).toBeGreaterThan(-1)
+    expect(tenantIdWriteIndex).toBeGreaterThan(-1)
+    expect(invitationCheckIndex).toBeLessThan(tenantIdWriteIndex)
   })
 })

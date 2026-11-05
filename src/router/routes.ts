@@ -9,8 +9,7 @@ import SetupTenantView from '@/views/SetupTenantView.vue'
 import SettingsView from '@/views/SettingsView.vue'
 import TenantSettingsView from '@/views/TenantSettingsView.vue'
 import SalesChannelsView from '@/views/SalesChannelsView.vue'
-import YandexCallbackView from '@/views/YandexCallbackView.vue'
-import GoogleCallbackView from '@/views/GoogleCallbackView.vue'
+import OAuthCallbackView from '@/views/OAuthCallbackView.vue'
 import AcceptInvitationView from '@/views/AcceptInvitationView.vue'
 import ComponentsView from '@/views/ComponentsView.vue'
 import SuppliersView from '@/views/SuppliersView.vue'
@@ -211,17 +210,19 @@ export const routes: RouteRecordRaw[] = [
   {
     path: '/auth/yandex/callback',
     name: 'yandex-callback',
-    component: YandexCallbackView,
+    component: OAuthCallbackView,
     meta: {
       title: 'Вход через Яндекс',
+      oauthProvider: 'yandex',
     },
   },
   {
     path: '/auth/google/callback',
     name: 'google-callback',
-    component: GoogleCallbackView,
+    component: OAuthCallbackView,
     meta: {
       title: 'Вход через Google',
+      oauthProvider: 'google',
     },
   },
   {

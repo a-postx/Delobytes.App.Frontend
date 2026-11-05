@@ -6,43 +6,65 @@ const props = withDefaults(
   defineProps<{
     class?: HTMLAttributes['class']
     size?: 'sm' | 'md' | 'lg'
+    label?: string
   }>(),
   {
     size: 'md',
+    label: 'Загрузка',
   }
 )
 
 const sizeClasses = computed(() => {
   switch (props.size) {
     case 'sm':
-      return 'h-4 w-4'
+      return 'size-4'
     case 'lg':
-      return 'h-8 w-8'
+      return 'size-8'
     default:
-      return 'h-6 w-6'
+      return 'size-6'
   }
 })
 </script>
 
 <template>
-  <svg
-    :class="cn('animate-spin text-current', sizeClasses, props.class)"
-    xmlns="http://www.w3.org/2000/svg"
-    fill="none"
-    viewBox="0 0 24 24"
-  >
-    <circle
-      class="opacity-25"
-      cx="12"
-      cy="12"
-      r="10"
-      stroke="currentColor"
-      stroke-width="4"
-    />
-    <path
-      class="opacity-75"
-      fill="currentColor"
-      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-    />
-  </svg>
+  <span
+    :class="cn('app-spinner', sizeClasses, props.class)"
+    role="status"
+    :aria-label="label"
+  />
 </template>
+
+<style scoped>
+/*
+ * Толщина кольца считается в процентах от радиуса, поэтому спиннер остаётся
+ * пропорциональным и при переопределении размера утилитой (`size-3` в кнопках).
+ * Палитра берётся из currentColor: цвет задаётся на месте, как раньше.
+ */
+.app-spinner {
+  display: inline-block;
+  flex: none;
+  vertical-align: middle;
+  border-radius: 9999px;
+  background: conic-gradient(from 0turn, transparent 0deg, currentColor 360deg);
+  -webkit-mask: radial-gradient(farthest-side, transparent 82%, #000 82%);
+  mask: radial-gradient(farthest-side, transparent 82%, #000 82%);
+  /* Полный оборот за 0,85 с — базовая скорость приложения, на местах не переопределяется. */
+  animation: app-spinner-rotate 0.85s linear infinite;
+}
+
+@keyframes app-spinner-rotate {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-spinner {
+    animation-duration: 2.4s;
+  }
+}
+</style>

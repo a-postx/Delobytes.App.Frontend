@@ -2,8 +2,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import { createRouter, createMemoryHistory } from 'vue-router'
 import type { Router } from 'vue-router'
-import GoogleCallbackView from '@/views/GoogleCallbackView.vue'
-import YandexCallbackView from '@/views/YandexCallbackView.vue'
+import OAuthCallbackView from '@/views/OAuthCallbackView.vue'
+import { OAUTH_PROVIDERS, type OAuthProviderConfig } from '@/utils/oauthProviders'
 import { REDIRECT_STORAGE_KEY } from '@/utils/redirect'
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
@@ -25,8 +25,16 @@ function buildRouter(): Router {
   return createRouter({
     history: createMemoryHistory(),
     routes: [
-      { path: '/auth/google/callback', component: GoogleCallbackView },
-      { path: '/auth/yandex/callback', component: YandexCallbackView },
+      {
+        path: '/auth/google/callback',
+        component: OAuthCallbackView,
+        meta: { oauthProvider: 'google' },
+      },
+      {
+        path: '/auth/yandex/callback',
+        component: OAuthCallbackView,
+        meta: { oauthProvider: 'yandex' },
+      },
       { path: '/', component: { template: '<div>Home</div>' } },
       { path: '/setup-tenant', component: { template: '<div>Setup</div>' } },
       { path: '/catalogs/suppliers', component: { template: '<div>Suppliers</div>' } },
@@ -45,19 +53,24 @@ function setQueryParams(params: Record<string, string>): void {
   })
 }
 
-async function mountCallback(component: unknown, path: string, stateKey: string) {
-  sessionStorage.setItem(stateKey, 'correct-state')
+async function mountCallback(provider: OAuthProviderConfig): Promise<Router> {
+  sessionStorage.setItem(provider.stateStorageKey, 'correct-state')
   setQueryParams({ code: 'auth-code', state: 'correct-state' })
 
   const router: Router = buildRouter()
-  await router.push(path)
+  await router.push(provider.callbackPath)
   await router.isReady()
 
-  const wrapper = mount(component as never, { global: { plugins: [router] } })
+  mount(OAuthCallbackView, { global: { plugins: [router] } })
   await flushPromises()
 
-  return { wrapper, router }
+  return router
 }
+
+const providers: ReadonlyArray<OAuthProviderConfig> = [
+  OAUTH_PROVIDERS.google,
+  OAUTH_PROVIDERS.yandex,
+]
 
 // ── Tests ────────────────────────────────────────────────────────────────────
 
@@ -75,69 +88,79 @@ describe('OAuth callback: возврат на исходный адрес', () =
     fetchCurrentUserMock = vi.fn().mockResolvedValue(undefined)
   })
 
-  it('Google: возвращает на адрес, сохранённый перед уходом на сторонний домен', async () => {
-    sessionStorage.setItem(REDIRECT_STORAGE_KEY, '/catalogs/suppliers')
+  it.each(providers)(
+    '$id: возвращает на адрес, сохранённый перед уходом на сторонний домен',
+    async (provider: OAuthProviderConfig) => {
+      sessionStorage.setItem(REDIRECT_STORAGE_KEY, '/catalogs/suppliers')
 
-    const { router } = await mountCallback(GoogleCallbackView, '/auth/google/callback', 'google_oauth_state')
+      const router: Router = await mountCallback(provider)
 
-    expect(router.currentRoute.value.path).toBe('/catalogs/suppliers')
-  })
+      expect(router.currentRoute.value.path).toBe('/catalogs/suppliers')
+    },
+  )
 
-  it('Яндекс: возвращает на адрес, сохранённый перед уходом на сторонний домен', async () => {
-    sessionStorage.setItem(REDIRECT_STORAGE_KEY, '/catalogs/suppliers')
+  it.each(providers)(
+    '$id: без сохранённого адреса уходит на главную',
+    async (provider: OAuthProviderConfig) => {
+      const router: Router = await mountCallback(provider)
 
-    const { router } = await mountCallback(YandexCallbackView, '/auth/yandex/callback', 'yandex_oauth_state')
+      expect(router.currentRoute.value.path).toBe('/')
+    },
+  )
 
-    expect(router.currentRoute.value.path).toBe('/catalogs/suppliers')
-  })
+  it.each(providers)(
+    '$id: не применяет сохранённый адрес дважды',
+    async (provider: OAuthProviderConfig) => {
+      sessionStorage.setItem(REDIRECT_STORAGE_KEY, '/catalogs/suppliers')
 
-  it('Google: без сохранённого адреса уходит на главную', async () => {
-    const { router } = await mountCallback(GoogleCallbackView, '/auth/google/callback', 'google_oauth_state')
+      const router: Router = await mountCallback(provider)
 
-    expect(router.currentRoute.value.path).toBe('/')
-  })
+      expect(router.currentRoute.value.path).toBe('/catalogs/suppliers')
+      expect(sessionStorage.getItem(REDIRECT_STORAGE_KEY)).toBeNull()
+    },
+  )
 
-  it('Google: не применяет сохранённый адрес дважды', async () => {
-    sessionStorage.setItem(REDIRECT_STORAGE_KEY, '/catalogs/suppliers')
+  it.each(providers)(
+    '$id: игнорирует внешний адрес в хранилище',
+    async (provider: OAuthProviderConfig) => {
+      sessionStorage.setItem(REDIRECT_STORAGE_KEY, 'https://evil.com')
 
-    const { router } = await mountCallback(GoogleCallbackView, '/auth/google/callback', 'google_oauth_state')
+      const router: Router = await mountCallback(provider)
 
-    expect(router.currentRoute.value.path).toBe('/catalogs/suppliers')
-    expect(sessionStorage.getItem(REDIRECT_STORAGE_KEY)).toBeNull()
-  })
+      expect(router.currentRoute.value.path).toBe('/')
+    },
+  )
 
-  it('Яндекс: игнорирует внешний адрес в хранилище', async () => {
-    sessionStorage.setItem(REDIRECT_STORAGE_KEY, 'https://evil.com')
+  it.each(providers)(
+    '$id: при неверном state не применяет адрес возврата',
+    async (provider: OAuthProviderConfig) => {
+      sessionStorage.setItem(REDIRECT_STORAGE_KEY, '/catalogs/suppliers')
+      sessionStorage.setItem(provider.stateStorageKey, 'correct-state')
+      setQueryParams({ code: 'auth-code', state: 'wrong-state' })
 
-    const { router } = await mountCallback(YandexCallbackView, '/auth/yandex/callback', 'yandex_oauth_state')
+      const router: Router = buildRouter()
+      await router.push(provider.callbackPath)
+      await router.isReady()
 
-    expect(router.currentRoute.value.path).toBe('/')
-  })
+      mount(OAuthCallbackView, { global: { plugins: [router] } })
+      await flushPromises()
 
-  it('Google: при неверном state не применяет адрес возврата', async () => {
-    sessionStorage.setItem(REDIRECT_STORAGE_KEY, '/catalogs/suppliers')
-    sessionStorage.setItem('google_oauth_state', 'correct-state')
-    setQueryParams({ code: 'auth-code', state: 'wrong-state' })
+      expect(router.currentRoute.value.path).toBe(provider.callbackPath)
+    },
+  )
 
-    const router: Router = buildRouter()
-    await router.push('/auth/google/callback')
-    await router.isReady()
+  it.each(providers)(
+    '$id: при требовании настроить пространство идёт на /setup-tenant',
+    async (provider: OAuthProviderConfig) => {
+      postMock = vi.fn().mockResolvedValue({
+        accessToken: 'token',
+        userId: 'user-1',
+        requiresTenantSetup: true,
+      })
 
-    mount(GoogleCallbackView, { global: { plugins: [router] } })
-    await flushPromises()
+      const router: Router = await mountCallback(provider)
 
-    expect(router.currentRoute.value.path).toBe('/auth/google/callback')
-  })
-
-  it('Google: при требовании настройки пространства идёт на /setup-tenant', async () => {
-    postMock = vi.fn().mockResolvedValue({
-      accessToken: 'token',
-      userId: 'user-1',
-      requiresTenantSetup: true,
-    })
-
-    const { router } = await mountCallback(GoogleCallbackView, '/auth/google/callback', 'google_oauth_state')
-
-    expect(router.currentRoute.value.path).toBe('/setup-tenant')
-  })
+      expect(router.currentRoute.value.path).toBe('/setup-tenant')
+    },
+  )
 })

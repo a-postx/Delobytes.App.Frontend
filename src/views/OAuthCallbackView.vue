@@ -1,15 +1,19 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useApi } from '@/composables/useApi'
 import { useCurrentUser } from '@/composables/useCurrentUser'
 import { consumeRedirect } from '@/utils/redirect'
 import { readPendingInvitationToken } from '@/utils/pendingInvitation'
-import { Spinner } from '@/components/ui/spinner'
+import { resolveOAuthProvider, type OAuthProviderConfig } from '@/utils/oauthProviders'
+import AuthWaitingScreen from '@/components/auth/AuthWaitingScreen.vue'
 
+const route = useRoute()
 const router = useRouter()
 const { post } = useApi()
 const { fetchCurrentUser } = useCurrentUser()
+
+const provider: OAuthProviderConfig = resolveOAuthProvider(route.meta.oauthProvider)
 
 const error = ref('')
 
@@ -21,40 +25,39 @@ onMounted(async () => {
 
   if (oauthError) {
     error.value = oauthError === 'access_denied'
-      ? 'Вы отменили вход через Google.'
+      ? `Вы отменили вход через ${provider.displayName}.`
       : `Ошибка авторизации: ${oauthError}`
     return
   }
 
   if (!code) {
-    error.value = 'Не получен код авторизации от Google.'
+    error.value = `Не получен код авторизации от ${provider.genitiveName}.`
     return
   }
 
-  const savedState = sessionStorage.getItem('google_oauth_state')
-  sessionStorage.removeItem('google_oauth_state')
+  const savedState = sessionStorage.getItem(provider.stateStorageKey)
+  sessionStorage.removeItem(provider.stateStorageKey)
 
   if (!savedState || savedState !== state) {
     error.value = 'Неверный параметр state. Попробуйте войти ещё раз.'
     return
   }
 
-  // Адрес возврата, сохранённый перед уходом на сторонний домен провайдера.
+  // Читаем до запроса: при ошибке адрес возврата всё равно больше не нужен.
   const returnTarget: string = consumeRedirect() ?? '/'
 
   try {
-    const redirectUri = `${window.location.origin}/auth/google/callback`
+    const redirectUri = `${window.location.origin}${provider.callbackPath}`
 
-    const response = await post('/api/auth/google/callback', {
+    const response = await post(provider.apiPath, {
       code,
       redirectUri,
     })
 
-    // Always save the access token, even for tenant setup flow
     localStorage.setItem('accessToken', response.accessToken)
     localStorage.setItem('userId', response.userId)
 
-    // То же правило, что и в YandexCallbackView: приглашение важнее создания тенанта.
+    // Приглашение важнее создания тенанта: иначе приглашённый попадёт в чужое пространство.
     const pendingInvitationToken: string | null = readPendingInvitationToken()
 
     if (pendingInvitationToken) {
@@ -73,32 +76,27 @@ onMounted(async () => {
     }
   } catch (err: unknown) {
     const apiError = err as { response?: { data?: { message?: string } } }
-    error.value = apiError.response?.data?.message || 'Не удалось выполнить вход через Google.'
+    error.value = apiError.response?.data?.message || `Не удалось выполнить вход через ${provider.displayName}.`
   }
 })
 </script>
 
 <template>
-  <div class="bg-muted flex min-h-svh flex-col items-center justify-center gap-6 p-6 md:p-10">
-    <div class="flex w-full max-w-sm flex-col items-center gap-4 text-center">
-      <template v-if="!error">
-        <Spinner size="lg" class="text-muted-foreground" />
-        <p class="text-sm text-muted-foreground">
-          Вход через Google…
-        </p>
-      </template>
+  <div v-if="!error">
+    <AuthWaitingScreen />
+  </div>
 
-      <template v-else>
-        <div class="rounded-md bg-destructive/10 px-4 py-3 text-sm text-destructive">
-          {{ error }}
-        </div>
-        <router-link
-          to="/login"
-          class="text-sm text-primary underline-offset-4 hover:underline"
-        >
-          Вернуться на страницу входа
-        </router-link>
-      </template>
+  <div v-else class="relative flex min-h-svh items-center justify-center overflow-hidden bg-muted p-6 md:p-10">
+    <div class="flex w-full max-w-sm flex-col items-center gap-4 text-center">
+      <div class="w-full rounded-md bg-destructive/10 px-4 py-3 text-sm text-destructive">
+        {{ error }}
+      </div>
+      <router-link
+        to="/login"
+        class="text-sm text-primary underline-offset-4 hover:underline"
+      >
+        Вернуться на страницу входа
+      </router-link>
     </div>
   </div>
 </template>

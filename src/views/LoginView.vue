@@ -65,7 +65,7 @@ const handleLogin = async () => {
 /**
  * Redirects the browser to the Yandex OAuth 2.0 authorization endpoint.
  * After the user grants access, Yandex redirects back to /auth/yandex/callback
- * where YandexCallbackView.vue completes the code exchange.
+ * where OAuthCallbackView.vue completes the code exchange.
  */
 const handleYandex = () => {
   const clientId = import.meta.env.VITE_YANDEX_CLIENT_ID as string
@@ -98,7 +98,7 @@ const handleYandex = () => {
 /**
  * Redirects the browser to the Google OAuth 2.0 authorization endpoint.
  * After the user grants access, Google redirects back to /auth/google/callback
- * where GoogleCallbackView.vue completes the code exchange.
+ * where OAuthCallbackView.vue completes the code exchange.
  */
 const handleGoogle = () => {
   const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID as string
