@@ -16,8 +16,7 @@ import {
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import YandexLoginButton from "@/components/auth/YandexLoginButton.vue"
-import GoogleLoginButton from "@/components/auth/GoogleLoginButton.vue"
+import { OAuthButton } from "@/components/ui/oauth-button"
 
 const props = defineProps<{
   class?: HTMLAttributes["class"]
@@ -47,21 +46,6 @@ const emit = defineEmits<{
       <CardContent>
         <form @submit.prevent="emit('submit')">
           <FieldGroup>
-            <Field>
-              <YandexLoginButton
-                :loading="loading"
-                @click="emit('yandex')"
-              />
-            </Field>
-            <Field>
-              <GoogleLoginButton
-                :loading="loading"
-                @click="emit('google')"
-              />
-            </Field>
-            <FieldSeparator>
-              или продолжить с email
-            </FieldSeparator>
             <Field>
               <FieldLabel for="email">
                 Email
@@ -107,6 +91,28 @@ const emit = defineEmits<{
             </Field>
           </FieldGroup>
         </form>
+
+        <!--
+          Провайдеры вынесены из <form>: кнопка OAuth не должна отправлять форму
+          с email и паролем, а Enter в поле пароля — уходить не туда.
+        -->
+        <div class="mt-4 flex flex-col gap-4">
+          <FieldSeparator>
+            или войти через
+          </FieldSeparator>
+          <div class="flex flex-col gap-2">
+            <OAuthButton
+              provider="yandex"
+              :loading="loading"
+              @click="emit('yandex')"
+            />
+            <OAuthButton
+              provider="google"
+              :loading="loading"
+              @click="emit('google')"
+            />
+          </div>
+        </div>
       </CardContent>
     </Card>
     <FieldDescription class="px-6 text-center">

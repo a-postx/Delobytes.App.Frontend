@@ -62,11 +62,10 @@ const emit = defineEmits<{
               :model-value="password"
               @update:model-value="emit('update:password', $event as string)"
             />
-            <FieldDescription>Минимум 6 символов.</FieldDescription>
           </Field>
           <Field>
             <FieldLabel for="confirm-password">
-              Подтвердите пароль
+              Повторите введённый пароль
             </FieldLabel>
             <Input
               id="confirm-password"
@@ -75,7 +74,6 @@ const emit = defineEmits<{
               :model-value="confirmPassword"
               @update:model-value="emit('update:confirmPassword', $event as string)"
             />
-            <FieldDescription>Повторите введённый пароль.</FieldDescription>
           </Field>
           <Field v-if="error">
             <div class="rounded-md bg-destructive/10 px-3 py-2 text-center text-xs text-destructive">
