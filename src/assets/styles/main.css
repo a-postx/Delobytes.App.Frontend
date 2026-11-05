@@ -38,11 +38,11 @@
     --chart-2: 150 30% 55%;
     --chart-3: 35 80% 60%;
     --chart-wildberries: 273 67% 39%;
-    --success: 142 45% 48%;
-    --warning: 35 90% 55%;
-    --info: 210 75% 58%;
-    --pending: 35 90% 55%;
-    --completed: 142 45% 48%;
+    --success: 142 45% 34%;
+    --warning: 35 90% 34%;
+    --info: 210 75% 42%;
+    --pending: 35 90% 34%;
+    --completed: 142 45% 34%;
   }
 
   .dark {
@@ -79,11 +79,11 @@
     --chart-2: 150 30% 52%;
     --chart-3: 35 75% 58%;
     --chart-wildberries: 270 95% 75%;
-    --success: 142 40% 45%;
+    --success: 142 40% 55%;
     --warning: 35 85% 55%;
-    --info: 210 70% 58%;
+    --info: 210 70% 68%;
     --pending: 35 85% 55%;
-    --completed: 142 40% 45%;
+    --completed: 142 40% 55%;
   }
 }
 
