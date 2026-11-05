@@ -828,7 +828,7 @@ const emptyText = computed<string>(() => {
             <div :class="fieldClass">
               <Label>Действует с</Label>
               <Input :class="inputClass" v-model="form.validFrom" type="date" />
-              <p v-if="isNewRateDateInPast" class="text-xs text-amber-600 mt-1">
+              <p v-if="isNewRateDateInPast" class="text-xs text-warning mt-1">
                 Дата в прошлом изменит расчёты себестоимости задним числом
               </p>
             </div>

@@ -331,7 +331,7 @@ const optionSkuClass = 'text-xs text-muted-foreground font-mono truncate'
 
                 <span
                   class="size-2 rounded-full shrink-0"
-                  :class="product.hasActiveWorkRate ? 'bg-green-500 dark:bg-green-400' : 'bg-muted-foreground/40'"
+                  :class="product.hasActiveWorkRate ? 'bg-success' : 'bg-muted-foreground/40'"
                   :title="product.hasActiveWorkRate ? 'Норма заведена' : 'Норма не заведена'"
                 />
                 <span class="sr-only">
@@ -361,7 +361,7 @@ const optionSkuClass = 'text-xs text-muted-foreground font-mono truncate'
       </ComboboxPortal>
     </ComboboxRoot>
 
-    <p v-if="activeWriteRateFrom" class="text-xs text-amber-600">
+    <p v-if="activeWriteRateFrom" class="text-xs text-warning">
       Уже есть активная норма с {{ formatIsoDate(activeWriteRateFrom) }}. Новая запись деактивирует её.
     </p>
   </div>

@@ -305,7 +305,7 @@ const inputClass = 'mt-1'
                   <Trash2 class="size-4 text-destructive" />
                 </Button>
                 <Button v-else variant="ghost" size="icon-sm" @click="openRestore(item)" title="Восстановить">
-                  <Undo2 class="size-4 text-green-600" />
+                  <Undo2 class="size-4 text-success" />
                 </Button>
               </div>
             </TableCell>
@@ -530,7 +530,7 @@ const inputClass = 'mt-1'
               <Button variant="outline">Отмена</Button>
             </AlertDialogCancel>
             <AlertDialogAction as-child>
-              <Button @click="handleRestore" :disabled="isSaving" class="gap-2 bg-green-600 hover:bg-green-700">
+              <Button @click="handleRestore" :disabled="isSaving" variant="success" class="gap-2">
                 <Spinner v-if="isSaving" class="size-4" />
                 Восстановить
               </Button>

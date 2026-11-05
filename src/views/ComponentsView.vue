@@ -362,7 +362,7 @@ const renderActions = (item: ComponentItem): unknown => {
         title: 'Восстановить',
         onClick: () => openRestore(item),
       },
-      () => h(Undo2, { class: 'size-4 text-green-600' }),
+      () => h(Undo2, { class: 'size-4 text-success' }),
     )
 
   return h('div', { class: 'flex items-center justify-end gap-1' }, [
@@ -989,7 +989,7 @@ const selectClass = 'flex h-10 w-full rounded-md border border-input bg-backgrou
                 type="date"
                 :class="inputClass"
               />
-              <p v-if="isPriceDateInPast" class="text-xs text-amber-600 mt-1">
+              <p v-if="isPriceDateInPast" class="text-xs text-warning mt-1">
                 Дата в прошлом изменит стоимость компонента в прошлых расчётах
               </p>
             </div>

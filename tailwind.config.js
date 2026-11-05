@@ -29,8 +29,11 @@ export default {
           DEFAULT: 'hsl(var(--muted))',
           foreground: 'hsl(var(--muted-foreground))',
         },
-		success: 'hsl(var(--success))',
-		warning: 'hsl(var(--warning))',
+        success: {
+          DEFAULT: 'hsl(var(--success))',
+          foreground: 'hsl(var(--success-foreground))',
+        },
+        warning: 'hsl(var(--warning))',
         info: 'hsl(var(--info))',
 		pending: 'hsl(var(--pending))',
 		completed: 'hsl(var(--completed))',
@@ -45,6 +48,32 @@ export default {
         card: {
           DEFAULT: 'hsl(var(--card))',
           foreground: 'hsl(var(--card-foreground))',
+        },
+        badge: {
+          success: {
+            DEFAULT: 'hsl(var(--badge-success))',
+            foreground: 'hsl(var(--badge-success-foreground))',
+          },
+          warning: {
+            DEFAULT: 'hsl(var(--badge-warning))',
+            foreground: 'hsl(var(--badge-warning-foreground))',
+          },
+          destructive: {
+            DEFAULT: 'hsl(var(--badge-destructive))',
+            foreground: 'hsl(var(--badge-destructive-foreground))',
+          },
+          wb: {
+            DEFAULT: 'hsl(var(--badge-wb))',
+            foreground: 'hsl(var(--badge-wb-foreground))',
+          },
+          oz: {
+            DEFAULT: 'hsl(var(--badge-oz))',
+            foreground: 'hsl(var(--badge-oz-foreground))',
+          },
+          ym: {
+            DEFAULT: 'hsl(var(--badge-ym))',
+            foreground: 'hsl(var(--badge-ym-foreground))',
+          },
         },
         sidebar: {
           DEFAULT: 'hsl(var(--sidebar-background))',

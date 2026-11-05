@@ -490,7 +490,7 @@ const inputClass = 'mt-1'
             <div :class="fieldClass">
               <Label for="version-validFrom">Действует с</Label>
               <Input id="version-validFrom" v-model="versionForm.validFrom" type="date" :class="inputClass" />
-              <p v-if="isVersionDateInPast" class="text-xs text-amber-600 mt-1">
+              <p v-if="isVersionDateInPast" class="text-xs text-warning mt-1">
                 Дата в прошлом изменит стоимость работ в прошлых расчётах
               </p>
             </div>

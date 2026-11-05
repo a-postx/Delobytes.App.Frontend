@@ -39,10 +39,24 @@
     --chart-3: 35 80% 60%;
     --chart-wildberries: 273 67% 39%;
     --success: 142 45% 34%;
+    --success-foreground: 0 0% 100%;
     --warning: 35 90% 34%;
     --info: 210 75% 42%;
     --pending: 35 90% 34%;
     --completed: 142 45% 34%;
+
+    --badge-success: 142 45% 92%;
+    --badge-success-foreground: 142 45% 26%;
+    --badge-warning: 35 90% 92%;
+    --badge-warning-foreground: 35 90% 26%;
+    --badge-destructive: 0 75% 93%;
+    --badge-destructive-foreground: 0 75% 30%;
+    --badge-wb: 273 67% 95%;
+    --badge-wb-foreground: 273 67% 35%;
+    --badge-oz: 214 80% 95%;
+    --badge-oz-foreground: 214 80% 35%;
+    --badge-ym: 35 90% 92%;
+    --badge-ym-foreground: 35 90% 26%;
   }
 
   .dark {
@@ -80,10 +94,24 @@
     --chart-3: 35 75% 58%;
     --chart-wildberries: 270 95% 75%;
     --success: 142 40% 55%;
+    --success-foreground: 160 10% 10%;
     --warning: 35 85% 55%;
     --info: 210 70% 68%;
     --pending: 35 85% 55%;
     --completed: 142 40% 55%;
+
+    --badge-success: 142 30% 20%;
+    --badge-success-foreground: 142 40% 74%;
+    --badge-warning: 35 45% 20%;
+    --badge-warning-foreground: 35 85% 72%;
+    --badge-destructive: 0 45% 20%;
+    --badge-destructive-foreground: 0 65% 70%;
+    --badge-wb: 273 30% 20%;
+    --badge-wb-foreground: 273 60% 75%;
+    --badge-oz: 214 30% 20%;
+    --badge-oz-foreground: 214 70% 75%;
+    --badge-ym: 35 45% 20%;
+    --badge-ym-foreground: 35 85% 72%;
   }
 }
 

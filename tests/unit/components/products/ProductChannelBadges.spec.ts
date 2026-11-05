@@ -62,6 +62,6 @@ describe('ProductChannelBadges', () => {
     })
 
     expect(wrapper.text()).toContain('123456789')
-    expect(wrapper.find('span').classes()).toContain('bg-purple-100')
+    expect(wrapper.find('span').classes()).toContain('bg-badge-wb')
   })
 })
