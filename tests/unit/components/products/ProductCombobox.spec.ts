@@ -31,7 +31,7 @@ const PRODUCTS = [
     createdAt: '2024-01-02',
     creationSource: 'manual',
     hasActiveWorkRate: true,
-    photos: [{ id: 'ph1', displayOrder: 0, sizeVariant: 'small', url: 'https://example.test/p2.jpg' }],
+    photos: [{ id: 'ph1', channelId: 'ch1', displayOrder: 0, sizeVariant: 'small', url: 'https://example.test/p2.jpg' }],
   },
 ]
 

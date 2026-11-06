@@ -18,6 +18,7 @@ const loadErrors = ref<Set<string>>(new Set())
 const lightboxEl = ref<HTMLElement | null>(null)
 const thumbnailStripEl = ref<HTMLElement | null>(null)
 
+// Only one channel importer exists today, so photos are rendered flat without grouping by channelId; per-channel grouping is a later stage.
 const largePhotos = computed<ProductPhoto[]>(() =>
   props.photos
     .filter(p => p.sizeVariant === 'large')

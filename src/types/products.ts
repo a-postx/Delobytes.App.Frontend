@@ -26,6 +26,7 @@ export interface PackingUnit {
 
 export interface ProductPhoto {
   id: string
+  channelId: string
   displayOrder: number
   sizeVariant: string
   url: string
