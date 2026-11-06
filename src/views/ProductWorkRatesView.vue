@@ -687,7 +687,7 @@ const handleDelete = async (): Promise<void> => {
 const dialogContentClass = 'bg-popover text-popover-foreground fixed top-[50%] left-[50%] max-h-[90vh] w-[90vw] max-w-[480px] translate-x-[-50%] translate-y-[-50%] rounded-lg border shadow-lg p-6 focus:outline-none z-[100] overflow-y-auto overflow-x-hidden'
 const fieldClass = 'flex min-w-0 flex-col gap-1'
 const inputClass = 'mt-1'
-const selectClass = 'mt-1 flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring'
+const selectClass = 'mt-1 flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring/[var(--focus-ring-alpha)]'
 
 /**
  * Заголовок и описание пустого состояния нужны и пропсам грида, и его слоту `#empty`:

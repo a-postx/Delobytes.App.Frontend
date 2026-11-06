@@ -36,7 +36,7 @@ const props = withDefaults(defineProps<Props>(), {
           v-for="item in items"
           :key="item.value"
           :value="item.value"
-          class="inline-flex items-center justify-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium transition-all outline-none focus-visible:ring-2 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm hover:text-foreground dark:hover:text-foreground"
+          class="inline-flex items-center justify-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium transition-all outline-none focus-visible:ring-2 focus-visible:ring-ring/[var(--focus-ring-alpha)] disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm hover:text-foreground dark:hover:text-foreground"
         >
           {{ item.label }}
         </TabsTrigger>
@@ -49,7 +49,7 @@ const props = withDefaults(defineProps<Props>(), {
         :key="item.value"
         :value="item.value"
         :class="cn(
-          'mt-3 rounded-lg border border-border bg-background p-4 text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring/50 animate-in fade-in-50 data-[state=inactive]:animate-out data-[state=inactive]:fade-out-50',
+          'mt-3 rounded-lg border border-border bg-background p-4 text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring/[var(--focus-ring-alpha)] animate-in fade-in-50 data-[state=inactive]:animate-out data-[state=inactive]:fade-out-50',
           props.contentClass,
         )"
       >

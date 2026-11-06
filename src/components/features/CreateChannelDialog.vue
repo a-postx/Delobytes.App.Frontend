@@ -115,7 +115,7 @@ const handleSubmit = async (): Promise<void> => {
                 id="channel-template"
                 v-model="selectedTemplateValue"
                 :disabled="isSubmitting"
-                class="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-3"
+                class="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-ring/[var(--focus-ring-alpha)] focus-visible:ring-3"
               >
                 <option v-for="t in props.templates" :key="t.id" :value="t.id">{{ t.displayName }}</option>
               </select>

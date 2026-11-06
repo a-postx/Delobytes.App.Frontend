@@ -23,6 +23,7 @@
     --border: 30 10% 88%;
     --input: 30 10% 88%;
     --ring: 14 65% 55%;
+    --focus-ring-alpha: 0.25;
     --radius: 0.5rem;
 	color-scheme: light;
 
@@ -80,6 +81,7 @@
     --border: 160 8% 28%;
     --input: 160 8% 28%;
     --ring: 14 65% 58%;
+    --focus-ring-alpha: 0.25;
 	color-scheme: dark;
 
     --sidebar-background: 160 10% 14%;

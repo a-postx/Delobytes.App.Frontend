@@ -217,7 +217,7 @@ const inputClass = 'mt-1'
         <select
           v-model="filterProductId"
           @change="loadData"
-          class="h-9 rounded-md border border-input bg-transparent px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-3"
+          class="h-9 rounded-md border border-input bg-transparent px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-ring/[var(--focus-ring-alpha)] focus-visible:ring-3"
         >
           <option value="">Все товары</option>
           <option v-for="p in products" :key="p.id" :value="p.id">{{ p.name }}</option>
@@ -305,19 +305,19 @@ const inputClass = 'mt-1'
           <div class="flex flex-col gap-4">
             <div :class="fieldClass">
               <Label>Товар</Label>
-              <select v-model="form.productId" class="mt-1 h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-3">
+              <select v-model="form.productId" class="mt-1 h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-ring/[var(--focus-ring-alpha)] focus-visible:ring-3">
                 <option v-for="p in products" :key="p.id" :value="p.id">{{ p.name }}</option>
               </select>
             </div>
             <div :class="fieldClass">
               <Label>Канал продаж</Label>
-              <select v-model="form.channelId" class="mt-1 h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-3">
+              <select v-model="form.channelId" class="mt-1 h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-ring/[var(--focus-ring-alpha)] focus-visible:ring-3">
                 <option v-for="ch in channels" :key="ch.id" :value="ch.id">{{ ch.name }}</option>
               </select>
             </div>
             <div :class="fieldClass">
               <Label>Тип расхода</Label>
-              <select v-model="form.costTypeId" class="mt-1 h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-3">
+              <select v-model="form.costTypeId" class="mt-1 h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-ring/[var(--focus-ring-alpha)] focus-visible:ring-3">
                 <option v-for="ct in activeCostTypes" :key="ct.id" :value="ct.id">{{ ct.name }}</option>
               </select>
             </div>

@@ -15,7 +15,7 @@ import {
 <template>
   <AlertDialogRoot>
     <AlertDialogTrigger
-      class="bg-primary text-primary-foreground hover:bg-primary/90 inline-flex h-9 items-center justify-center rounded-md px-4 text-sm font-semibold shadow-sm focus:ring-ring/50 focus:ring-3 focus:outline-none border-0"
+      class="bg-primary text-primary-foreground hover:bg-primary/90 inline-flex h-9 items-center justify-center rounded-md px-4 text-sm font-semibold shadow-sm focus:ring-ring/[var(--focus-ring-alpha)] focus:ring-3 focus:outline-none border-0"
     >
       Open alert dialog
     </AlertDialogTrigger>

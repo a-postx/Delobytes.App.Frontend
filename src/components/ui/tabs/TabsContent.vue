@@ -16,7 +16,7 @@ const props = defineProps<Props>()
     v-bind="props"
     data-slot="tabs-content"
     :class="cn(
-      'mt-3 rounded-lg border border-border bg-background p-4 text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring/50',
+      'mt-3 rounded-lg border border-border bg-background p-4 text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring/[var(--focus-ring-alpha)]',
       'animate-in fade-in-50 data-[state=inactive]:animate-out data-[state=inactive]:fade-out-50',
       props.class,
     )"

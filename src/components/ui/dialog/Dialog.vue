@@ -15,7 +15,7 @@ import {
 <template>
   <DialogRoot>
     <DialogTrigger
-      class="bg-primary text-primary-foreground hover:bg-primary/90 inline-flex h-9 items-center justify-center rounded-md px-4 text-sm font-semibold shadow-sm focus:ring-ring/50 focus:ring-3 focus:outline-none border-0"
+      class="bg-primary text-primary-foreground hover:bg-primary/90 inline-flex h-9 items-center justify-center rounded-md px-4 text-sm font-semibold shadow-sm focus:ring-ring/[var(--focus-ring-alpha)] focus:ring-3 focus:outline-none border-0"
     >
       Edit profile
     </DialogTrigger>
@@ -37,7 +37,7 @@ import {
           > Name </label>
           <input
             id="name"
-            class="bg-background border-input text-foreground placeholder:text-muted-foreground focus:border-ring focus:ring-ring/50 flex-1 h-9 w-full rounded-md border px-3 text-sm outline-none focus:ring-3 transition-[color,box-shadow]"
+            class="bg-background border-input text-foreground placeholder:text-muted-foreground focus:border-ring focus:ring-ring/[var(--focus-ring-alpha)] flex-1 h-9 w-full rounded-md border px-3 text-sm outline-none focus:ring-3 transition-[color,box-shadow]"
             defaultValue="Pedro Duarte"
           >
         </fieldset>
@@ -48,14 +48,14 @@ import {
           > Username </label>
           <input
             id="username"
-            class="bg-background border-input text-foreground placeholder:text-muted-foreground focus:border-ring focus:ring-ring/50 flex-1 h-9 w-full rounded-md border px-3 text-sm outline-none focus:ring-3 transition-[color,box-shadow]"
+            class="bg-background border-input text-foreground placeholder:text-muted-foreground focus:border-ring focus:ring-ring/[var(--focus-ring-alpha)] flex-1 h-9 w-full rounded-md border px-3 text-sm outline-none focus:ring-3 transition-[color,box-shadow]"
             defaultValue="@peduarte"
           >
         </fieldset>
         <div class="mt-6 flex justify-end">
           <DialogClose as-child>
             <button
-              class="bg-primary text-primary-foreground hover:bg-primary/90 inline-flex h-9 items-center justify-center rounded-md px-4 text-sm font-semibold focus:ring-ring/50 focus:ring-3 focus:outline-none"
+              class="bg-primary text-primary-foreground hover:bg-primary/90 inline-flex h-9 items-center justify-center rounded-md px-4 text-sm font-semibold focus:ring-ring/[var(--focus-ring-alpha)] focus:ring-3 focus:outline-none"
             >
               Save changes
             </button>

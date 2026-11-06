@@ -20,7 +20,7 @@ const props = withDefaults(defineProps<Props>(), {
     :as="props.as"
     :as-child="props.asChild"
     :class="cn(
-      'bg-primary text-primary-foreground hover:bg-primary/90 inline-flex h-9 items-center justify-center rounded-md px-4 text-sm font-semibold shadow-sm focus:ring-ring/50 focus:ring-3 focus:outline-none border-0 transition-all disabled:pointer-events-none disabled:opacity-50',
+      'bg-primary text-primary-foreground hover:bg-primary/90 inline-flex h-9 items-center justify-center rounded-md px-4 text-sm font-semibold shadow-sm focus:ring-ring/[var(--focus-ring-alpha)] focus:ring-3 focus:outline-none border-0 transition-all disabled:pointer-events-none disabled:opacity-50',
       props.class
     )"
   >
