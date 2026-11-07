@@ -109,7 +109,7 @@ function resetPendingFromModel(): void {
 watch(open, (isOpen: boolean) => {
   if (isOpen) {
     resetPendingFromModel()
-    nextTick(() => scrollToMonth(modelValue.value.to.month - 1))
+    void nextTick(() => scrollToMonth(modelValue.value.to.month - 1))
   }
 })
 
@@ -263,7 +263,7 @@ function selectPreset(id: OrdersPeriodPresetId): void {
   startInputText.value = formatFullDate(resolved.from)
   endInputText.value = formatFullDate(resolved.to)
   visibleYear.value = resolved.to.year
-  nextTick(() => scrollToMonth(resolved.to.month - 1))
+  void nextTick(() => scrollToMonth(resolved.to.month - 1))
 }
 </script>
 

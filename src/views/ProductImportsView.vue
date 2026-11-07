@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
+import type { ComputedRef } from 'vue'
 import { Plus, RefreshCw, Download, ArrowRightLeft } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -15,10 +16,15 @@ import {
 } from '@/components/ui/table'
 import { toast } from 'vue-sonner'
 import { integrationsApi } from '@/services/api'
-import type { ProductImportJob, Connection } from '@/types'
+import type { ProductImportJob, GetProductImportsResponse, Connection } from '@/types'
 import { ProductImportStatus } from '@/types'
 import { useCurrentUser } from '@/composables/useCurrentUser'
 import { usePolling } from '@/composables/usePolling'
+import { useAsyncResource } from '@/composables/useAsyncResource'
+import { describeFailure } from '@/composables/useApiFailureCopy'
+import type { FailureCopy } from '@/composables/useApiFailureCopy'
+import type { ApiError } from '@/types/errors'
+import ErrorState from '@/components/feedback/ErrorState.vue'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
@@ -28,7 +34,7 @@ const { canWrite } = useCurrentUser()
  * Два независимых ресурса: упавшее подключение не должно скрывать историю задач
  * и наоборот. Каждый сам показывает свой сбой, поэтому один запрос не обнуляет второй.
  */
-const jobsResource = useAsyncResource<ProductImportJobsResponse>({
+const jobsResource = useAsyncResource<GetProductImportsResponse>({
   fetcher: () => integrationsApi.getProductImports(),
   fallbackMessage: 'Не удалось загрузить задачи импорта',
 })
@@ -137,7 +143,7 @@ const { start: startPolling } = usePolling(loadJobs, {
 const startImport = async (): Promise<void> => {
   if (!activeWildberriesConnection.value) {
     toast.error('Нет активного подключения Wildberries')
-    router.push({ name: 'sales-channels' })
+    void router.push({ name: 'sales-channels' })
     return
   }
 
@@ -224,6 +230,16 @@ onMounted(async () => {
     <div v-if="isLoading" class="flex flex-col gap-2">
       <Skeleton v-for="n in 4" :key="n" class="h-10 w-full rounded-lg" />
     </div>
+
+    <!-- Ошибка загрузки: важнее пустого состояния, иначе недоступный бэкенд выглядит как «задач ещё нет» -->
+    <ErrorState
+      v-else-if="failureCopy && jobs.length === 0"
+      variant="embedded"
+      :title="failureCopy.title"
+      :description="failureCopy.description"
+      retry-label="Повторить"
+      @retry="loadData"
+    />
 
     <!-- Пустое состояние -->
     <div

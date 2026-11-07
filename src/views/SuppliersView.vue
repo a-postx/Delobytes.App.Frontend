@@ -264,6 +264,16 @@ const inputClass = 'mt-1'
       </div>
     </div>
 
+    <!-- Ошибка загрузки: важнее пустого состояния, иначе недоступный бэкенд выглядит как «поставщиков ещё нет» -->
+    <ErrorState
+      v-else-if="failureCopy && filteredItems.length === 0"
+      variant="embedded"
+      :title="failureCopy.title"
+      :description="failureCopy.description"
+      retry-label="Повторить"
+      @retry="loadItems"
+    />
+
     <div
       v-else-if="filteredItems.length === 0"
       class="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-card py-16 text-center"

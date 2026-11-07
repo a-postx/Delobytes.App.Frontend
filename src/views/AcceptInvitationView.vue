@@ -26,7 +26,7 @@ onMounted(async () => {
     // Сохраняем токен и отправляем на логин; после входа любой способ
     // аутентификации подхватит его и вернёт пользователя к приглашению.
     sessionStorage.setItem(PENDING_INVITATION_KEY, token)
-    router.push('/login')
+    void router.push('/login')
     return
   }
 
@@ -38,7 +38,7 @@ onMounted(async () => {
 
     await fetchCurrentUser()
 
-    router.push('/')
+    void router.push('/')
   } catch (err: unknown) {
     const apiError = err as { response?: { data?: { message?: string } } }
     error.value = apiError.response?.data?.message ?? 'Не удалось принять приглашение.'

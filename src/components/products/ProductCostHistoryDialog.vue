@@ -66,7 +66,7 @@ const loadHistory = async (): Promise<void> => {
 // Данные загружаются лениво — только при первом открытии диалога, не на монтировании родителя.
 watch(open, (isOpen) => {
   if (isOpen) {
-    loadHistory()
+    void loadHistory()
   }
 })
 </script>

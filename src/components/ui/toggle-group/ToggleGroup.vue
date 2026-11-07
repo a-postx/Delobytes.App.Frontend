@@ -5,7 +5,7 @@ import { ToggleGroupRoot, useForwardProps } from 'reka-ui'
 import { cn } from '@/lib/utils'
 import { computed } from 'vue'
 
-const props = defineProps<ToggleGroupRootProps & {
+const props = defineProps<Omit<ToggleGroupRootProps, 'modelValue'> & {
   class?: HTMLAttributes['class']
 }>()
 

@@ -293,7 +293,7 @@ const loadCost = async (): Promise<void> => {
 }
 
 watch(asOfDate, () => {
-  loadCost()
+  void loadCost()
 })
 
 // ---------- Живой предпросмотр ----------

@@ -23,7 +23,7 @@ onMounted(() => {
   const token = localStorage.getItem('accessToken')
 
   if (!token) {
-    router.push('/login')
+    void router.push('/login')
     return
   }
 
@@ -33,7 +33,7 @@ onMounted(() => {
   const pendingInvitationToken: string | null = readPendingInvitationToken()
 
   if (pendingInvitationToken) {
-    router.replace({ name: 'accept-invitation', query: { token: pendingInvitationToken } })
+    void router.replace({ name: 'accept-invitation', query: { token: pendingInvitationToken } })
   }
 })
 
@@ -50,7 +50,7 @@ const handleSetup = async () => {
     localStorage.setItem('accessToken', response.accessToken)
     localStorage.setItem('tenantId', response.tenantId)
 
-    router.replace(returnTarget)
+    void router.replace(returnTarget)
   } catch (err: unknown) {
     error.value = extractErrorMessage(err, 'Ошибка создания рабочего пространства. Попробуйте ещё раз.')
   } finally {

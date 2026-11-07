@@ -100,7 +100,7 @@ const loadMembers = async (): Promise<void> => {
 }
 
 onMounted(() => {
-  loadMembers()
+  void loadMembers()
 })
 
 defineExpose({

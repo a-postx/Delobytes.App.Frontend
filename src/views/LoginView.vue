@@ -22,7 +22,7 @@ const error = ref('')
  * не возвращала на форму входа, которую пользователь уже прошёл.
  */
 const goAfterLogin = (target: string): void => {
-  router.replace(target)
+  void router.replace(target)
 }
 
 const handleLogin = async () => {
@@ -38,7 +38,7 @@ const handleLogin = async () => {
     if (response.requiresTenantSetup) {
       localStorage.setItem('accessToken', response.accessToken)
       localStorage.setItem('userId', response.userId)
-      router.push('/setup-tenant')
+      void router.push('/setup-tenant')
     } else {
       localStorage.setItem('accessToken', response.accessToken)
       localStorage.setItem('userId', response.userId)
@@ -49,7 +49,7 @@ const handleLogin = async () => {
       const pendingToken: string | null = readPendingInvitationToken()
       if (pendingToken) {
         // Приглашение важнее исходного адреса: пользователя ждут в пространстве.
-        router.push({ name: 'accept-invitation', query: { token: pendingToken } })
+        void router.push({ name: 'accept-invitation', query: { token: pendingToken } })
       } else {
         goAfterLogin(resolveRedirectTarget(route.query.redirect))
       }

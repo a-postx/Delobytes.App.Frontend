@@ -709,7 +709,18 @@ const inputClass = 'mt-1'
       <StatusFilter v-model="statusFilter" :options="filterOptions" />
     </div>
 
+    <!-- Ошибка загрузки перед гридом: иначе недоступный бэкенд читается как «товаров ещё нет» -->
+    <ErrorState
+      v-if="failureCopy && items.length === 0"
+      variant="embedded"
+      :title="failureCopy.title"
+      :description="failureCopy.description"
+      retry-label="Повторить"
+      @retry="loadItems"
+    />
+
     <DataGrid
+      v-else
       v-model:pagination="pagination"
       v-model:sorting="sorting"
       v-model:column-visibility="columnVisibility"

@@ -40,7 +40,7 @@ const remainingCount = computed<number>(() => {
 const openLightbox = (index: number): void => {
   activeIndex.value = index
   lightboxOpen.value = true
-  nextTick(() => {
+  void nextTick(() => {
     lightboxEl.value?.focus()
     scrollThumbnailIntoView(index)
   })
@@ -52,12 +52,12 @@ const closeLightbox = (): void => {
 
 const prev = (): void => {
   activeIndex.value = (activeIndex.value - 1 + largePhotos.value.length) % largePhotos.value.length
-  nextTick(() => scrollThumbnailIntoView(activeIndex.value))
+  void nextTick(() => scrollThumbnailIntoView(activeIndex.value))
 }
 
 const next = (): void => {
   activeIndex.value = (activeIndex.value + 1) % largePhotos.value.length
-  nextTick(() => scrollThumbnailIntoView(activeIndex.value))
+  void nextTick(() => scrollThumbnailIntoView(activeIndex.value))
 }
 
 const scrollThumbnailIntoView = (index: number): void => {

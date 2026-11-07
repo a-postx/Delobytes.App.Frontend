@@ -61,18 +61,18 @@ onMounted(async () => {
     const pendingInvitationToken: string | null = readPendingInvitationToken()
 
     if (pendingInvitationToken) {
-      router.replace({ name: 'accept-invitation', query: { token: pendingInvitationToken } })
+      void router.replace({ name: 'accept-invitation', query: { token: pendingInvitationToken } })
       return
     }
 
     if (response.requiresTenantSetup) {
-      router.push('/setup-tenant')
+      void router.push('/setup-tenant')
     } else {
       localStorage.setItem('tenantId', response.tenantId)
 
       await fetchCurrentUser()
 
-      router.replace(returnTarget)
+      void router.replace(returnTarget)
     }
   } catch (err: unknown) {
     const apiError = err as { response?: { data?: { message?: string } } }

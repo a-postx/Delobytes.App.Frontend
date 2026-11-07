@@ -30,7 +30,7 @@ const { canWrite } = useCurrentUser()
 
 const productId = computed<string>(() => route.query.productId as string)
 
-const FALLBACK_LOAD_MESSAGE = '\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u0437\u0430\u0433\u0440\u0443\u0437\u0438\u0442\u044c \u0442\u043e\u0432\u0430\u0440'
+const FALLBACK_LOAD_MESSAGE = 'Не удалось загрузить товар'
 
 const isLoading = ref<boolean>(true)
 const isSaving = ref<boolean>(false)
@@ -202,7 +202,7 @@ const handleSave = async (): Promise<void> => {
 }
 
 const handleCancel = (): void => {
-  router.push({ name: 'products' })
+  void router.push({ name: 'products' })
 }
 
 onMounted(() => {

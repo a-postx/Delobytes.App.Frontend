@@ -79,7 +79,7 @@ watch(
   (open) => {
     if (open) {
       showHistory.value = false
-      loadData()
+      void loadData()
     }
   },
   { immediate: true },

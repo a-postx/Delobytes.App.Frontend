@@ -139,14 +139,14 @@ async function loadChart(): Promise<void> {
 }
 
 onMounted(() => {
-  loadChannels()
-  loadChart()
+  void loadChannels()
+  void loadChart()
 })
 
 watch(
   [range, granularity, channelId],
   () => {
-    loadChart()
+    void loadChart()
   },
   { deep: true },
 )

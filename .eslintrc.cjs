@@ -40,7 +40,9 @@ module.exports = {
       },
       rules: {
         '@typescript-eslint/no-floating-promises': ['error', { ignoreVoid: true }],
-        '@typescript-eslint/no-misused-promises': ['error', { checksVoidReturn: { attributes: false } }]
+        '@typescript-eslint/no-misused-promises': ['error', { checksVoidReturn: { attributes: false } }],
+        // `_` — намеренно отбрасываемая часть деструктуризации (`const { class: _, ...delegated }`).
+        '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }]
       }
     }
   ],

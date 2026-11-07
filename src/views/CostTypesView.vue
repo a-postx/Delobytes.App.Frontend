@@ -126,7 +126,7 @@ const handleCreate = async (): Promise<void> => {
     await createCostType(() => costTypesApi.create(payload))
     toast.success('Тип расхода добавлен')
     createDialogOpen.value = false
-    loadItems()
+    void loadItems()
   } catch {
     // Ошибка уже обработана в useApiCall
   } finally {
@@ -146,7 +146,7 @@ const handleEdit = async (): Promise<void> => {
     await updateCostType(() => costTypesApi.update(editTarget.value!.id, payload))
     toast.success('Тип расхода обновлён')
     editDialogOpen.value = false
-    loadItems()
+    void loadItems()
   } catch {
     // Ошибка уже обработана в useApiCall
   } finally {
@@ -161,7 +161,7 @@ const handleDelete = async (): Promise<void> => {
     await deleteCostType(() => costTypesApi.delete(deleteTarget.value!.id))
     toast.success('Тип расхода удалён')
     deleteDialogOpen.value = false
-    loadItems()
+    void loadItems()
   } catch {
     // Ошибка уже обработана в useApiCall
   } finally {

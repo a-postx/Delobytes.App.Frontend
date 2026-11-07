@@ -39,7 +39,7 @@ const handleRegister = async () => {
     }
 
     if (response.requiresTenantSetup) {
-      router.push('/setup-tenant')
+      void router.push('/setup-tenant')
     } else {
       localStorage.setItem('tenantId', response.tenantId)
 
@@ -47,10 +47,10 @@ const handleRegister = async () => {
       if (pendingToken) {
         // Приглашение важнее исходного адреса.
         sessionStorage.removeItem('pendingInvitationToken')
-        router.push(`/invite?token=${pendingToken}`)
+        void router.push(`/invite?token=${pendingToken}`)
       } else {
         // `replace`: кнопка «назад» не должна возвращать на форму регистрации.
-        router.replace(resolveRedirectTarget(route.query.redirect))
+        void router.replace(resolveRedirectTarget(route.query.redirect))
       }
     }
   } catch (err: unknown) {

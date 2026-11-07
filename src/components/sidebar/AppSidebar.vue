@@ -51,7 +51,7 @@ function handleLogout(): void {
 }
 
 function handleTenantSettings(): void {
-  router.push('/tenant-settings')
+  void router.push('/tenant-settings')
 }
 </script>
 
