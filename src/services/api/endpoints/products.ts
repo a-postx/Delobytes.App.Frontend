@@ -1,4 +1,5 @@
 import { axiosInstance } from '../client'
+import { requireItems } from '../responseShape'
 import type {
   ProductStatus,
   GetProductsParams,
@@ -53,7 +54,7 @@ export const catalogProductsApi = {
     const response = await axiosInstance.get<GetProductsResponse>('/api/catalogs/products', {
       params: query,
     })
-    return response.data
+    return requireItems<GetProductsResponse>(response.data, 'товары')
   },
 
   getById: async (id: string): Promise<GetProductResponse> => {

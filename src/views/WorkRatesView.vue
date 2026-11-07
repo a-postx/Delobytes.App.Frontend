@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
+import type { ComputedRef } from 'vue'
 import { Plus, Trash2, Hammer, Undo2, Pencil, Tag } from 'lucide-vue-next'
 import {
   DialogClose,
@@ -44,16 +45,34 @@ import type {
   CreateWorkRateRequest,
   UpdateWorkRateRequest,
   CreateWorkRateVersionRequest,
+  GetWorkRatesResponse,
 } from '@/services/api'
 import { useCurrentUser } from '@/composables/useCurrentUser'
 import { useApiCall } from '@/composables/useApiCall'
+import { useAsyncResource, useResourceItems } from '@/composables/useAsyncResource'
+import { describeFailure } from '@/composables/useApiFailureCopy'
+import type { FailureCopy } from '@/composables/useApiFailureCopy'
+import ErrorState from '@/components/feedback/ErrorState.vue'
 import { useTenantMoney } from '@/composables/useTenantMoney'
 import { X } from 'lucide-vue-next'
 
 const { canWrite } = useCurrentUser()
 const { formatMoney } = useTenantMoney()
 
-const items = ref<WorkRateItem[]>([])
+const workRatesResource = useAsyncResource<GetWorkRatesResponse>({
+  fetcher: () => workRatesApi.getAll(),
+  fallbackMessage: 'Не удалось загрузить ставки работ',
+})
+
+const items: ComputedRef<WorkRateItem[]> = useResourceItems<WorkRateItem>(workRatesResource.data)
+const isLoading = workRatesResource.loading
+
+const failureCopy: ComputedRef<FailureCopy | null> = computed<FailureCopy | null>(() =>
+  workRatesResource.error.value
+    ? describeFailure(workRatesResource.error.value, 'Не удалось загрузить ставки работ')
+    : null,
+)
+
 const createDialogOpen = ref<boolean>(false)
 const editDialogOpen = ref<boolean>(false)
 const priceDialogOpen = ref<boolean>(false)
@@ -101,10 +120,6 @@ const isVersionDateInPast = computed<boolean>(() => {
 const formatDate = (d: string): string =>
   new Date(d).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' })
 
-const { loading: isLoading, execute: fetchWorkRates } = useApiCall<{ items: WorkRateItem[] }>({
-  fallbackMessage: 'Не удалось загрузить ставки работ',
-})
-
 const { execute: createWorkRate } = useApiCall({
   fallbackMessage: 'Не удалось создать ставку работ',
 })
@@ -122,10 +137,7 @@ const { execute: addWorkRateVersion } = useApiCall({
 })
 
 const loadItems = async (): Promise<void> => {
-  const result = await fetchWorkRates(() => workRatesApi.getAll())
-  if (result) {
-    items.value = result.items
-  }
+  await workRatesResource.load()
 }
 
 onMounted(loadItems)
@@ -296,6 +308,16 @@ const inputClass = 'mt-1'
         <Skeleton v-for="n in 4" :key="n" class="h-10 w-full rounded-lg" />
       </div>
     </div>
+
+    <!-- Ошибка загрузки: важнее пустого состояния, иначе недоступный бэкенд выглядит как пустой справочник -->
+    <ErrorState
+      v-else-if="failureCopy && items.length === 0"
+      variant="embedded"
+      :title="failureCopy.title"
+      :description="failureCopy.description"
+      retry-label="Повторить"
+      @retry="loadItems"
+    />
 
     <!-- Empty -->
     <div

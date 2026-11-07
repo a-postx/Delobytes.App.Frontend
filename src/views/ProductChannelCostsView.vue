@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
+import type { ComputedRef } from 'vue'
 import { Plus, Pencil, Trash2, DollarSign } from 'lucide-vue-next'
 import {
   DialogClose,
@@ -46,16 +47,67 @@ import type {
 import type { ProductItem } from '@/types/products'
 import { useCurrentUser } from '@/composables/useCurrentUser'
 import { useTenantMoney } from '@/composables/useTenantMoney'
+import { useAsyncResource } from '@/composables/useAsyncResource'
+import { describeFailure } from '@/composables/useApiFailureCopy'
+import type { FailureCopy } from '@/composables/useApiFailureCopy'
+import ErrorState from '@/components/feedback/ErrorState.vue'
 import { X } from 'lucide-vue-next'
 
 const { canWrite } = useCurrentUser()
 const { formatMoney, currencySymbol } = useTenantMoney()
 
-const items = ref<ProductChannelCostItem[]>([])
-const products = ref<ProductItem[]>([])
-const channels = ref<ChannelItem[]>([])
-const costTypes = ref<CostTypeItem[]>([])
-const isLoading = ref<boolean>(true)
+/**
+ * Вся страница грузится одним логическим запросом: справочники нужны только вместе,
+ * а расходы без списка товаров не загрузить. Поэтому один ресурс — один тост и одна кнопка
+ * повтора вместо трёх независимых сообщений об одной и той же недоступности бэкенда.
+ */
+interface PagePayload {
+  items: ProductChannelCostItem[]
+  products: ProductItem[]
+  channels: ChannelItem[]
+  costTypes: CostTypeItem[]
+}
+
+const pageResource = useAsyncResource<PagePayload>({
+  fetcher: async (): Promise<PagePayload> => {
+    const [productsResp, costTypesResp, channelsResp] = await Promise.all([
+      catalogProductsApi.getAll(),
+      costTypesApi.getAll(),
+      channelsApi.getAll(),
+    ])
+
+    const products: ProductItem[] = productsResp.items
+    const items: ProductChannelCostItem[] = await loadCosts(products)
+
+    return {
+      items,
+      products,
+      channels: channelsResp.items,
+      costTypes: costTypesResp.items,
+    }
+  },
+  fallbackMessage: 'Не удалось загрузить данные',
+})
+
+const items: ComputedRef<ProductChannelCostItem[]> = computed<ProductChannelCostItem[]>(
+  () => pageResource.data.value?.items ?? [],
+)
+const products: ComputedRef<ProductItem[]> = computed<ProductItem[]>(
+  () => pageResource.data.value?.products ?? [],
+)
+const channels: ComputedRef<ChannelItem[]> = computed<ChannelItem[]>(
+  () => pageResource.data.value?.channels ?? [],
+)
+const costTypes: ComputedRef<CostTypeItem[]> = computed<CostTypeItem[]>(
+  () => pageResource.data.value?.costTypes ?? [],
+)
+const isLoading = pageResource.loading
+
+const failureCopy: ComputedRef<FailureCopy | null> = computed<FailureCopy | null>(() =>
+  pageResource.error.value
+    ? describeFailure(pageResource.error.value, 'Не удалось загрузить данные')
+    : null,
+)
 
 const createDialogOpen = ref<boolean>(false)
 const editDialogOpen = ref<boolean>(false)
@@ -84,32 +136,28 @@ const filteredItems = computed<ProductChannelCostItem[]>(() => {
   return items.value.filter(i => i.productId === filterProductId.value)
 })
 
-const loadData = async (): Promise<void> => {
-  isLoading.value = true
-  try {
-    const [productsResp, costTypesResp, channelsResp] = await Promise.all([
-      catalogProductsApi.getAll(),
-      costTypesApi.getAll(),
-      channelsApi.getAll(),
-    ])
-    products.value = productsResp.items
-    costTypes.value = costTypesResp.items
-    channels.value = channelsResp.items
-
-    if (filterProductId.value) {
-      const resp = await productChannelCostsApi.getByProduct(filterProductId.value)
-      items.value = resp.items
-    } else if (products.value.length > 0) {
-      const allResults = await Promise.all(
-        products.value.map(p => productChannelCostsApi.getByProduct(p.id))
-      )
-      items.value = allResults.flatMap(r => r.items)
-    }
-  } catch {
-    toast.error('Не удалось загрузить данные')
-  } finally {
-    isLoading.value = false
+/**
+ * Расходы запрашиваются по выбранному товару, а без фильтра — по всем товарам.
+ * Фильтр клиентский: серверного запроса «все расходы сразу» у API нет.
+ */
+const loadCosts = async (catalog: ProductItem[]): Promise<ProductChannelCostItem[]> => {
+  if (filterProductId.value) {
+    const resp = await productChannelCostsApi.getByProduct(filterProductId.value)
+    return resp.items
   }
+
+  if (catalog.length === 0) {
+    return []
+  }
+
+  const allResults = await Promise.all(
+    catalog.map(p => productChannelCostsApi.getByProduct(p.id)),
+  )
+  return allResults.flatMap(r => r.items)
+}
+
+const loadData = async (): Promise<void> => {
+  await pageResource.load()
 }
 
 onMounted(loadData)
@@ -242,6 +290,15 @@ const inputClass = 'mt-1'
         <Skeleton v-for="n in 4" :key="n" class="h-10 w-full rounded-lg" />
       </div>
     </div>
+
+    <ErrorState
+      v-else-if="failureCopy && filteredItems.length === 0"
+      variant="embedded"
+      :title="failureCopy.title"
+      :description="failureCopy.description"
+      retry-label="Повторить"
+      @retry="loadData"
+    />
 
     <div
       v-else-if="filteredItems.length === 0"

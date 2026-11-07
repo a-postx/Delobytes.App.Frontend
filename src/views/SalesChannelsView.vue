@@ -1,12 +1,17 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { toast } from 'vue-sonner'
+import type { ComputedRef } from 'vue'
 import { Plus } from 'lucide-vue-next'
 import { integrationsApi, channelsApi } from '@/services/api'
 import type { AvailableChannel, Connection } from '@/types'
-import type { ChannelItem } from '@/services/api'
+import type { ChannelItem, GetChannelsResponse } from '@/services/api'
+import { useApiCall } from '@/composables/useApiCall'
+import { describeFailure } from '@/composables/useApiFailureCopy'
+import type { FailureCopy } from '@/composables/useApiFailureCopy'
+import type { ApiError } from '@/types/errors'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
+import ErrorState from '@/components/feedback/ErrorState.vue'
 import ChannelCard, { type ChannelCardModel } from '@/components/features/ChannelCard.vue'
 import CreateChannelDialog from '@/components/features/CreateChannelDialog.vue'
 import CreateConnectionDialog from '@/components/features/CreateConnectionDialog.vue'
@@ -15,6 +20,11 @@ const templates = ref<AvailableChannel[]>([])
 const channels = ref<ChannelItem[]>([])
 const connections = ref<Connection[]>([])
 const isLoading = ref<boolean>(true)
+const loadError = ref<ApiError | null>(null)
+
+const failureCopy: ComputedRef<FailureCopy | null> = computed<FailureCopy | null>(() =>
+  loadError.value ? describeFailure(loadError.value, 'Не удалось загрузить интеграции') : null,
+)
 
 const isCreateChannelDialogOpen = ref<boolean>(false)
 const isConnectDialogOpen = ref<boolean>(false)
@@ -49,21 +59,41 @@ const templateCodeForChannel = (channelId: string): { code: string; displayName:
   return template ? { code: template.code, displayName: template.displayName } : null
 }
 
+/**
+ * Три независимых запроса: падение одного не должно обнулять остальные.
+ *
+ * Ошибка показывается одной строкой (первая по порядку), а не тремя тостами: пользователю
+ * важен сам факт недоступности раздела. `status` различает сетевой сбой и ответ сервера.
+ */
 const loadAll = async (): Promise<void> => {
-  try {
-    const [templatesResp, channelsResp, connectionsResp] = await Promise.all([
-      integrationsApi.getAvailableChannels(),
-      channelsApi.getAll(),
-      integrationsApi.getConnections(),
-    ])
-    templates.value = templatesResp
-    channels.value = channelsResp.items
-    connections.value = connectionsResp
-  } catch {
-    toast.error('Не удалось загрузить интеграции')
-  } finally {
-    isLoading.value = false
+  isLoading.value = true
+  loadError.value = null
+
+  const templatesCall = useApiCall<AvailableChannel[]>({
+    fallbackMessage: 'Не удалось загрузить шаблоны каналов',
+  })
+  const channelsCall = useApiCall<GetChannelsResponse>({
+    fallbackMessage: 'Не удалось загрузить каналы продаж',
+  })
+  const connectionsCall = useApiCall<Connection[]>({
+    fallbackMessage: 'Не удалось загрузить подключения',
+  })
+
+  const [templatesResp, channelsResp, connectionsResp] = await Promise.all([
+    templatesCall.executeSafe(() => integrationsApi.getAvailableChannels()),
+    channelsCall.executeSafe(() => channelsApi.getAll()),
+    connectionsCall.executeSafe(() => integrationsApi.getConnections()),
+  ])
+
+  templates.value = templatesResp ?? []
+  channels.value = channelsResp?.items ?? []
+  connections.value = connectionsResp ?? []
+
+  for (const call of [templatesCall, channelsCall, connectionsCall]) {
+    loadError.value ??= call.error.value
   }
+
+  isLoading.value = false
 }
 
 onMounted(loadAll)
@@ -75,7 +105,6 @@ const openConnectDialog = (channel: ChannelCardModel): void => {
 
 // После создания канала сразу предлагаем ввести API-ключ, если это не кастомный канал.
 const handleChannelCreated = async (channelId: string, templateCode: string | null): Promise<void> => {
-  isLoading.value = true
   await loadAll()
 
   if (templateCode) {
@@ -87,17 +116,14 @@ const handleChannelCreated = async (channelId: string, templateCode: string | nu
 }
 
 const handleConnected = async (): Promise<void> => {
-  isLoading.value = true
   await loadAll()
 }
 
 const handleDeleted = async (): Promise<void> => {
-  isLoading.value = true
   await loadAll()
 }
 
 const handleRenamed = async (): Promise<void> => {
-  isLoading.value = true
   await loadAll()
 }
 </script>
@@ -133,6 +159,15 @@ const handleRenamed = async (): Promise<void> => {
         <Skeleton class="h-9 w-28 mt-auto" />
       </div>
     </div>
+
+    <ErrorState
+      v-else-if="failureCopy && channelCards.length === 0"
+      variant="embedded"
+      :title="failureCopy.title"
+      :description="failureCopy.description"
+      retry-label="Повторить"
+      @retry="loadAll"
+    />
 
     <div v-else-if="channelCards.length === 0" class="rounded-lg border border-dashed p-10 text-center text-muted-foreground">
       Каналов продаж пока нет. Нажмите «Добавить», чтобы создать первый.

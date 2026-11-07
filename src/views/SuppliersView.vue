@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
+import type { ComputedRef } from 'vue'
 import { Plus, Pencil, Trash2, Truck, Undo2 } from 'lucide-vue-next'
 import {
   DialogClose,
@@ -40,14 +41,34 @@ import {
 import { StatusFilter } from '@/components/ui/status-filter'
 import { toast } from 'vue-sonner'
 import { suppliersApi } from '@/services/api'
-import type { SupplierItem, CreateSupplierRequest, UpdateSupplierRequest } from '@/services/api'
+import type {
+  SupplierItem,
+  CreateSupplierRequest,
+  UpdateSupplierRequest,
+  GetSuppliersResponse,
+} from '@/services/api'
 import { useCurrentUser } from '@/composables/useCurrentUser'
+import { useAsyncResource, useResourceItems } from '@/composables/useAsyncResource'
+import { describeFailure } from '@/composables/useApiFailureCopy'
+import type { FailureCopy } from '@/composables/useApiFailureCopy'
+import ErrorState from '@/components/feedback/ErrorState.vue'
 import { X } from 'lucide-vue-next'
 
 const { canWrite } = useCurrentUser()
 
-const items = ref<SupplierItem[]>([])
-const isLoading = ref<boolean>(true)
+const suppliersResource = useAsyncResource<GetSuppliersResponse>({
+  fetcher: () => suppliersApi.getAll(),
+  fallbackMessage: 'Не удалось загрузить поставщиков',
+})
+
+const items: ComputedRef<SupplierItem[]> = useResourceItems<SupplierItem>(suppliersResource.data)
+const isLoading = suppliersResource.loading
+
+const failureCopy: ComputedRef<FailureCopy | null> = computed<FailureCopy | null>(() =>
+  suppliersResource.error.value
+    ? describeFailure(suppliersResource.error.value, 'Не удалось загрузить поставщиков')
+    : null,
+)
 
 const createDialogOpen = ref<boolean>(false)
 const editDialogOpen = ref<boolean>(false)
@@ -92,15 +113,7 @@ const formatDate = (dateStr: string): string =>
   new Date(dateStr).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' })
 
 const loadItems = async (): Promise<void> => {
-  isLoading.value = true
-  try {
-    const resp = await suppliersApi.getAll()
-    items.value = resp.items
-  } catch {
-    toast.error('Не удалось загрузить поставщиков')
-  } finally {
-    isLoading.value = false
-  }
+  await suppliersResource.load()
 }
 
 onMounted(loadItems)

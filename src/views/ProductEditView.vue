@@ -14,9 +14,13 @@ import ProductChannelBadges from '@/components/products/ProductChannelBadges.vue
 import ProductBomEditor from '@/components/products/ProductBomEditor.vue'
 import { toast } from 'vue-sonner'
 import { catalogProductsApi } from '@/services/api'
-import { extractErrorMessage } from '@/composables/useApi'
+import { extractErrorCode, extractErrorMessage } from '@/composables/useApi'
+import { describeFailure } from '@/composables/useApiFailureCopy'
+import type { FailureCopy } from '@/composables/useApiFailureCopy'
+import ErrorState from '@/components/feedback/ErrorState.vue'
 import { channelDisplay, normalizeChannel } from '@/utils/channelBadges'
 import type { GetProductResponse, UpdateProductRequest, ProductBarcode, PackingUnit, ProductPhoto } from '@/types/products'
+import type { ApiError } from '@/types/errors'
 import { useCurrentUser } from '@/composables/useCurrentUser'
 import { markUnsavedChanges, useUnsavedChangesGuard } from '@/composables/useUnsavedChangesGuard'
 
@@ -26,9 +30,12 @@ const { canWrite } = useCurrentUser()
 
 const productId = computed<string>(() => route.query.productId as string)
 
+const FALLBACK_LOAD_MESSAGE = '\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u0437\u0430\u0433\u0440\u0443\u0437\u0438\u0442\u044c \u0442\u043e\u0432\u0430\u0440'
+
 const isLoading = ref<boolean>(true)
 const isSaving = ref<boolean>(false)
 const notFound = ref<boolean>(false)
+const loadError = ref<FailureCopy | null>(null)
 const photos = ref<ProductPhoto[]>([])
 const product = ref<GetProductResponse | null>(null)
 
@@ -117,6 +124,9 @@ const loadProduct = async (): Promise<void> => {
   }
 
   isLoading.value = true
+  notFound.value = false
+  loadError.value = null
+
   try {
     const response = await catalogProductsApi.getById(productId.value)
 
@@ -142,7 +152,13 @@ const loadProduct = async (): Promise<void> => {
     photos.value = response.photos ?? []
     formBaseline.value = formSnapshot()
   } catch (error: unknown) {
-    toast.error(extractErrorMessage(error, 'Не удалось загрузить товар'))
+    const apiError: ApiError = {
+      code: extractErrorCode(error) ?? 'common.unexpected_error',
+      message: extractErrorMessage(error, FALLBACK_LOAD_MESSAGE),
+      status: (error as { response?: { status?: number } })?.response?.status ?? 0,
+    }
+    loadError.value = describeFailure(apiError, FALLBACK_LOAD_MESSAGE)
+    toast.error(apiError.message)
   } finally {
     isLoading.value = false
   }
@@ -190,7 +206,7 @@ const handleCancel = (): void => {
 }
 
 onMounted(() => {
-  loadProduct()
+  void loadProduct()
 })
 </script>
 
@@ -211,6 +227,16 @@ onMounted(() => {
         <Skeleton class="h-5 w-48 rounded-md" />
       </div>
     </div>
+
+    <!-- Ошибка загрузки: отличается от "товар не найден" текстом и не стирает форму молча -->
+    <ErrorState
+      v-else-if="loadError"
+      variant="embedded"
+      :title="loadError.title"
+      :description="loadError.description"
+      retry-label="Повторить"
+      @retry="loadProduct"
+    />
 
     <div v-else-if="notFound" class="flex flex-col items-center justify-center gap-4 py-12">
       <Package class="size-16 text-muted-foreground/40" />

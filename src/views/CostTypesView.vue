@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { computed, ref, onMounted } from 'vue'
+import type { ComputedRef } from 'vue'
 import { Plus, Pencil, Trash2, Tag } from 'lucide-vue-next'
 import {
   DialogClose,
@@ -38,14 +39,21 @@ import {
 } from '@/components/ui/table'
 import { toast } from 'vue-sonner'
 import { costTypesApi } from '@/services/api'
-import type { CostTypeItem, CreateCostTypeRequest, UpdateCostTypeRequest } from '@/services/api'
+import type {
+  CostTypeItem,
+  CreateCostTypeRequest,
+  GetCostTypesResponse,
+  UpdateCostTypeRequest,
+} from '@/services/api'
 import { useCurrentUser } from '@/composables/useCurrentUser'
 import { useApiCall } from '@/composables/useApiCall'
+import { useAsyncResource, useResourceItems } from '@/composables/useAsyncResource'
+import { describeFailure } from '@/composables/useApiFailureCopy'
+import type { FailureCopy } from '@/composables/useApiFailureCopy'
+import ErrorState from '@/components/feedback/ErrorState.vue'
 import { X } from 'lucide-vue-next'
 
 const { canWrite } = useCurrentUser()
-
-const items = ref<CostTypeItem[]>([])
 
 const createDialogOpen = ref<boolean>(false)
 const editDialogOpen = ref<boolean>(false)
@@ -59,9 +67,19 @@ const isDeleting = ref<boolean>(false)
 const form = ref({ name: '', description: '' })
 const editForm = ref({ name: '', description: '', isActive: true })
 
-const { loading: isLoading, execute: fetchCostTypes } = useApiCall<{ items: CostTypeItem[] }>({
+const costTypesResource = useAsyncResource<GetCostTypesResponse>({
+  fetcher: () => costTypesApi.getAll(),
   fallbackMessage: 'Не удалось загрузить типы расходов',
 })
+
+const items: ComputedRef<CostTypeItem[]> = useResourceItems<CostTypeItem>(costTypesResource.data)
+const isLoading = costTypesResource.loading
+
+const failureCopy: ComputedRef<FailureCopy | null> = computed<FailureCopy | null>(() =>
+  costTypesResource.error.value
+    ? describeFailure(costTypesResource.error.value, 'Не удалось загрузить типы расходов')
+    : null,
+)
 
 const { execute: createCostType } = useApiCall({
   fallbackMessage: 'Не удалось создать тип расхода',
@@ -75,11 +93,8 @@ const { execute: deleteCostType } = useApiCall({
   fallbackMessage: 'Не удалось удалить тип расхода',
 })
 
-const loadItems = async (): Promise<void> => {
-  const result = await fetchCostTypes(() => costTypesApi.getAll())
-  if (result) {
-    items.value = result.items
-  }
+const loadItems = (): void => {
+  void costTypesResource.load()
 }
 
 onMounted(loadItems)
@@ -111,7 +126,7 @@ const handleCreate = async (): Promise<void> => {
     await createCostType(() => costTypesApi.create(payload))
     toast.success('Тип расхода добавлен')
     createDialogOpen.value = false
-    await loadItems()
+    loadItems()
   } catch {
     // Ошибка уже обработана в useApiCall
   } finally {
@@ -131,7 +146,7 @@ const handleEdit = async (): Promise<void> => {
     await updateCostType(() => costTypesApi.update(editTarget.value!.id, payload))
     toast.success('Тип расхода обновлён')
     editDialogOpen.value = false
-    await loadItems()
+    loadItems()
   } catch {
     // Ошибка уже обработана в useApiCall
   } finally {
@@ -146,7 +161,7 @@ const handleDelete = async (): Promise<void> => {
     await deleteCostType(() => costTypesApi.delete(deleteTarget.value!.id))
     toast.success('Тип расхода удалён')
     deleteDialogOpen.value = false
-    await loadItems()
+    loadItems()
   } catch {
     // Ошибка уже обработана в useApiCall
   } finally {
@@ -180,6 +195,15 @@ const inputClass = 'mt-1'
         <Skeleton v-for="n in 4" :key="n" class="h-10 w-full rounded-lg" />
       </div>
     </div>
+
+    <ErrorState
+      v-else-if="failureCopy && items.length === 0"
+      variant="embedded"
+      :title="failureCopy.title"
+      :description="failureCopy.description"
+      retry-label="Повторить"
+      @retry="loadItems"
+    />
 
     <div
       v-else-if="items.length === 0"

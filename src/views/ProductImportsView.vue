@@ -24,9 +24,35 @@ import { useRouter } from 'vue-router'
 const router = useRouter()
 const { canWrite } = useCurrentUser()
 
-const jobs = ref<ProductImportJob[]>([])
-const connections = ref<Connection[]>([])
-const isLoading = ref<boolean>(true)
+/**
+ * Два независимых ресурса: упавшее подключение не должно скрывать историю задач
+ * и наоборот. Каждый сам показывает свой сбой, поэтому один запрос не обнуляет второй.
+ */
+const jobsResource = useAsyncResource<ProductImportJobsResponse>({
+  fetcher: () => integrationsApi.getProductImports(),
+  fallbackMessage: 'Не удалось загрузить задачи импорта',
+})
+
+const connectionsResource = useAsyncResource<Connection[]>({
+  fetcher: () => integrationsApi.getConnections(),
+  fallbackMessage: 'Не удалось загрузить подключения',
+})
+
+const jobs: ComputedRef<ProductImportJob[]> = computed<ProductImportJob[]>(
+  () => jobsResource.data.value?.jobs ?? [],
+)
+const connections: ComputedRef<Connection[]> = computed<Connection[]>(
+  () => connectionsResource.data.value ?? [],
+)
+const isLoading: ComputedRef<boolean> = computed<boolean>(
+  () => jobsResource.loading.value || connectionsResource.loading.value,
+)
+
+const failureCopy: ComputedRef<FailureCopy | null> = computed<FailureCopy | null>(() => {
+  const error: ApiError | null = jobsResource.error.value ?? connectionsResource.error.value
+  return error ? describeFailure(error, 'Не удалось загрузить задачи импорта') : null
+})
+
 const isStarting = ref<boolean>(false)
 
 const activeWildberriesConnection = computed<Connection | null>(() => {
@@ -89,30 +115,15 @@ const getStatusLabel = (status: string): string => {
 }
 
 const loadConnections = async (): Promise<void> => {
-  try {
-    connections.value = await integrationsApi.getConnections()
-  } catch (error) {
-    console.error('Failed to load connections:', error)
-  }
+  await connectionsResource.load()
 }
 
 const loadJobs = async (): Promise<void> => {
-  try {
-    const response = await integrationsApi.getProductImports()
-    jobs.value = response.jobs
-  } catch (error) {
-    console.error('Failed to load import jobs:', error)
-    toast.error('Не удалось загрузить задачи импорта')
-  }
+  await jobsResource.load()
 }
 
 const loadData = async (): Promise<void> => {
-  isLoading.value = true
-  try {
-    await Promise.all([loadConnections(), loadJobs()])
-  } finally {
-    isLoading.value = false
-  }
+  await Promise.all([loadConnections(), loadJobs()])
 }
 
 // Polling останавливается автоматически когда нет активных задач

@@ -1,5 +1,6 @@
 import type { AxiosError } from 'axios'
 import { axiosInstance } from '../client'
+import { requireItems } from '../responseShape'
 import type {
   AvailableChannel,
   Connection,
@@ -28,12 +29,12 @@ export const integrationsApi = {
   /** Каталог поддерживаемых системных шаблонов каналов (Wildberries, Ozon, ...). */
   getAvailableChannels: async (): Promise<AvailableChannel[]> => {
     const response = await axiosInstance.get<ChannelsResponse>('/api/integrations/channels')
-    return response.data.items
+    return requireItems<ChannelsResponse>(response.data, 'каналы интеграций').items
   },
 
   getConnections: async (): Promise<Connection[]> => {
     const response = await axiosInstance.get<ConnectionsResponse>('/api/integrations/connections')
-    return response.data.items
+    return requireItems<ConnectionsResponse>(response.data, 'подключения интеграций').items
   },
 
   /** channelId — идентификатор уже существующего Catalog.Channel, созданного заранее через catalogsApi/channelsApi. */

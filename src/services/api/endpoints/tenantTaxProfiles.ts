@@ -1,4 +1,5 @@
 import { axiosInstance } from '../client'
+import { requireItems } from '../responseShape'
 import type { VatType } from '@/types'
 
 export const TaxRegime = {
@@ -63,7 +64,7 @@ export const tenantTaxProfilesApi = {
     const response = await axiosInstance.get<GetTenantTaxProfilesResponse>(
       '/api/tenant/tax-profiles'
     )
-    return response.data
+    return requireItems<GetTenantTaxProfilesResponse>(response.data, 'налоговые профили')
   },
 
   getActive: async (at?: string): Promise<GetActiveTenantTaxProfileResponse> => {

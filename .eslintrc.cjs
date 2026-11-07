@@ -24,6 +24,24 @@ module.exports = {
         'vue/require-default-prop': 'off',
         'vue/require-prop-types': 'off'
       }
+    },
+    {
+      // Type-aware floating-promise detection. Scoped to src/**: tests/** and vite.config.ts
+      // are outside tsconfig.json's `include`, and type-aware linting errors out on files
+      // absent from the TS project.
+      files: ['src/**/*.ts', 'src/**/*.vue'],
+      parserOptions: {
+        parser: '@typescript-eslint/parser',
+        project: ['./tsconfig.json'],
+        extraFileExtensions: ['.vue'],
+        tsconfigRootDir: __dirname,
+        ecmaVersion: 'latest',
+        sourceType: 'module'
+      },
+      rules: {
+        '@typescript-eslint/no-floating-promises': ['error', { ignoreVoid: true }],
+        '@typescript-eslint/no-misused-promises': ['error', { checksVoidReturn: { attributes: false } }]
+      }
     }
   ],
   rules: {

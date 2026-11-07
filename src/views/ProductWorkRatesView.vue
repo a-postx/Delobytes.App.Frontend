@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, computed, watch, onUnmounted, h, type VNode } from 'vue'
+import type { ComputedRef } from 'vue'
 import { Plus, Tag, Gauge, Pencil, Trash2, X, ChevronDown, ChevronRight, SearchX } from 'lucide-vue-next'
 import {
   DialogClose,
@@ -48,10 +49,16 @@ import type {
   CreateProductWorkRateRequest,
   UpdateProductWorkRateRequest,
   WorkRateItem,
+  GetProductWorkRatesResponse,
+  GetProductsResponse,
 } from '@/services/api'
 import { useCurrentUser } from '@/composables/useCurrentUser'
 import { useTenantMoney } from '@/composables/useTenantMoney'
 import { useApiCall } from '@/composables/useApiCall'
+import { useAsyncResource, useResourceItems } from '@/composables/useAsyncResource'
+import { describeFailure } from '@/composables/useApiFailureCopy'
+import type { FailureCopy } from '@/composables/useApiFailureCopy'
+import ErrorState from '@/components/feedback/ErrorState.vue'
 import { ErrorCodes } from '@/types/errors'
 import type { ApiError } from '@/types/errors'
 import {
@@ -92,11 +99,8 @@ interface GridRow {
   isVersionRow?: boolean
 }
 
-const items = ref<ProductWorkRateItem[]>([])
-const workRates = ref<WorkRateItem[]>([])
 const totalCount = ref<number>(0)
 const statusCounts = ref<ProductWorkRateStatusCounts>({ active: 0, inactive: 0, all: 0 })
-const hasEmptyCatalog = ref<boolean>(false)
 
 const createDialogOpen = ref<boolean>(false)
 const editDialogOpen = ref<boolean>(false)
@@ -151,9 +155,56 @@ const isNewRateDateInPast = computed<boolean>(() => {
   return form.value.validFrom < today()
 })
 
-const { loading: isLoading, execute: fetchData } = useApiCall({
+const ratesResource = useAsyncResource<GetProductWorkRatesResponse>({
+  fetcher: () => {
+    const sort = sorting.value[0]
+    return productWorkRatesApi.getAll({
+      status: statusByFilter[statusFilter.value],
+      search: searchQuery.value.trim() || undefined,
+      page: pagination.value.pageIndex + 1,
+      pageSize: pagination.value.pageSize,
+      sortBy: toWorkRateSortKey(sort?.id),
+      sortDir: sort?.desc ? 'desc' : 'asc',
+      includeCounts: true,
+    })
+  },
   fallbackMessage: 'Не удалось загрузить данные',
 })
+
+const items: ComputedRef<ProductWorkRateItem[]> = computed<ProductWorkRateItem[]>(
+  () => ratesResource.data.value?.items ?? [],
+)
+const isLoading = ratesResource.loading
+
+const failureCopy: ComputedRef<FailureCopy | null> = computed<FailureCopy | null>(() =>
+  ratesResource.error.value
+    ? describeFailure(ratesResource.error.value, 'Не удалось загрузить данные')
+    : null,
+)
+
+/**
+ * Каталог нужен только как признак «есть ли куда заводить норму». Полная выгрузка товаров
+ * на открытии страницы не грузится: хватает одной строки со счётчиками. Пока проба не выполнена
+ * или завершилась ошибкой, каталог считается непустым — иначе сетевой сбой выглядел бы как
+ * «сначала добавьте товары», что неверно.
+ */
+const catalogProbeResource = useAsyncResource<GetProductsResponse>({
+  fetcher: () => catalogProductsApi.getAll(undefined, { page: 1, pageSize: 1, includeCounts: true }),
+  fallbackMessage: 'Не удалось проверить каталог товаров',
+})
+
+const hasEmptyCatalog: ComputedRef<boolean> = computed<boolean>(
+  () =>
+    catalogProbeResource.data.value !== null &&
+    (catalogProbeResource.data.value.statusCounts?.all ?? 0) === 0,
+)
+
+const workRatesResource = useAsyncResource<GetWorkRatesResponse>({
+  fetcher: () => workRatesApi.getAll(),
+  fallbackMessage: 'Не удалось загрузить ставки работ',
+})
+
+const workRates: ComputedRef<WorkRateItem[]> = useResourceItems<WorkRateItem>(workRatesResource.data)
 
 const conflictMessage = 'Запись была изменена другим пользователем. Закройте диалог и попробуйте снова.'
 
@@ -205,58 +256,19 @@ const { execute: deleteRate } = useApiCall({
 })
 
 const loadRates = async (): Promise<void> => {
-  await fetchData(async () => {
-    const sort = sorting.value[0]
-    const response = await productWorkRatesApi.getAll({
-      status: statusByFilter[statusFilter.value],
-      search: searchQuery.value.trim() || undefined,
-      page: pagination.value.pageIndex + 1,
-      pageSize: pagination.value.pageSize,
-      sortBy: toWorkRateSortKey(sort?.id),
-      sortDir: sort?.desc ? 'desc' : 'asc',
-      includeCounts: true,
-    })
-    items.value = response.items
-    totalCount.value = response.totalCount ?? response.items.length
-    if (response.statusCounts) {
-      statusCounts.value = {
-        active: response.statusCounts.active,
-        inactive: response.statusCounts.inactive,
-        all: response.statusCounts.all,
-      }
+  const response: GetProductWorkRatesResponse | null = await ratesResource.load()
+  totalCount.value = response?.totalCount ?? response?.items.length ?? 0
+  if (response?.statusCounts) {
+    statusCounts.value = {
+      active: response.statusCounts.active,
+      inactive: response.statusCounts.inactive,
+      all: response.statusCounts.all,
     }
-    return response
-  })
-}
-
-/**
- * Каталог нужен только как признак «есть ли куда заводить норму». Полная выгрузка товаров
- * на открытии страницы не грузится: хватает одной строки со счётчиками.
- */
-const loadCatalogProbe = async (): Promise<void> => {
-  try {
-    const probe = await catalogProductsApi.getAll(undefined, {
-      page: 1,
-      pageSize: 1,
-      includeCounts: true,
-    })
-    hasEmptyCatalog.value = (probe.statusCounts?.all ?? 0) === 0
-  } catch {
-    hasEmptyCatalog.value = false
-  }
-}
-
-const loadWorkRates = async (): Promise<void> => {
-  try {
-    const response = await workRatesApi.getAll()
-    workRates.value = response.items
-  } catch {
-    workRates.value = []
   }
 }
 
 onMounted(async () => {
-  await Promise.all([loadRates(), loadWorkRates(), loadCatalogProbe()])
+  await Promise.all([loadRates(), workRatesResource.load(), catalogProbeResource.load()])
 })
 
 watch(statusFilter, () => {
@@ -734,6 +746,16 @@ const emptyText = computed<string>(() => {
         <Skeleton v-for="n in 4" :key="n" class="h-10 w-full rounded-lg" />
       </div>
     </div>
+
+    <!-- Ошибка загрузки: важнее пустого состояния, иначе недоступный бэкенд выглядит как «норм ещё нет» -->
+    <ErrorState
+      v-else-if="failureCopy && gridRows.length === 0"
+      variant="embedded"
+      :title="failureCopy.title"
+      :description="failureCopy.description"
+      retry-label="Повторить"
+      @retry="loadRates"
+    />
 
     <!-- Empty: search returned nothing -->
     <div

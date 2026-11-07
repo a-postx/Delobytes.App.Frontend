@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { getCurrentInstance, onErrorCaptured, ref, watch } from 'vue'
-import type { Ref } from 'vue'
+import { computed, getCurrentInstance, onErrorCaptured, ref, watch } from 'vue'
+import type { ComputedRef, Ref } from 'vue'
 import { useRoute } from 'vue-router'
 import type { RouteLocationNormalizedLoaded } from 'vue-router'
 import ErrorState from '@/components/feedback/ErrorState.vue'
@@ -33,6 +33,32 @@ watch(
   },
 )
 
+/**
+ * Сообщение пойманной ошибки — только для сборок разработки. В production внутренние
+ * детали не показываем: текст исключения может содержать имена полей и путей.
+ */
+const errorDetails: ComputedRef<string | null> = computed<string | null>(() => {
+  if (!import.meta.env.DEV) {
+    return null
+  }
+
+  const caught = error.value
+
+  if (caught instanceof Error) {
+    return caught.stack ?? `${caught.name}: ${caught.message}`
+  }
+
+  if (typeof caught === 'string') {
+    return caught
+  }
+
+  try {
+    return JSON.stringify(caught, null, 2)
+  } catch {
+    return String(caught)
+  }
+})
+
 function reset(): void {
   error.value = null
 }
@@ -44,7 +70,6 @@ defineExpose({ reset })
   <ErrorState
     v-if="error"
     variant="embedded"
-    code="500"
     title="Не удалось отобразить раздел"
     description="Произошла ошибка при построении страницы. Остальные разделы продолжают работать — попробуйте ещё раз или вернитесь назад."
     retry-label="Попробовать снова"
@@ -52,6 +77,15 @@ defineExpose({ reset })
   >
     <template #actions>
       <slot name="fallback-actions" />
+    </template>
+    <template
+      v-if="errorDetails"
+      #footer
+    >
+      <details class="mt-2 w-full max-w-md text-left text-xs text-muted-foreground">
+        <summary class="cursor-pointer select-none">Подробности (только в режиме разработки)</summary>
+        <pre class="mt-2 max-h-64 overflow-auto whitespace-pre-wrap break-words rounded-md border border-border bg-muted/40 p-3">{{ errorDetails }}</pre>
+      </details>
     </template>
   </ErrorState>
   <slot v-else />

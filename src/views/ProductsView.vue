@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, computed, watch, onUnmounted, h } from 'vue'
+import type { ComputedRef } from 'vue'
 import { Plus, Trash2, Archive, Undo2, Package, MoreHorizontal, X as XIcon, Download } from 'lucide-vue-next'
 import {
   DialogClose,
@@ -48,18 +49,56 @@ import ProductChannelBadges from '@/components/products/ProductChannelBadges.vue
 import { channelDisplay, normalizeChannel } from '@/utils/channelBadges'
 import { toast } from 'vue-sonner'
 import { catalogProductsApi, integrationsApi } from '@/services/api'
-import type { ProductItem, CreateProductRequest, ProductBarcode, PackingUnit, ProductSortKey } from '@/types/products'
+import type {
+  ProductItem,
+  CreateProductRequest,
+  ProductBarcode,
+  PackingUnit,
+  ProductSortKey,
+  GetProductsResponse,
+} from '@/types/products'
 import type { Connection } from '@/types'
 import { ProductStatus, isProductSortKey } from '@/types/products'
 import { useCurrentUser } from '@/composables/useCurrentUser'
+import { useAsyncResource } from '@/composables/useAsyncResource'
+import { describeFailure } from '@/composables/useApiFailureCopy'
+import type { FailureCopy } from '@/composables/useApiFailureCopy'
+import ErrorState from '@/components/feedback/ErrorState.vue'
 import { RouterLink, useRouter } from 'vue-router'
 import { X } from 'lucide-vue-next'
 
 const { canWrite } = useCurrentUser()
 const router = useRouter()
 
-const items = ref<ProductItem[]>([])
-const isLoading = ref<boolean>(true)
+const productsResource = useAsyncResource<GetProductsResponse>({
+  fetcher: () => {
+    const sort = sorting.value[0]
+    return catalogProductsApi.getAll(
+      statusFilter.value === 'all' ? undefined : statusByFilter[statusFilter.value],
+      {
+        page: pagination.value.pageIndex + 1,
+        pageSize: pagination.value.pageSize,
+        sortBy: toProductSortKey(sort?.id),
+        sortDir: sort?.desc ? 'desc' : 'asc',
+        includeCounts: true,
+        search: searchQuery.value.trim() || undefined,
+      },
+    )
+  },
+  fallbackMessage: 'Не удалось загрузить товары',
+})
+
+const items: ComputedRef<ProductItem[]> = computed<ProductItem[]>(
+  () => productsResource.data.value?.items ?? [],
+)
+const isLoading = productsResource.loading
+
+const failureCopy: ComputedRef<FailureCopy | null> = computed<FailureCopy | null>(() =>
+  productsResource.error.value
+    ? describeFailure(productsResource.error.value, 'Не удалось загрузить товары')
+    : null,
+)
+
 const connections = ref<Connection[]>([])
 const isLoadingConnections = ref<boolean>(false)
 
@@ -368,30 +407,10 @@ const renderActions = (item: ProductItem): unknown => {
  * Счётчики вкладок приходят тем же ответом, поэтому второго запроса на «Все» больше нет.
  */
 const loadItems = async (): Promise<void> => {
-  isLoading.value = true
-  try {
-    const sort = sorting.value[0]
-    const resp = await catalogProductsApi.getAll(
-      statusFilter.value === 'all' ? undefined : statusByFilter[statusFilter.value],
-      {
-        page: pagination.value.pageIndex + 1,
-        pageSize: pagination.value.pageSize,
-        sortBy: toProductSortKey(sort?.id),
-        sortDir: sort?.desc ? 'desc' : 'asc',
-        includeCounts: true,
-        search: searchQuery.value.trim() || undefined,
-      },
-    )
-    items.value = resp.items
-    totalCount.value = resp.totalCount ?? resp.items.length
-    if (resp.statusCounts) {
-      statusCounts.value = resp.statusCounts
-    }
-  } catch {
-    toast.error('Не удалось загрузить товары')
-    return
-  } finally {
-    isLoading.value = false
+  const response: GetProductsResponse | null = await productsResource.load()
+  totalCount.value = response?.totalCount ?? response?.items.length ?? 0
+  if (response?.statusCounts) {
+    statusCounts.value = response.statusCounts
   }
 }
 
@@ -479,7 +498,7 @@ watch(() => items.value, (newItems) => {
 watch(statusFilter, () => {
   rowSelection.value = {}
   pagination.value = { ...pagination.value, pageIndex: 0 }
-  loadItems()
+  void loadItems()
 })
 
 watch(
@@ -491,14 +510,14 @@ watch(
       return
     }
     rowSelection.value = {}
-    loadItems()
+    void loadItems()
   },
 )
 
 watch(sorting, () => {
   rowSelection.value = {}
   pagination.value = { ...pagination.value, pageIndex: 0 }
-  loadItems()
+  void loadItems()
 }, { deep: true })
 
 /**
@@ -514,13 +533,13 @@ watch(searchQuery, () => {
   }
   searchDebounceTimer = setTimeout(() => {
     searchDebounceTimer = null
-    loadItems()
+    void loadItems()
   }, SEARCH_DEBOUNCE_MS)
 })
 
 onMounted(() => {
-  loadItems()
-  loadConnections()
+  void loadItems()
+  void loadConnections()
 })
 
 onUnmounted(() => {

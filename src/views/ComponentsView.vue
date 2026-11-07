@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, computed, watch, onUnmounted, h } from 'vue'
+import type { ComputedRef } from 'vue'
 import { Plus, Trash2, PackageOpen, Pencil, Undo2, Tag } from 'lucide-vue-next'
 import {
   DialogClose,
@@ -46,20 +47,50 @@ import type {
   CreateComponentPriceRequest,
   SupplierItem,
   UpdateComponentRequest,
+  GetComponentsResponse,
 } from '@/services/api'
 import type { ComponentCategory } from '@/types/bom'
 import { COMPONENT_CATEGORY_LABELS } from '@/types/bom'
 import { useCurrentUser } from '@/composables/useCurrentUser'
 import { useApiCall } from '@/composables/useApiCall'
+import { useAsyncResource } from '@/composables/useAsyncResource'
+import { describeFailure } from '@/composables/useApiFailureCopy'
+import type { FailureCopy } from '@/composables/useApiFailureCopy'
+import ErrorState from '@/components/feedback/ErrorState.vue'
 import { useTenantMoney } from '@/composables/useTenantMoney'
 import { X } from 'lucide-vue-next'
 
 const { canWrite } = useCurrentUser()
 const { formatMoney } = useTenantMoney()
 
-const items = ref<ComponentItem[]>([])
+const componentsResource = useAsyncResource<GetComponentsResponse>({
+  fetcher: () => {
+    const sort = sorting.value[0]
+    return componentsApi.getAll({
+      isActive: statusFilter.value === 'all' ? undefined : statusFilter.value === 'active',
+      search: searchQuery.value.trim() || undefined,
+      page: pagination.value.pageIndex + 1,
+      pageSize: pagination.value.pageSize,
+      sortBy: toComponentSortKey(sort?.id),
+      sortDir: sort?.desc ? 'desc' : 'asc',
+      includeCounts: true,
+    })
+  },
+  fallbackMessage: 'Не удалось загрузить компоненты',
+})
+
+const items: ComputedRef<ComponentItem[]> = computed<ComponentItem[]>(
+  () => componentsResource.data.value?.items ?? [],
+)
+const isLoading = componentsResource.loading
+
+const failureCopy: ComputedRef<FailureCopy | null> = computed<FailureCopy | null>(() =>
+  componentsResource.error.value
+    ? describeFailure(componentsResource.error.value, 'Не удалось загрузить компоненты')
+    : null,
+)
+
 const suppliers = ref<SupplierItem[]>([])
-const isLoading = ref<boolean>(true)
 
 const createDialogOpen = ref<boolean>(false)
 const editDialogOpen = ref<boolean>(false)
@@ -378,28 +409,10 @@ const renderActions = (item: ComponentItem): unknown => {
  * Счётчики вкладок приходят тем же ответом, поэтому отдельного запроса на «Все» больше нет.
  */
 const loadItems = async (): Promise<void> => {
-  isLoading.value = true
-  try {
-    const sort = sorting.value[0]
-    const resp = await componentsApi.getAll({
-      isActive: statusFilter.value === 'all' ? undefined : statusFilter.value === 'active',
-      search: searchQuery.value.trim() || undefined,
-      page: pagination.value.pageIndex + 1,
-      pageSize: pagination.value.pageSize,
-      sortBy: toComponentSortKey(sort?.id),
-      sortDir: sort?.desc ? 'desc' : 'asc',
-      includeCounts: true,
-    })
-    items.value = resp.items
-    totalCount.value = resp.totalCount ?? resp.items.length
-    if (resp.statusCounts) {
-      statusCounts.value = resp.statusCounts
-    }
-  } catch {
-    toast.error('Не удалось загрузить компоненты')
-    return
-  } finally {
-    isLoading.value = false
+  const response: GetComponentsResponse | null = await componentsResource.load()
+  totalCount.value = response?.totalCount ?? response?.items.length ?? 0
+  if (response?.statusCounts) {
+    statusCounts.value = response.statusCounts
   }
 }
 
@@ -427,7 +440,7 @@ const refreshList = async (): Promise<void> => {
 watch(statusFilter, () => {
   rowSelection.value = {}
   pagination.value = { ...pagination.value, pageIndex: 0 }
-  loadItems()
+  void loadItems()
 })
 
 watch(
@@ -439,14 +452,14 @@ watch(
       return
     }
     rowSelection.value = {}
-    loadItems()
+    void loadItems()
   },
 )
 
 watch(sorting, () => {
   rowSelection.value = {}
   pagination.value = { ...pagination.value, pageIndex: 0 }
-  loadItems()
+  void loadItems()
 }, { deep: true })
 
 /**
@@ -462,13 +475,13 @@ watch(searchQuery, () => {
   }
   searchDebounceTimer = setTimeout(() => {
     searchDebounceTimer = null
-    loadItems()
+    void loadItems()
   }, SEARCH_DEBOUNCE_MS)
 })
 
 onMounted(() => {
-  loadItems()
-  loadSuppliers()
+  void loadItems()
+  void loadSuppliers()
 })
 
 onUnmounted(() => {

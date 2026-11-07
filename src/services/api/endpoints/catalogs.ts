@@ -1,4 +1,5 @@
 import { axiosInstance } from '../client'
+import { requireItems } from '../responseShape'
 import type { ComponentCategory } from '@/types/bom'
 
 // ---------- Enums ----------
@@ -376,7 +377,7 @@ export interface UpdateProductWorkRateRequest {
 export const channelsApi = {
   getAll: async (): Promise<GetChannelsResponse> => {
     const response = await axiosInstance.get<GetChannelsResponse>('/api/catalogs/channels')
-    return response.data
+    return requireItems<GetChannelsResponse>(response.data, 'каналы продаж')
   },
 
   create: async (data: CreateChannelRequest): Promise<CreateChannelResponse> => {
@@ -395,7 +396,7 @@ export const channelParametersApi = {
     const response = await axiosInstance.get<GetChannelParameterSetsResponse>(
       `/api/catalogs/channels/${channelId}/parameter-sets`,
     )
-    return response.data
+    return requireItems<GetChannelParameterSetsResponse>(response.data, 'параметры канала')
   },
 
   /**
@@ -439,7 +440,7 @@ export const channelParametersApi = {
 export const suppliersApi = {
   getAll: async (): Promise<GetSuppliersResponse> => {
     const response = await axiosInstance.get<GetSuppliersResponse>('/api/catalogs/suppliers')
-    return response.data
+    return requireItems<GetSuppliersResponse>(response.data, 'поставщики')
   },
 
   create: async (data: CreateSupplierRequest): Promise<SupplierItem> => {
@@ -495,7 +496,7 @@ export const componentsApi = {
     const response = await axiosInstance.get<GetComponentsResponse>('/api/catalogs/components', {
       params: query,
     })
-    return response.data
+    return requireItems<GetComponentsResponse>(response.data, 'компоненты')
   },
 
   create: async (data: CreateComponentRequest): Promise<ComponentItem> => {
@@ -523,7 +524,7 @@ export const componentsApi = {
 export const costTypesApi = {
   getAll: async (): Promise<GetCostTypesResponse> => {
     const response = await axiosInstance.get<GetCostTypesResponse>('/api/catalogs/cost-types')
-    return response.data
+    return requireItems<GetCostTypesResponse>(response.data, 'типы расходов')
   },
 
   create: async (data: CreateCostTypeRequest): Promise<CostTypeItem> => {
@@ -548,7 +549,7 @@ export const productChannelCostsApi = {
       '/api/catalogs/product-channel-costs',
       { params },
     )
-    return response.data
+    return requireItems<GetProductChannelCostsResponse>(response.data, 'расходы по каналам')
   },
 
   upsert: async (data: UpsertProductChannelCostRequest): Promise<void> => {
@@ -563,7 +564,7 @@ export const productChannelCostsApi = {
 export const workRatesApi = {
   getAll: async (): Promise<GetWorkRatesResponse> => {
     const response = await axiosInstance.get<GetWorkRatesResponse>('/api/catalogs/work-rates')
-    return response.data
+    return requireItems<GetWorkRatesResponse>(response.data, 'ставки работ')
   },
 
   create: async (data: CreateWorkRateRequest): Promise<WorkRateItem> => {
@@ -620,14 +621,14 @@ export const productWorkRatesApi = {
     const response = Object.keys(query).length > 0
       ? await axiosInstance.get<GetProductWorkRatesResponse>(url, { params: query })
       : await axiosInstance.get<GetProductWorkRatesResponse>(url)
-    return response.data
+    return requireItems<GetProductWorkRatesResponse>(response.data, 'нормы выработки')
   },
 
   getByProduct: async (productId: string): Promise<GetProductWorkRatesResponse> => {
     const response = await axiosInstance.get<GetProductWorkRatesResponse>(
       `/api/catalogs/product-work-rates/by-product/${productId}`,
     )
-    return response.data
+    return requireItems<GetProductWorkRatesResponse>(response.data, 'нормы выработки товара')
   },
 
   create: async (data: CreateProductWorkRateRequest): Promise<ProductWorkRateItem> => {
