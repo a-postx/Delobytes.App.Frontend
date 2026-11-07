@@ -42,6 +42,9 @@ import {
 } from '@/components/ui/select'
 import { usePermissions } from '@/composables/usePermissions'
 import { useApiCall } from '@/composables/useApiCall'
+import { describeFailure } from '@/composables/useApiFailureCopy'
+import type { FailureCopy } from '@/composables/useApiFailureCopy'
+import ErrorState from '@/components/feedback/ErrorState.vue'
 import {
   TAX_REGIME_OPTIONS,
   TaxRegime,
@@ -187,7 +190,10 @@ const dateBlocked: ComputedRef<boolean> = computed(() => {
   return form.value.validFrom <= latestProfile.value.validFrom
 })
 
-const { execute: fetchProfiles } = useApiCall<{ items: TenantTaxProfileItem[] }>({
+const {
+  executeSafe: fetchProfiles,
+  error: fetchError,
+} = useApiCall<{ items: TenantTaxProfileItem[] }>({
   fallbackMessage: 'Не удалось загрузить налоговые настройки',
 })
 
@@ -206,6 +212,19 @@ const loadItems = async (): Promise<void> => {
     items.value = result.items
   }
 }
+
+/**
+ * Текст ошибки загрузки для встроенного блока.
+ *
+ * `execute` пробрасывает исключение, и reject из `onMounted` уходит в `errorCaptured`:
+ * AppErrorBoundary подменял всю страницу настроек полноэкранной заглушкой из-за одной
+ * недоступной карточки. `executeSafe` резолвится в null, а состояние берём из `error`.
+ */
+const loadFailure: ComputedRef<FailureCopy | null> = computed<FailureCopy | null>(() =>
+  fetchError.value
+    ? describeFailure(fetchError.value, 'Не удалось загрузить налоговые настройки')
+    : null,
+)
 
 onMounted(async () => {
   try {
@@ -350,6 +369,16 @@ const selectContentClass = 'z-[110] pointer-events-auto'
       <div v-if="isLoading" class="flex justify-center py-6">
         <Spinner size="md" />
       </div>
+
+      <!-- Ошибка загрузки: важнее пустого списка, иначе недоступный бэкенд читается как «ставок нет» -->
+      <ErrorState
+        v-else-if="loadFailure"
+        variant="compact"
+        :title="loadFailure.title"
+        :description="loadFailure.description"
+        retry-label="Повторить"
+        @retry="loadItems"
+      />
 
       <template v-else>
         <div v-if="!canEditTenantSettings" class="text-xs text-muted-foreground">

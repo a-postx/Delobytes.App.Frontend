@@ -46,11 +46,10 @@ const emit = defineEmits<{
     <CardContent :class="cn('flex-1', props.compact ? 'p-4 pt-0' : undefined)">
       <ErrorState
         v-if="props.error"
-        variant="embedded"
+        variant="compact"
         title="Не удалось загрузить данные"
         :description="props.error"
         retry-label="Повторить"
-        class="min-h-0 py-6"
         @retry="emit('retry')"
       />
       <template v-else-if="props.loading">

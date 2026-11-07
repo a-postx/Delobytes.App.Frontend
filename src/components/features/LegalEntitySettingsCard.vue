@@ -15,6 +15,9 @@ import { Spinner } from '@/components/ui/spinner'
 import { usePermissions } from '@/composables/usePermissions'
 import { useTenantMoney } from '@/composables/useTenantMoney'
 import { tenantLegalEntityApi } from '@/services/api/endpoints/tenantLegalEntity'
+import { describeFailure } from '@/composables/useApiFailureCopy'
+import type { ApiError } from '@/types/errors'
+import ErrorState from '@/components/feedback/ErrorState.vue'
 import { toast } from 'vue-sonner'
 
 const { canEditTenantSettings } = usePermissions()
@@ -22,6 +25,13 @@ const { currency, currencySymbol } = useTenantMoney()
 
 const isLoading = ref<boolean>(true)
 const isSaving = ref<boolean>(false)
+
+/**
+ * Ошибка загрузки реквизитов. Отдельное состояние, а не тихий catch: пустые поля ИНН
+ * и наименования выглядят как «реквизиты не заполнены», и пользователь может затереть
+ * реальные данные, сохранив пустую форму поверх недоступного ответа.
+ */
+const loadError = ref<string>('')
 
 const legalName = ref<string>('')
 const inn = ref<string>('')
@@ -36,17 +46,28 @@ const normalizeOptionalText = (value: string): string | null => {
   return normalized === '' ? null : normalized
 }
 
-onMounted(async () => {
+const loadLegalEntity = async (): Promise<void> => {
+  isLoading.value = true
+  loadError.value = ''
+
   try {
     const data = await tenantLegalEntityApi.get()
     legalName.value = data.legalName ?? ''
     inn.value = data.inn ?? ''
-  } catch {
-    // данные не загружены — оставляем пустые значения, ничего не подставляем
+  } catch (error: unknown) {
+    const apiError = error as { response?: { status?: number; data?: { message?: string } } }
+    const failure: ApiError = {
+      code: 'common.unexpected_error',
+      message: apiError.response?.data?.message ?? 'Не удалось загрузить реквизиты организации',
+      status: apiError.response?.status ?? 0,
+    }
+    loadError.value = describeFailure(failure, 'Не удалось загрузить реквизиты организации').title
   } finally {
     isLoading.value = false
   }
-})
+}
+
+onMounted(loadLegalEntity)
 
 const handleSave = async (): Promise<void> => {
   if (!canEditTenantSettings.value) {
@@ -82,6 +103,15 @@ const handleSave = async (): Promise<void> => {
       <div v-if="isLoading" class="flex justify-center py-6">
         <Spinner size="md" />
       </div>
+
+      <ErrorState
+        v-else-if="loadError"
+        variant="compact"
+        :title="loadError"
+        description="Реквизиты не загружены — проверьте подключение и повторите попытку."
+        retry-label="Повторить"
+        @retry="loadLegalEntity"
+      />
 
       <template v-else>
         <div class="space-y-3">
