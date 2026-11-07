@@ -54,7 +54,15 @@ const stubs = {
   SearchInput: defineComponent({ name: 'SearchInput', template: '<div data-test="search-input" />' }),
   StatusFilter: defineComponent({ name: 'StatusFilter', template: '<div data-test="status-filter" />' }),
   Skeleton: PassthroughStub,
-  Button: defineComponent({ template: '<button @click="$emit(\'click\')"><slot /></button>' }),
+  /**
+   * `emits` обязателен: без него Vue считает `click` обычным атрибутом, обработчик приходит
+   * fallthrough'ом на корневой <button> и вызывается второй раз вместе с `$emit`. Один клик
+   * по retry давал два запроса, и счётчик вызовов в тесте был завышен вдвое.
+   */
+  Button: defineComponent({
+    emits: ['click'],
+    template: '<button @click="$emit(\'click\')"><slot /></button>',
+  }),
   Input: defineComponent({ template: '<input />' }),
   Label: defineComponent({ template: '<label><slot /></label>' }),
   Badge: PassthroughStub,

@@ -18,6 +18,9 @@ const getConnections = integrationsApi.getConnections as ReturnType<typeof vi.fn
 const getChannels = channelsApi.getAll as ReturnType<typeof vi.fn>
 const toastError = toast.error as ReturnType<typeof vi.fn>
 
+/** Текст тоста для сетевого сбоя: любое отклонение без `response` даёт `status === 0`. */
+const NETWORK_FAILURE_TOAST = 'Нет связи с сервером. Проверьте подключение и повторите попытку.'
+
 const templates: AvailableChannel[] = [
   { id: 'template-ozon', code: 'ozon', displayName: 'Ozon', description: 'Marketplace', apiVersion: 'v3' },
   { id: 'template-wb', code: 'wildberries', displayName: 'Wildberries', description: null, apiVersion: 'v2' },
@@ -76,14 +79,30 @@ describe('SalesChannelsView: загрузка каналов и подключе
     expect(wrapper.text()).toContain('Каналов продаж пока нет')
   })
   it('показывает уведомление при ошибке загрузки любого ресурса', async () => {
+    // Отказ без response — это сетевой сбой (status 0), а не ответ сервера: с R3 такие
+    // ошибки читаются как «нет связи», а не как текст fallbackMessage.
     getTemplates.mockRejectedValue(new Error('Server error'))
     getChannels.mockResolvedValue({ items: [] })
     getConnections.mockResolvedValue([])
     const wrapper = factory()
     await flushPromises()
 
-    expect(toastError).toHaveBeenCalledWith('Не удалось загрузить интеграции')
+    expect(toastError).toHaveBeenCalledWith(NETWORK_FAILURE_TOAST, { duration: 5000 })
+    expect(toastError).toHaveBeenCalledTimes(1)
     expect(wrapper.findAll('.skeleton')).toHaveLength(0)
+  })
+
+  it('показывает текст серверной ошибки, когда сервер ответил 500', async () => {
+    getTemplates.mockRejectedValue({
+      response: { status: 500, data: { message: 'Не удалось загрузить интеграции' } },
+    })
+    getChannels.mockResolvedValue({ items: [] })
+    getConnections.mockResolvedValue([])
+    factory()
+    await flushPromises()
+
+    expect(toastError).toHaveBeenCalledWith('Не удалось загрузить интеграции', { duration: 5000 })
+    expect(toastError).toHaveBeenCalledTimes(1)
   })
 })
 
