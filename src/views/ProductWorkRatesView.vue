@@ -49,9 +49,10 @@ import type {
   CreateProductWorkRateRequest,
   UpdateProductWorkRateRequest,
   WorkRateItem,
+  GetWorkRatesResponse,
   GetProductWorkRatesResponse,
-  GetProductsResponse,
 } from '@/services/api'
+import type { GetProductsResponse } from '@/types/products'
 import { useCurrentUser } from '@/composables/useCurrentUser'
 import { useTenantMoney } from '@/composables/useTenantMoney'
 import { useApiCall } from '@/composables/useApiCall'

@@ -91,6 +91,18 @@ const productsResource = useAsyncResource<GetProductsResponse>({
 const items: ComputedRef<ProductItem[]> = computed<ProductItem[]>(
   () => productsResource.data.value?.items ?? [],
 )
+
+/**
+ * Замена списка строк. `items` — вычисляемое значение, писать в него нельзя, а точечная
+ * мутация массива не разбудит `shallowRef` внутри ресурса. Поэтому подменяем ответ целиком.
+ */
+const replaceItems = (next: ProductItem[]): void => {
+  const current: GetProductsResponse | null = productsResource.data.value
+  if (!current) {
+    return
+  }
+  productsResource.data.value = { ...current, items: next }
+}
 const isLoading = productsResource.loading
 
 const failureCopy: ComputedRef<FailureCopy | null> = computed<FailureCopy | null>(() =>
@@ -446,15 +458,14 @@ const checkDeletionStatus = async (): Promise<void> => {
       const status = await catalogProductsApi.getDeletionStatus(product.id)
 
       if (status.status === ProductStatus.Deleted) {
-        items.value = items.value.filter(p => p.id !== product.id)
+        replaceItems(items.value.filter(p => p.id !== product.id))
         deletingProductIds.value.delete(product.id)
         deletedFromPage = true
         toast.success(`Товар "${product.name}" успешно удалён`)
       } else if (status.status === ProductStatus.DeletionFailed) {
-        const index = items.value.findIndex(p => p.id === product.id)
-        if (index !== -1) {
-          items.value[index] = { ...items.value[index], status: ProductStatus.DeletionFailed }
-        }
+        replaceItems(items.value.map(p =>
+          p.id === product.id ? { ...p, status: ProductStatus.DeletionFailed } : p,
+        ))
         deletingProductIds.value.delete(product.id)
         toast.error(`Невозможно удалить товар "${product.name}": есть история продаж`)
       }
@@ -630,14 +641,12 @@ const handleDelete = async (): Promise<void> => {
   try {
     await catalogProductsApi.requestDeletion(deleteTarget.value.id)
 
-    const index = items.value.findIndex(p => p.id === deleteTarget.value!.id)
-    if (index !== -1) {
-      items.value[index] = {
-        ...items.value[index],
-        status: ProductStatus.DeletionPending,
-        deletionRequestedAt: new Date().toISOString()
-      }
-    }
+    const targetId: string = deleteTarget.value.id
+    replaceItems(items.value.map(p =>
+      p.id === targetId
+        ? { ...p, status: ProductStatus.DeletionPending, deletionRequestedAt: new Date().toISOString() }
+        : p,
+    ))
     deletingProductIds.value.add(deleteTarget.value.id)
 
     toast.info('Запрос на удаление отправлен, проверяем историю продаж...')

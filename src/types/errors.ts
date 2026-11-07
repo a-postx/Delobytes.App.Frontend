@@ -34,8 +34,11 @@ export interface ApiError {
   message: string
   /** HTTP ��татус */
   status: number
-  /** Ошибки валидации полей (для 400/422) */
-  errors?: Record<string, string[]>
+  /**
+   * Ошибки валидации полей (для 400/422). Массивы только для чтения: объект приходит
+   * с сервера и нигде не мутируется, а `readonly()` в useApiCall делает их таковыми на уровне типов.
+   */
+  errors?: Record<string, readonly string[]>
 }
 
 /**
