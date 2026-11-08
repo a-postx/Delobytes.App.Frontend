@@ -9,10 +9,7 @@ import {
   Hammer,
   Truck,
   Gauge,
-  Tag,
-  DollarSign,
   Store,
-  ShoppingCart,
   Factory,
   Download,
   GalleryHorizontalEnd,
@@ -33,11 +30,6 @@ import {
   SidebarMenuSubButton,
   SidebarMenuSubItem,
 } from '@/components/ui/sidebar'
-
-const salesItems = [
-  { to: '/catalogs/cost-types', label: 'Типы расходов', icon: Tag },
-  { to: '/catalogs/product-channel-costs', label: 'Расходы по каналам', icon: DollarSign },
-]
 
 const productionItems = [
   { to: '/catalogs/components', label: 'Компоненты', icon: PackageOpen },
@@ -92,44 +84,6 @@ const referenceItems = [
                   <RouterLink to="/catalogs/products" class="flex items-center gap-2">
                     <GalleryHorizontalEnd class="size-3.5 shrink-0" />
                     <span>Каталог</span>
-                  </RouterLink>
-                </SidebarMenuSubButton>
-              </SidebarMenuSubItem>
-            </SidebarMenuSub>
-          </CollapsibleContent>
-        </SidebarMenuItem>
-      </Collapsible>
-
-      <!-- Продажи -->
-      <Collapsible
-        as-child
-        :default-open="true"
-        class="group/collapsible"
-      >
-        <SidebarMenuItem>
-          <CollapsibleTrigger as-child>
-            <SidebarMenuButton :tooltip="'Продажи'">
-              <ShoppingCart />
-              <span>Продажи</span>
-              <ChevronRight class="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
-            </SidebarMenuButton>
-          </CollapsibleTrigger>
-          <CollapsibleContent>
-            <SidebarMenuSub>
-              <SidebarMenuSubItem
-                v-for="item in salesItems"
-                :key="item.to"
-              >
-                <SidebarMenuSubButton as-child>
-                  <RouterLink
-                    :to="item.to"
-                    class="flex items-center gap-2"
-                  >
-                    <component
-                      :is="item.icon"
-                      class="size-3.5 shrink-0"
-                    />
-                    <span>{{ item.label }}</span>
                   </RouterLink>
                 </SidebarMenuSubButton>
               </SidebarMenuSubItem>

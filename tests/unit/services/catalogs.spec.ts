@@ -2,15 +2,11 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import {
   suppliersApi,
   componentsApi,
-  costTypesApi,
-  productChannelCostsApi,
   workRatesApi,
   productWorkRatesApi,
   Unit,
   type SupplierItem,
   type ComponentItem,
-  type CostTypeItem,
-  type ProductChannelCostItem,
   type WorkRateItem,
   type UpdateWorkRateRequest,
   type CreateWorkRateVersionRequest,
@@ -294,146 +290,6 @@ describe('Catalogs API - Stage 7 & 8', () => {
       await componentsApi.delete(componentId)
 
       expect(axiosInstance.delete).toHaveBeenCalledWith(`/api/catalogs/components/${componentId}`)
-    })
-  })
-
-  describe('costTypesApi', () => {
-    it('should get all cost types', async () => {
-      const mockResponse = {
-        items: [
-          {
-            id: '1',
-            name: 'Логистика до покупателя',
-            description: 'Доставка от склада до покупателя',
-            isActive: true,
-            createdAt: '2024-01-01T00:00:00Z'
-          }
-        ]
-      }
-
-      vi.mocked(axiosInstance.get).mockResolvedValue({ data: mockResponse })
-
-      const result = await costTypesApi.getAll()
-
-      expect(axiosInstance.get).toHaveBeenCalledWith('/api/catalogs/cost-types')
-      expect(result).toEqual(mockResponse)
-      expect(result.items[0].name).toBe('Логистика до покупателя')
-    })
-
-    it('should create a cost type', async () => {
-      const newCostType: CostTypeItem = {
-        id: '2',
-        name: 'Фулфилмент',
-        description: 'Комиссия фулфилмент-центра',
-        isActive: true,
-        createdAt: '2024-01-02T00:00:00Z'
-      }
-
-      vi.mocked(axiosInstance.post).mockResolvedValue({ data: newCostType })
-
-      const payload = {
-        name: 'Фулфилмент',
-        description: 'Комиссия фулфилмент-центра'
-      }
-
-      const result = await costTypesApi.create(payload)
-
-      expect(axiosInstance.post).toHaveBeenCalledWith('/api/catalogs/cost-types', payload)
-      expect(result).toEqual(newCostType)
-      expect(result.name).toBe('Фулфилмент')
-    })
-
-    it('should update a cost type', async () => {
-      const costTypeId = '1'
-      const updatePayload = {
-        name: 'Логистика (обновлено)',
-        description: 'Обновлённое описание',
-        isActive: false
-      }
-
-      vi.mocked(axiosInstance.put).mockResolvedValue({ data: undefined })
-
-      await costTypesApi.update(costTypeId, updatePayload)
-
-      expect(axiosInstance.put).toHaveBeenCalledWith(
-        `/api/catalogs/cost-types/${costTypeId}`,
-        updatePayload
-      )
-    })
-  })
-  
-    describe('productChannelCostsApi', () => {
-    it('should get costs by product', async () => {
-      const productId = 'prod-1'
-      const mockResponse = {
-        items: [
-          {
-            id: '1',
-            productId,
-            channelId: 'chan-1',
-            costTypeId: 'ct-1',
-            costTypeName: 'Логистика',
-            amount: 150,
-            createdAt: '2024-01-01T00:00:00Z'
-          }
-        ]
-      }
-
-      vi.mocked(axiosInstance.get).mockResolvedValue({ data: mockResponse })
-
-      const result = await productChannelCostsApi.getByProduct(productId)
-
-      expect(axiosInstance.get).toHaveBeenCalledWith(
-        '/api/catalogs/product-channel-costs',
-        { params: { productId } }
-      )
-      expect(result).toEqual(mockResponse)
-      expect(result.items[0].amount).toBe(150)
-    })
-
-    it('should get costs by product and channel', async () => {
-      const productId = 'prod-1'
-      const channelId = 'chan-1'
-      const mockResponse = { items: [] }
-
-      vi.mocked(axiosInstance.get).mockResolvedValue({ data: mockResponse })
-
-      await productChannelCostsApi.getByProduct(productId, channelId)
-
-      expect(axiosInstance.get).toHaveBeenCalledWith(
-        '/api/catalogs/product-channel-costs',
-        { params: { productId, channelId } }
-      )
-    })
-
-    it('should upsert a product channel cost', async () => {
-      const payload = {
-        productId: 'prod-1',
-        channelId: 'chan-1',
-        costTypeId: 'ct-1',
-        amount: 200
-      }
-
-      vi.mocked(axiosInstance.put).mockResolvedValue({ data: undefined })
-
-      await productChannelCostsApi.upsert(payload)
-
-      expect(axiosInstance.put).toHaveBeenCalledWith(
-        '/api/catalogs/product-channel-costs',
-        payload
-      )
-    })
-
-    it('should delete a product channel cost', async () => {
-      const costId = '1'
-
-      vi.mocked(axiosInstance.delete).mockResolvedValue({ data: undefined })
-
-      await productChannelCostsApi.delete(costId)
-
-      expect(axiosInstance.delete).toHaveBeenCalledWith(
-        `/api/catalogs/product-channel-costs/${costId}`
-      )
     })
   })
 

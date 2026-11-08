@@ -138,31 +138,6 @@ export interface CreateComponentPriceRequest {
   validFrom: string // YYYY-MM-DD
 }
 
-// ---------- Cost Types ----------
-
-export interface CostTypeItem {
-  id: string
-  name: string
-  description?: string
-  isActive: boolean
-  createdAt: string
-}
-
-export interface GetCostTypesResponse {
-  items: CostTypeItem[]
-}
-
-export interface CreateCostTypeRequest {
-  name: string
-  description?: string
-}
-
-export interface UpdateCostTypeRequest {
-  name: string
-  description?: string
-  isActive: boolean
-}
-
 // ---------- Channels ----------
 
 export interface ChannelItem {
@@ -222,41 +197,6 @@ export interface CreateChannelParameterSetRequest {
 export interface CreateChannelParameterSetResponse {
   id: string
   channelFound: boolean
-}
-
-// ---------- Product Channel Costs ----------
-
-export interface ProductChannelCostItem {
-  id: string
-  productId: string
-  channelId: string
-  costTypeId: string
-  costTypeName: string
-  amount: number
-  createdAt: string
-  updatedAt?: string
-}
-
-export interface GetProductChannelCostsResponse {
-  items: ProductChannelCostItem[]
-}
-
-export interface CreateProductChannelCostRequest {
-  productId: string
-  channelId: string
-  costTypeId: string
-  amount: number
-}
-
-export interface UpdateProductChannelCostRequest {
-  amount: number
-}
-
-export interface UpsertProductChannelCostRequest {
-  productId: string
-  channelId: string
-  costTypeId: string
-  amount: number
 }
 
 // ---------- Work Rates ----------
@@ -518,46 +458,6 @@ export const componentsApi = {
 
   delete: async (id: string): Promise<void> => {
     await axiosInstance.delete(`/api/catalogs/components/${id}`)
-  },
-}
-
-export const costTypesApi = {
-  getAll: async (): Promise<GetCostTypesResponse> => {
-    const response = await axiosInstance.get<GetCostTypesResponse>('/api/catalogs/cost-types')
-    return requireItems<GetCostTypesResponse>(response.data, 'типы расходов')
-  },
-
-  create: async (data: CreateCostTypeRequest): Promise<CostTypeItem> => {
-    const response = await axiosInstance.post<CostTypeItem>('/api/catalogs/cost-types', data)
-    return response.data
-  },
-
-  update: async (id: string, data: UpdateCostTypeRequest): Promise<void> => {
-    await axiosInstance.put(`/api/catalogs/cost-types/${id}`, data)
-  },
-
-  delete: async (id: string): Promise<void> => {
-    await axiosInstance.delete(`/api/catalogs/cost-types/${id}`)
-  },
-}
-
-export const productChannelCostsApi = {
-  getByProduct: async (productId: string, channelId?: string): Promise<GetProductChannelCostsResponse> => {
-    const params: Record<string, string> = { productId }
-    if (channelId) { params.channelId = channelId }
-    const response = await axiosInstance.get<GetProductChannelCostsResponse>(
-      '/api/catalogs/product-channel-costs',
-      { params },
-    )
-    return requireItems<GetProductChannelCostsResponse>(response.data, 'расходы по каналам')
-  },
-
-  upsert: async (data: UpsertProductChannelCostRequest): Promise<void> => {
-    await axiosInstance.put('/api/catalogs/product-channel-costs', data)
-  },
-
-  delete: async (id: string): Promise<void> => {
-    await axiosInstance.delete(`/api/catalogs/product-channel-costs/${id}`)
   },
 }
 

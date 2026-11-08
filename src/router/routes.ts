@@ -13,10 +13,8 @@ import OAuthCallbackView from '@/views/OAuthCallbackView.vue'
 import AcceptInvitationView from '@/views/AcceptInvitationView.vue'
 import ComponentsView from '@/views/ComponentsView.vue'
 import SuppliersView from '@/views/SuppliersView.vue'
-import CostTypesView from '@/views/CostTypesView.vue'
 import ProductsView from '@/views/ProductsView.vue'
 import ProductEditView from '@/views/ProductEditView.vue'
-import ProductChannelCostsView from '@/views/ProductChannelCostsView.vue'
 import WorkRatesView from '@/views/WorkRatesView.vue'
 import ProductWorkRatesView from '@/views/ProductWorkRatesView.vue'
 import StepperDemoView from '@/views/StepperDemoView.vue'
@@ -129,26 +127,6 @@ export const routes: RouteRecordRaw[] = [
         meta: {
           group: NavGroup.Platform,
           title: 'Импорт товаров',
-          requiresAuth: true,
-        },
-      },
-      {
-        path: 'catalogs/cost-types',
-        name: 'cost-types',
-        component: CostTypesView,
-        meta: {
-          group: NavGroup.Sales,
-          title: 'Типы расходов',
-          requiresAuth: true,
-        },
-      },
-      {
-        path: 'catalogs/product-channel-costs',
-        name: 'product-channel-costs',
-        component: ProductChannelCostsView,
-        meta: {
-          group: NavGroup.Sales,
-          title: 'Расходы по каналам',
           requiresAuth: true,
         },
       },
