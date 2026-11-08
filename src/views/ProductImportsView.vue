@@ -50,16 +50,54 @@ const jobs: ComputedRef<ProductImportJob[]> = computed<ProductImportJob[]>(
 const connections: ComputedRef<Connection[]> = computed<Connection[]>(
   () => connectionsResource.data.value ?? [],
 )
-const isLoading: ComputedRef<boolean> = computed<boolean>(
-  () => jobsResource.loading.value || connectionsResource.loading.value,
+/**
+ * Скелетон показываем только пока данных нет вовсе: при фоновом опросе таблица обязана
+ * оставаться на месте, иначе каждая итерация размонтирует её.
+ */
+const isInitialLoading: ComputedRef<boolean> = computed<boolean>(
+  () => jobsResource.isInitialLoading.value || connectionsResource.isInitialLoading.value,
+)
+/** Индикатор фонового обновления — отдельно от скелетона. */
+const isRefetching: ComputedRef<boolean> = computed<boolean>(
+  () => jobsResource.isRefetching.value || connectionsResource.isRefetching.value,
 )
 
-const failureCopy: ComputedRef<FailureCopy | null> = computed<FailureCopy | null>(() => {
-  const error: ApiError | null = jobsResource.error.value ?? connectionsResource.error.value
-  return error ? describeFailure(error, 'Не удалось загрузить задачи импорта') : null
+/** Сбой задач без данных: показываем блок ошибки на месте таблицы. */
+const jobsFailureCopy: ComputedRef<FailureCopy | null> = computed<FailureCopy | null>(() => {
+  const error: ApiError | null = jobsResource.error.value
+  return error && jobsResource.isLoadingError.value
+    ? describeFailure(error, 'Не удалось загрузить задачи импорта')
+    : null
 })
 
+/** Сбой подключений: своей таблицы у них нет, поэтому показываем отдельным баннером. */
+const connectionsFailureCopy: ComputedRef<FailureCopy | null> = computed<FailureCopy | null>(() => {
+  const error: ApiError | null = connectionsResource.error.value
+  return error && connectionsResource.isLoadingError.value
+    ? describeFailure(error, 'Не удалось загрузить подключения')
+    : null
+})
+
+/** Подключения загружены успешно хотя бы раз — можно судить об отсутствии активного WB. */
+const connectionsLoaded: ComputedRef<boolean> = computed<boolean>(
+  () => connectionsResource.status.value === 'success',
+)
+
 const isStarting = ref<boolean>(false)
+const isManualRefreshing = ref<boolean>(false)
+
+/** Время последнего успешного опроса в формате ЧЧ:ММ:СС. */
+const lastUpdatedLabel: ComputedRef<string | null> = computed<string | null>(() => {
+  const updatedAt: number | null = jobsResource.lastUpdatedAt.value
+  if (updatedAt === null) {
+    return null
+  }
+  return new Date(updatedAt).toLocaleTimeString('ru-RU', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  })
+})
 
 const activeWildberriesConnection = computed<Connection | null>(() => {
   return connections.value.find(c => c.isActive && c.templateCode === 'wildberries') ?? null
@@ -124,16 +162,21 @@ const loadConnections = async (): Promise<void> => {
   await connectionsResource.load()
 }
 
-const loadJobs = async (): Promise<void> => {
-  await jobsResource.load()
+/**
+ * Возвращает признак успеха для usePolling: загрузчик резолвится в null и не бросает,
+ * поэтому бэкофф и остановку опроса можно включить только по явному результату.
+ */
+const loadJobs = async (): Promise<boolean> => {
+  const result: GetProductImportsResponse | null = await jobsResource.load()
+  return result !== null
 }
 
 const loadData = async (): Promise<void> => {
   await Promise.all([loadConnections(), loadJobs()])
 }
 
-// Polling останавливается автоматически когда нет активных задач
-// и при размонтировании компонента (onUnmounted внутри usePolling)
+// Polling останавливается сам: когда нет активных задач, после серии неудачных запросов
+// и при размонтировании компонента (onUnmounted внутри usePolling).
 const { start: startPolling } = usePolling(loadJobs, {
   interval: 2000,
   shouldContinue: () => hasActiveJobs.value,
@@ -167,9 +210,14 @@ const startImport = async (): Promise<void> => {
 }
 
 const refreshJobs = async (): Promise<void> => {
-  await loadJobs()
-  if (hasActiveJobs.value) {
-    startPolling()
+  isManualRefreshing.value = true
+  try {
+    await loadJobs()
+    if (hasActiveJobs.value) {
+      startPolling()
+    }
+  } finally {
+    isManualRefreshing.value = false
   }
 }
 
@@ -190,18 +238,21 @@ onMounted(async () => {
         <p class="text-sm text-muted-foreground">История задач импорта из внешних систем.</p>
       </div>
       <div class="flex items-center gap-2">
+        <span v-if="lastUpdatedLabel" class="text-xs text-muted-foreground tabular-nums">
+          Обновлено в {{ lastUpdatedLabel }}
+        </span>
         <Button
           variant="outline"
           size="icon"
-          :disabled="isLoading"
+          :disabled="isInitialLoading || isManualRefreshing"
           @click="refreshJobs"
           aria-label="Обновить"
         >
-          <RefreshCw class="size-4" :class="{ 'animate-spin': isLoading }" />
+          <RefreshCw class="size-4" :class="{ 'animate-spin': isManualRefreshing || isRefetching }" />
         </Button>
         <Button
           v-if="canWrite"
-          :disabled="isStarting || isLoading || !activeWildberriesConnection"
+          :disabled="isStarting || isInitialLoading || !activeWildberriesConnection"
           @click="startImport"
           class="gap-2"
         >
@@ -212,9 +263,23 @@ onMounted(async () => {
       </div>
     </div>
 
+    <!-- Сбой подключений: их список грузится отдельно от задач, поэтому показываем баннером -->
+    <div
+      v-if="connectionsFailureCopy"
+      class="rounded-xl border border-destructive/40 bg-destructive/5 p-4 flex items-center justify-between gap-4"
+    >
+      <div class="flex flex-col gap-1">
+        <p class="text-sm font-medium">{{ connectionsFailureCopy.title }}</p>
+        <p class="text-sm text-muted-foreground">{{ connectionsFailureCopy.description }}</p>
+      </div>
+      <Button variant="outline" size="sm" class="shrink-0" @click="loadConnections">
+        Повторить
+      </Button>
+    </div>
+
     <!-- Баннер: нет подключения WB -->
     <div
-      v-if="!isLoading && !activeWildberriesConnection"
+      v-else-if="!isInitialLoading && connectionsLoaded && !activeWildberriesConnection"
       class="rounded-xl border border-border bg-card p-4 flex items-center justify-between gap-4"
     >
       <p class="text-sm text-muted-foreground">
@@ -226,17 +291,17 @@ onMounted(async () => {
       </Button>
     </div>
 
-    <!-- Skeleton при загрузке -->
-    <div v-if="isLoading" class="flex flex-col gap-2">
+    <!-- Skeleton при первой загрузке: только пока данных ещё нет -->
+    <div v-if="isInitialLoading" class="flex flex-col gap-2">
       <Skeleton v-for="n in 4" :key="n" class="h-10 w-full rounded-lg" />
     </div>
 
     <!-- Ошибка загрузки: важнее пустого состояния, иначе недоступный бэкенд выглядит как «задач ещё нет» -->
     <ErrorState
-      v-else-if="failureCopy && jobs.length === 0"
+      v-else-if="jobsFailureCopy"
       variant="embedded"
-      :title="failureCopy.title"
-      :description="failureCopy.description"
+      :title="jobsFailureCopy.title"
+      :description="jobsFailureCopy.description"
       retry-label="Повторить"
       @retry="loadData"
     />

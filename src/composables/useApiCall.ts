@@ -5,11 +5,20 @@ import { failureMessage } from '@/composables/useApiFailureCopy'
 import type { ApiError } from '@/types/errors'
 
 /**
+ * Политика показа toast с ошибкой.
+ *
+ * `'refetch'` — toast не показывается: решение остаётся за вызывающим кодом, который знает,
+ * была ли это первичная загрузка (ошибку показываем встроенным блоком) или фоновое обновление
+ * (ошибку показываем toast'ом).
+ */
+export type ErrorToastPolicy = boolean | 'refetch'
+
+/**
  * Опции для useApiCall
  */
 interface UseApiCallOptions {
   /** Показывать toast с ошибкой автоматически (по умолчанию true) */
-  showErrorToast?: boolean
+  showErrorToast?: ErrorToastPolicy
   /** Кастомные обработчики по машиночитаемым кодам */
   errorHandlers?: Record<string, (error: ApiError) => void>
   /** Фоллбэк-сообщение если бэкенд не вернул message */
@@ -94,7 +103,7 @@ export function useApiCall<T>(options: UseApiCallOptions = {}) {
       const handler = errorHandlers[apiError.code]
       if (handler) {
         handler(apiError)
-      } else if (showErrorToast) {
+      } else if (showErrorToast === true) {
         notifyError(failureMessage(apiError))
       }
 

@@ -103,7 +103,8 @@ const replaceItems = (next: ProductItem[]): void => {
   }
   productsResource.data.value = { ...current, items: next }
 }
-const isLoading = productsResource.loading
+const isLoading = productsResource.isInitialLoading
+const isRefetching = productsResource.isRefetching
 
 const failureCopy: ComputedRef<FailureCopy | null> = computed<FailureCopy | null>(() =>
   productsResource.error.value
@@ -716,6 +717,7 @@ const inputClass = 'mt-1'
         class="w-full sm:w-80"
       />
       <StatusFilter v-model="statusFilter" :options="filterOptions" />
+      <span v-if="isRefetching" class="text-xs text-muted-foreground">Обновление…</span>
     </div>
 
     <!-- Ошибка загрузки перед гридом: иначе недоступный бэкенд читается как «товаров ещё нет» -->

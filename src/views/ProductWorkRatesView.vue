@@ -175,7 +175,8 @@ const ratesResource = useAsyncResource<GetProductWorkRatesResponse>({
 const items: ComputedRef<ProductWorkRateItem[]> = computed<ProductWorkRateItem[]>(
   () => ratesResource.data.value?.items ?? [],
 )
-const isLoading = ratesResource.loading
+const isLoading = ratesResource.isInitialLoading
+const isRefetching = ratesResource.isRefetching
 
 const failureCopy: ComputedRef<FailureCopy | null> = computed<FailureCopy | null>(() =>
   ratesResource.error.value
@@ -739,6 +740,7 @@ const emptyText = computed<string>(() => {
         class="w-full sm:w-80"
       />
       <StatusFilter v-model="statusFilter" :options="filterOptions" />
+      <span v-if="isRefetching" class="text-xs text-muted-foreground">Обновление…</span>
     </div>
 
     <!-- Loading -->

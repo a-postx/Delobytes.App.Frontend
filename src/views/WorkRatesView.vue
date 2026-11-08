@@ -65,7 +65,8 @@ const workRatesResource = useAsyncResource<GetWorkRatesResponse>({
 })
 
 const items: ComputedRef<WorkRateItem[]> = useResourceItems<WorkRateItem>(workRatesResource.data)
-const isLoading = workRatesResource.loading
+const isLoading = workRatesResource.isInitialLoading
+const isRefetching = workRatesResource.isRefetching
 
 const failureCopy: ComputedRef<FailureCopy | null> = computed<FailureCopy | null>(() =>
   workRatesResource.error.value
@@ -300,7 +301,10 @@ const inputClass = 'mt-1'
     </div>
 
     <!-- Status Filter -->
-    <StatusFilter v-model="statusFilter" :options="filterOptions" />
+    <div class="flex items-center gap-2">
+      <StatusFilter v-model="statusFilter" :options="filterOptions" />
+      <span v-if="isRefetching" class="text-xs text-muted-foreground">Обновление…</span>
+    </div>
 
     <!-- Loading -->
     <div v-if="isLoading" class="rounded-xl border border-border bg-card overflow-hidden">

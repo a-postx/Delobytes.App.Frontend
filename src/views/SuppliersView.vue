@@ -62,7 +62,8 @@ const suppliersResource = useAsyncResource<GetSuppliersResponse>({
 })
 
 const items: ComputedRef<SupplierItem[]> = useResourceItems<SupplierItem>(suppliersResource.data)
-const isLoading = suppliersResource.loading
+const isLoading = suppliersResource.isInitialLoading
+const isRefetching = suppliersResource.isRefetching
 
 const failureCopy: ComputedRef<FailureCopy | null> = computed<FailureCopy | null>(() =>
   suppliersResource.error.value
@@ -256,7 +257,10 @@ const inputClass = 'mt-1'
       </Button>
     </div>
 
-    <StatusFilter v-model="statusFilter" :options="filterOptions" />
+    <div class="flex items-center gap-2">
+      <StatusFilter v-model="statusFilter" :options="filterOptions" />
+      <span v-if="isRefetching" class="text-xs text-muted-foreground">Обновление…</span>
+    </div>
 
     <div v-if="isLoading" class="rounded-xl border border-border bg-card overflow-hidden">
       <div class="p-4 flex flex-col gap-3">

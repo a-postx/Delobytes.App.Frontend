@@ -82,7 +82,8 @@ const componentsResource = useAsyncResource<GetComponentsResponse>({
 const items: ComputedRef<ComponentItem[]> = computed<ComponentItem[]>(
   () => componentsResource.data.value?.items ?? [],
 )
-const isLoading = componentsResource.loading
+const isLoading = componentsResource.isInitialLoading
+const isRefetching = componentsResource.isRefetching
 
 const failureCopy: ComputedRef<FailureCopy | null> = computed<FailureCopy | null>(() =>
   componentsResource.error.value
@@ -699,6 +700,7 @@ const selectClass = 'flex h-10 w-full rounded-md border border-input bg-backgrou
         class="w-full sm:w-80"
       />
       <StatusFilter v-model="statusFilter" :options="filterOptions" />
+      <span v-if="isRefetching" class="text-xs text-muted-foreground">Обновление…</span>
     </div>
 
     <!-- Ошибка загрузки перед гридом: иначе недоступный бэкенд читается как «компонентов ещё нет» -->
