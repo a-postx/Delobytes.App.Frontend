@@ -57,11 +57,6 @@ const connections: ComputedRef<Connection[]> = computed<Connection[]>(
 const isInitialLoading: ComputedRef<boolean> = computed<boolean>(
   () => jobsResource.isInitialLoading.value || connectionsResource.isInitialLoading.value,
 )
-/** Индикатор фонового обновления — отдельно от скелетона. */
-const isRefetching: ComputedRef<boolean> = computed<boolean>(
-  () => jobsResource.isRefetching.value || connectionsResource.isRefetching.value,
-)
-
 /** Сбой задач без данных: показываем блок ошибки на месте таблицы. */
 const jobsFailureCopy: ComputedRef<FailureCopy | null> = computed<FailureCopy | null>(() => {
   const error: ApiError | null = jobsResource.error.value
@@ -248,7 +243,7 @@ onMounted(async () => {
           @click="refreshJobs"
           aria-label="Обновить"
         >
-          <RefreshCw class="size-4" :class="{ 'animate-spin': isManualRefreshing || isRefetching }" />
+          <RefreshCw class="size-4" :class="{ 'animate-spin': isManualRefreshing }" />
         </Button>
         <Button
           v-if="canWrite"

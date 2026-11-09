@@ -106,6 +106,44 @@ describe('ProductImportsView: фоновый опрос не скрывает т
     wrapper.unmount()
   })
 
+  it('не вращает иконку Обновить во время фонового опроса', async () => {
+    getProductImports.mockResolvedValue({
+      jobs: [runningJob],
+      totalCount: 1,
+      page: 1,
+      pageSize: 50,
+    })
+
+    const wrapper = mount(ProductImportsView, {
+      global: { stubs: { RouterLink: true } },
+    })
+    await flushPromises()
+
+    const refreshButton = (): ReturnType<typeof wrapper.find> =>
+      wrapper.find('button[aria-label="\u041e\u0431\u043d\u043e\u0432\u0438\u0442\u044c"]')
+
+    expect(refreshButton().html()).not.toContain('animate-spin')
+
+    // Задерживаем ответ, чтобы застать опрос в полёте.
+    let releaseRefresh: (value: unknown) => void = () => {}
+    getProductImports.mockImplementationOnce(
+      () => new Promise(resolve => { releaseRefresh = resolve }),
+    )
+
+    await vi.advanceTimersByTimeAsync(2100)
+    await flushPromises()
+
+    // Иконка не должна реагировать на фоновые запросы: иначе она
+    // начинает и бросает вращение каждые 2 секунды.
+    expect(refreshButton().html()).not.toContain('animate-spin')
+
+    releaseRefresh({ jobs: [finishedJob], totalCount: 1, page: 1, pageSize: 50 })
+    await flushPromises()
+
+    expect(refreshButton().html()).not.toContain('animate-spin')
+    wrapper.unmount()
+  })
+
   it('оставляет таблицу при сбое фонового обновления', async () => {
     getProductImports.mockResolvedValue({
       jobs: [runningJob],
