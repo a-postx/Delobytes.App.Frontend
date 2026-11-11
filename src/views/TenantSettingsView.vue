@@ -14,6 +14,7 @@ import { CopyButton } from '@/components/ui/copy-button'
 import CreateTenantDialog from '@/components/features/CreateTenantDialog.vue'
 import LegalEntitySettingsCard from '@/components/features/LegalEntitySettingsCard.vue'
 import TaxProfileCard from '@/components/features/TaxProfileCard.vue'
+import TenantRegionSettingsCard from '@/components/features/TenantRegionSettingsCard.vue'
 import TenantMemberAccessDialog from '@/components/features/TenantMemberAccessDialog.vue'
 import TenantMembersTable from '@/components/features/TenantMembersTable.vue'
 import { useCurrentUser } from '@/composables/useCurrentUser'
@@ -150,6 +151,8 @@ const handleMembersRefresh = (): void => {
         </div>
       </CardContent>
     </Card>
+
+    <TenantRegionSettingsCard />
 
     <LegalEntitySettingsCard />
 

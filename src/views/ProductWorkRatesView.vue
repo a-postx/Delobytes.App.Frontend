@@ -54,6 +54,7 @@ import type {
 } from '@/services/api'
 import type { GetProductsResponse } from '@/types/products'
 import { useCurrentUser } from '@/composables/useCurrentUser'
+import { useTenantToday } from '@/composables/useTenantToday'
 import { useTenantMoney } from '@/composables/useTenantMoney'
 import { useApiCall } from '@/composables/useApiCall'
 import { useAsyncResource, useResourceItems } from '@/composables/useAsyncResource'
@@ -138,7 +139,9 @@ const statusByFilter: Record<'all' | 'active' | 'inactive', 'Active' | 'All' | '
   inactive: 'Inactive',
 }
 
-const today = (): string => new Date().toISOString().slice(0, 10)
+const { todayIso } = useTenantToday()
+
+const today = (): string => todayIso()
 
 const form = ref({ productId: '', workRateId: '', assemblyRatePerDay: 0, validFrom: today() })
 const editForm = ref({ workRateId: '', assemblyRatePerDay: 0, validFrom: '' })

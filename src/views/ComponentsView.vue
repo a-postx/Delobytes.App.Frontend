@@ -52,12 +52,14 @@ import type {
 import type { ComponentCategory } from '@/types/bom'
 import { COMPONENT_CATEGORY_LABELS } from '@/types/bom'
 import { useCurrentUser } from '@/composables/useCurrentUser'
+import { useTenantToday } from '@/composables/useTenantToday'
 import { useApiCall } from '@/composables/useApiCall'
 import { useAsyncResource } from '@/composables/useAsyncResource'
 import { describeFailure } from '@/composables/useApiFailureCopy'
 import type { FailureCopy } from '@/composables/useApiFailureCopy'
 import ErrorState from '@/components/feedback/ErrorState.vue'
 import { useTenantMoney } from '@/composables/useTenantMoney'
+import { formatIsoDateOnly } from '@/utils/format'
 import { X } from 'lucide-vue-next'
 
 const { canWrite } = useCurrentUser()
@@ -151,7 +153,9 @@ watch(columnVisibility, (value: VisibilityState) => {
   localStorage.setItem(COLUMN_VISIBILITY_KEY, JSON.stringify(value))
 }, { deep: true })
 
-const today = (): string => new Date().toISOString().slice(0, 10)
+const { todayIso } = useTenantToday()
+
+const today = (): string => todayIso()
 
 const form = ref({
   name: '',
@@ -299,7 +303,7 @@ const columns = computed<ColumnDef<ComponentItem, unknown>[]>(() => {
       cell: ({ row }) => h(
         'span',
         { class: 'text-sm text-muted-foreground tabular-nums' },
-        row.original.activePrice ? formatDate(row.original.activePrice.validFrom) : '—',
+        row.original.activePrice ? formatIsoDateOnly(row.original.activePrice.validFrom) : '—',
       ),
     },
     {

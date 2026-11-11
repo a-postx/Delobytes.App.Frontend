@@ -15,6 +15,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Spinner } from '@/components/ui/spinner'
 import { channelParametersApi } from '@/services/api'
+import { useTenantToday } from '@/composables/useTenantToday'
 import { toast } from 'vue-sonner'
 
 /**
@@ -34,11 +35,7 @@ const emit = defineEmits<{
 const validFrom = ref<string>('')
 const isSubmitting = ref<boolean>(false)
 
-const todayIso = (): string => {
-  const now = new Date()
-  const offsetMs = now.getTimezoneOffset() * 60 * 1000
-  return new Date(now.getTime() - offsetMs).toISOString().slice(0, 10)
-}
+const { todayIso } = useTenantToday()
 
 const resetState = (): void => {
   validFrom.value = todayIso()

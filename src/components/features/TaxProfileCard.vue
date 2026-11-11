@@ -41,6 +41,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { usePermissions } from '@/composables/usePermissions'
+import { useTenantToday } from '@/composables/useTenantToday'
 import { useApiCall } from '@/composables/useApiCall'
 import { describeFailure } from '@/composables/useApiFailureCopy'
 import type { FailureCopy } from '@/composables/useApiFailureCopy'
@@ -85,8 +86,10 @@ const formatIsoDate = (date: Date): string => {
   return `${year}-${month}-${day}`
 }
 
+const { todayIso: getTenantTodayIso } = useTenantToday()
+
 function today(): string {
-  return formatIsoDate(new Date())
+  return getTenantTodayIso()
 }
 
 const form = ref<{
@@ -118,15 +121,14 @@ const activeProfileId: ComputedRef<string | null> = computed(
   () => latestProfile.value?.id ?? null
 )
 
-/** Сегодня в ISO-формате (YYYY-MM-DD) — для сравнения с ValidFrom как со строками. */
+/** Сегодня в ISO-формате (YYYY-MM-DD) в календаре тенанта — для сравнения с ValidFrom как со строками. */
 const todayIso: ComputedRef<string> = computed(() => today())
 
 /**
  * Удалять можно только последнюю версию, которая ещё не вступила в силу: как только
  * наступил её ValidFrom, она могла попасть в уже посчитанные отчёты, и удаление задним
  * числом эти отчёты обесценит. Бэкенд проверяет то же самое по дате тенанта — здесь
- * сравнение приблизительное (по часовому поясу браузера), окончательное решение
- * всегда у бэкенда.
+ * сравнение предварительное, окончательное решение всегда у бэкенда.
  */
 const isDeletable = (item: TenantTaxProfileItem): boolean =>
   item.id === activeProfileId.value && item.validFrom > todayIso.value

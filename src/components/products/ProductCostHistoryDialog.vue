@@ -25,11 +25,14 @@ import { toast } from 'vue-sonner'
 import { productCostApi } from '@/services/api'
 import type { ProductCostSnapshotDto } from '@/types/bom'
 import { useTenantMoney } from '@/composables/useTenantMoney'
+import { useTenantToday } from '@/composables/useTenantToday'
+import { formatDateTime, formatIsoDateOnly } from '@/utils/format'
 
 const props = defineProps<{ productId: string }>()
 const open = defineModel<boolean>('open', { required: true })
 
 const { formatMoney } = useTenantMoney()
+const { timeZone } = useTenantToday()
 
 const items = ref<ProductCostSnapshotDto[]>([])
 const totalCount = ref<number>(0)
@@ -44,11 +47,7 @@ const triggerLabels: Record<string, string> = {
 
 const triggerLabel = (reason: string): string => triggerLabels[reason] ?? reason
 
-const formatDate = (dateStr: string): string =>
-  new Date(dateStr).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' })
-
-const formatDateTime = (dateStr: string): string =>
-  new Date(dateStr).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+const formatCalculatedAt = (dateStr: string): string => formatDateTime(dateStr, timeZone.value)
 
 const loadHistory = async (): Promise<void> => {
   isLoading.value = true
@@ -116,7 +115,7 @@ watch(open, (isOpen) => {
             </TableHeader>
             <TableBody>
               <TableRow v-for="item in items" :key="item.id" class="hover:bg-muted/40 transition-colors">
-                <TableCell class="tabular-nums">{{ formatDate(item.asOfDate) }}</TableCell>
+                <TableCell class="tabular-nums">{{ formatIsoDateOnly(item.asOfDate) }}</TableCell>
                 <TableCell class="text-muted-foreground">{{ triggerLabel(item.triggerReason) }}</TableCell>
                 <TableCell class="text-right tabular-nums font-medium">{{ formatMoney(item.totalCost) }}</TableCell>
                 <TableCell>
@@ -124,7 +123,7 @@ watch(open, (isOpen) => {
                     {{ item.isComplete ? 'Полный' : 'Неполный' }}
                   </Badge>
                 </TableCell>
-                <TableCell class="tabular-nums text-muted-foreground text-sm">{{ formatDateTime(item.calculatedAt) }}</TableCell>
+                <TableCell class="tabular-nums text-muted-foreground text-sm">{{ formatCalculatedAt(item.calculatedAt) }}</TableCell>
               </TableRow>
             </TableBody>
           </Table>

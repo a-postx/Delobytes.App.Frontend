@@ -43,6 +43,7 @@ import type {
 } from '@/types/bom'
 import { COMPONENT_CATEGORY_LABELS } from '@/types/bom'
 import { useCurrentUser } from '@/composables/useCurrentUser'
+import { useTenantToday } from '@/composables/useTenantToday'
 import { useTenantMoney } from '@/composables/useTenantMoney'
 import { useBomChanges } from '@/composables/useBomChanges'
 import { markUnsavedChanges } from '@/composables/useUnsavedChangesGuard'
@@ -273,7 +274,9 @@ const handleSaveBom = async (): Promise<void> => {
 
 // ---------- Cost calculation state ----------
 
-const today = (): string => new Date().toISOString().slice(0, 10)
+const { todayIso } = useTenantToday()
+
+const today = (): string => todayIso()
 
 const cost = ref<ProductCostResponse | null>(null)
 const isLoadingCost = ref<boolean>(true)

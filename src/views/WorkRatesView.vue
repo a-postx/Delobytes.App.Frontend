@@ -48,6 +48,7 @@ import type {
   GetWorkRatesResponse,
 } from '@/services/api'
 import { useCurrentUser } from '@/composables/useCurrentUser'
+import { useTenantToday } from '@/composables/useTenantToday'
 import { useApiCall } from '@/composables/useApiCall'
 import { useAsyncResource, useResourceItems } from '@/composables/useAsyncResource'
 import { describeFailure } from '@/composables/useApiFailureCopy'
@@ -89,7 +90,9 @@ const isDeleting = ref<boolean>(false)
 
 const statusFilter = ref<'all' | 'active' | 'inactive'>('active')
 
-const today = (): string => new Date().toISOString().slice(0, 10)
+const { todayIso } = useTenantToday()
+
+const today = (): string => todayIso()
 
 const form = ref({ name: '', dailyWage: 0, validFrom: '' })
 

@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Separator } from '@/components/ui/separator'
 import { channelParametersApi } from '@/services/api'
+import { useTenantToday } from '@/composables/useTenantToday'
 import type { ChannelParameterSetItem } from '@/services/api'
 import type { ChannelCardModel } from './ChannelCard.vue'
 import { toast } from 'vue-sonner'
@@ -43,11 +44,7 @@ const formatDate = (isoDate: string): string => {
   return `${parts[2]}.${parts[1]}.${parts[0]}`
 }
 
-const todayIso = (): string => {
-  const now = new Date()
-  const offsetMs = now.getTimezoneOffset() * 60 * 1000
-  return new Date(now.getTime() - offsetMs).toISOString().slice(0, 10)
-}
+const { todayIso } = useTenantToday()
 
 const isScheduled = (item: ChannelParameterSetItem): boolean => item.validFrom.slice(0, 10) > todayIso()
 
