@@ -12,7 +12,10 @@
     "webfetch": "allow",
     "websearch": "allow",
     "skill": "allow",
+    "computer_use": "allow",
+    "computer_use_read": "allow",
     "bash_dangerous": "allow",
-    "file_destructive": "allow"
+    "file_destructive": "allow",
+    "bash_readonly": "allow"
   }
 }
