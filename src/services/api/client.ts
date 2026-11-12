@@ -1,4 +1,5 @@
 import axios, { type AxiosInstance, type AxiosError } from 'axios'
+import { resolveApiBaseUrl } from '@/config/apiBackends'
 import { REDIRECT_QUERY_KEY, rememberRedirect, isSafeRedirect } from '@/utils/redirect'
 
 class ApiClient {
@@ -18,20 +19,22 @@ class ApiClient {
     this.setupInterceptors()
   }
 
+  /**
+   * Адрес API.
+   *
+   * `VITE_API_URL` имеет приоритет, но в сборке он пуст: адрес API определяется
+   * по хосту страницы, чтобы один и тот же образ работал и на `app.delobytes.ru`,
+   * и на техническом домене хостинга. Vite инлайнит `VITE_*` при сборке, поэтому
+   * зашитое значение пришлось бы менять и пересобирать под каждый домен.
+   */
   private getApiBaseUrl(): string {
-    if (import.meta.env.VITE_API_URL) {
-      return import.meta.env.VITE_API_URL
+    const configuredUrl: string = import.meta.env.VITE_API_URL ?? ''
+
+    if (configuredUrl.trim().length > 0) {
+      return configuredUrl.trim()
     }
 
-    const hostname = window.location.hostname
-    
-    if (hostname.includes('test.delobytes.ru')) {
-      return 'https://api.test.delobytes.ru'
-    } else if (hostname.includes('app.delobytes.ru')) {
-      return 'https://api.app.delobytes.ru'
-    }
-    
-    return 'https://a-postx-delobytes-app-backend-47aa.twc1.net'
+    return resolveApiBaseUrl(window.location.hostname)
   }
 
   /**
