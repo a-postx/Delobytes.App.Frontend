@@ -6,11 +6,12 @@ import { Button } from '@/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { SearchInput } from '@/components/ui/search-input'
 import { cn } from '@/lib/utils'
-import { formatUtcOffset, getTimeZoneLabel, listTimeZones } from '@/utils/timeZone'
+import { buildTimeZoneOptions, getTimeZoneLabel, formatUtcOffset } from '@/utils/timeZone'
+import type { TimeZoneOption } from '@/utils/timeZone'
 
 /**
  * Выбор часового пояса. Поясов около четырёхсот, поэтому это не Select, а поиск
- * по списку: найти нужный пояс по названию быстрее, чем прокручивать.
+ * по списку: пояса России идут первыми, остальные — по смещению от UTC.
  */
 const props = defineProps<{
   modelValue: string
@@ -21,7 +22,7 @@ const emit = defineEmits<{
   'update:modelValue': [value: string]
 }>()
 
-const allTimeZones: string[] = listTimeZones()
+const allOptions: TimeZoneOption[] = buildTimeZoneOptions()
 
 const isOpen: Ref<boolean> = ref(false)
 const query: Ref<string> = ref('')
@@ -34,20 +35,29 @@ const selectedOffset: ComputedRef<string> = computed<string>(() =>
   formatUtcOffset(props.modelValue)
 )
 
-const filteredTimeZones: ComputedRef<string[]> = computed<string[]>(() => {
+const filteredOptions: ComputedRef<TimeZoneOption[]> = computed<TimeZoneOption[]>(() => {
   const normalizedQuery: string = query.value.trim().toLowerCase()
 
   if (normalizedQuery === '') {
-    return allTimeZones
+    return allOptions
   }
 
-  return allTimeZones.filter((timeZoneId: string) => {
+  return allOptions.filter((option: TimeZoneOption) => {
     return (
-      timeZoneId.toLowerCase().includes(normalizedQuery) ||
-      getTimeZoneLabel(timeZoneId).toLowerCase().includes(normalizedQuery)
+      option.label.toLowerCase().includes(normalizedQuery) ||
+      option.id.toLowerCase().includes(normalizedQuery) ||
+      option.offset.toLowerCase().includes(normalizedQuery)
     )
   })
 })
+
+const russianOptions: ComputedRef<TimeZoneOption[]> = computed<TimeZoneOption[]>(() =>
+  filteredOptions.value.filter((option: TimeZoneOption) => option.isRussian)
+)
+
+const otherOptions: ComputedRef<TimeZoneOption[]> = computed<TimeZoneOption[]>(() =>
+  filteredOptions.value.filter((option: TimeZoneOption) => !option.isRussian)
+)
 
 const handleSelect = (timeZoneId: string): void => {
   emit('update:modelValue', timeZoneId)
@@ -88,26 +98,51 @@ const handleOpenChange = (open: boolean): void => {
       </div>
 
       <div class="max-h-72 overflow-y-auto px-1 pb-1">
-        <p v-if="filteredTimeZones.length === 0" class="px-3 py-6 text-center text-sm text-muted-foreground">
+        <p v-if="filteredOptions.length === 0" class="px-3 py-6 text-center text-sm text-muted-foreground">
           Часовой пояс не найден
         </p>
 
-        <button
-          v-for="timeZoneId in filteredTimeZones"
-          :key="timeZoneId"
-          type="button"
-          :class="cn(
-            'flex w-full items-center justify-between gap-2 rounded-sm px-3 py-2 text-left text-sm hover:bg-accent hover:text-accent-foreground',
-            timeZoneId === modelValue && 'bg-accent/60'
-          )"
-          @click="handleSelect(timeZoneId)"
-        >
-          <span class="truncate">
-            {{ getTimeZoneLabel(timeZoneId) }}
-            <span class="text-xs text-muted-foreground">{{ timeZoneId }}</span>
-          </span>
-          <Check v-if="timeZoneId === modelValue" class="size-4 shrink-0" />
-        </button>
+        <template v-if="russianOptions.length > 0">
+          <p class="px-3 pb-1 pt-2 text-xs font-medium text-muted-foreground">Россия</p>
+          <button
+            v-for="option in russianOptions"
+            :key="option.id"
+            type="button"
+            :title="option.id"
+            :class="cn(
+              'flex w-full items-center justify-between gap-2 rounded-sm px-3 py-2 text-left text-sm hover:bg-accent hover:text-accent-foreground',
+              option.id === modelValue && 'bg-accent/60'
+            )"
+            @click="handleSelect(option.id)"
+          >
+            <span class="truncate">{{ option.label }}</span>
+            <span class="flex shrink-0 items-center gap-2 text-xs text-muted-foreground">
+              {{ option.offset }}
+              <Check v-if="option.id === modelValue" class="size-4" />
+            </span>
+          </button>
+        </template>
+
+        <template v-if="otherOptions.length > 0">
+          <p class="px-3 pb-1 pt-2 text-xs font-medium text-muted-foreground">Другие пояса</p>
+          <button
+            v-for="option in otherOptions"
+            :key="option.id"
+            type="button"
+            :title="option.id"
+            :class="cn(
+              'flex w-full items-center justify-between gap-2 rounded-sm px-3 py-2 text-left text-sm hover:bg-accent hover:text-accent-foreground',
+              option.id === modelValue && 'bg-accent/60'
+            )"
+            @click="handleSelect(option.id)"
+          >
+            <span class="truncate">{{ option.label }}</span>
+            <span class="flex shrink-0 items-center gap-2 text-xs text-muted-foreground">
+              {{ option.offset }}
+              <Check v-if="option.id === modelValue" class="size-4" />
+            </span>
+          </button>
+        </template>
       </div>
     </PopoverContent>
   </Popover>
