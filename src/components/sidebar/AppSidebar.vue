@@ -1,10 +1,8 @@
 <script setup lang="ts">
 import { computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { Building2 } from 'lucide-vue-next'
 import NavMain from '@/components/sidebar/NavMain.vue'
 import NavUser from '@/components/sidebar/NavUser.vue'
-import TenantSwitcher from '@/components/sidebar/TenantSwitcher.vue'
 import {
   Sidebar,
   SidebarContent,
@@ -27,13 +25,6 @@ onMounted(async () => {
     await fetchCurrentUser()
   }
 })
-
-const tenants = computed(() => [
-  {
-    name: currentUser.value?.tenantName ?? '...',
-    logo: Building2,
-  },
-])
 
 const currentUserInfo = computed(() => ({
   name: currentUser.value?.displayName ?? currentUser.value?.email ?? 'Пользователь',
@@ -58,7 +49,10 @@ function handleTenantSettings(): void {
 <template>
   <Sidebar v-bind="props">
     <SidebarHeader>
-      <TenantSwitcher :tenants="tenants" />
+      <div
+        class="h-8"
+        aria-hidden="true"
+      />
     </SidebarHeader>
     <SidebarContent>
       <NavMain />
