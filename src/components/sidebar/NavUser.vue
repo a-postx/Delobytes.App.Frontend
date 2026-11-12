@@ -77,7 +77,6 @@ async function selectTenant(tenantId: string): Promise<void> {
     const response = await tenantApi.switchTenant(tenantId)
     localStorage.setItem('accessToken', response.accessToken)
     await fetchCurrentUser()
-    toast.success('Пространство успешно переключено')
     window.location.reload()
   } catch (error: unknown) {
     const apiError = error as { response?: { data?: { message?: string } } }
