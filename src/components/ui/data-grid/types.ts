@@ -17,6 +17,8 @@ declare module '@tanstack/vue-table' {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   interface ColumnMeta<TData extends RowData, TValue> {
     title?: string
+    /** Причина, по которой колонка не сортируется: бэкенд такого ключа не принимает. */
+    sortDisabledReason?: string
   }
 }
 

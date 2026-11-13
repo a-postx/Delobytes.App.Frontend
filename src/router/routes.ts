@@ -112,7 +112,7 @@ export const routes: RouteRecordRaw[] = [
         },
       },
       {
-        path: 'catalogs/product',
+        path: 'catalogs/product/:id',
         name: 'product-edit',
         component: ProductEditView,
         meta: {

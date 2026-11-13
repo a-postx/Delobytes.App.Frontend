@@ -9,8 +9,10 @@ import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Spinner } from '@/components/ui/spinner'
 import { Skeleton } from '@/components/ui/skeleton'
+import { CopyButton } from '@/components/ui/copy-button'
 import ProductPhotoGallery from '@/components/products/ProductPhotoGallery.vue'
 import ProductChannelBadges from '@/components/products/ProductChannelBadges.vue'
+import ProductChannelCard from '@/components/products/ProductChannelCard.vue'
 import ProductBomEditor from '@/components/products/ProductBomEditor.vue'
 import { toast } from 'vue-sonner'
 import { catalogProductsApi } from '@/services/api'
@@ -28,7 +30,7 @@ const route = useRoute()
 const router = useRouter()
 const { canWrite } = useCurrentUser()
 
-const productId = computed<string>(() => route.query.productId as string)
+const productId = computed<string>(() => route.params.id as string)
 
 const FALLBACK_LOAD_MESSAGE = 'Не удалось загрузить товар'
 
@@ -39,16 +41,9 @@ const loadError = ref<FailureCopy | null>(null)
 const photos = ref<ProductPhoto[]>([])
 const product = ref<GetProductResponse | null>(null)
 
-// Временная мера до появления отправки данных в маркетплейсы (см. ТЗ п.2.1):
-// у связанного товара импорт перезаписывает Name/Description/Barcodes/PackingUnit, поэтому
-// эти поля остаются только для чтения. SKU — исключение: импорт его не трогает после создания
-// (см. ImportProductBatchConsumer.FindProductByBarcodeAsync — сопоставление идёт по nmID и
-// штрихкоду, но не по Product.Sku), поэтому SKU открыт для правки и у связанных товаров.
-// Когда появится write-back, отключение снять со всех полей.
-const isLinked = computed<boolean>(() => (product.value?.channelLinks?.length ?? 0) > 0)
 // Поля формы — числовые значения хранятся как строка до отправки
 type PackingUnitForm = {
-  [K in keyof Required<PackingUnit>]: string
+  [K in keyof Required<PackingUnit>]: string | number
 }
 
 interface FormData {
@@ -86,7 +81,12 @@ const formSnapshot = (): string =>
     name: form.value.name.trim(),
     description: form.value.description.trim(),
     barcodes: form.value.barcodes.map(b => ({ value: b.value.trim(), type: b.type?.trim() ?? '', isDefault: b.isDefault })),
-    packingUnit: form.value.packingUnit,
+    packingUnit: {
+      lengthCm: packingValue(form.value.packingUnit.lengthCm),
+      widthCm: packingValue(form.value.packingUnit.widthCm),
+      heightCm: packingValue(form.value.packingUnit.heightCm),
+      weightKg: packingValue(form.value.packingUnit.weightKg),
+    },
   })
 
 const hasUnsavedFormChanges = computed<boolean>(() => {
@@ -164,6 +164,39 @@ const loadProduct = async (): Promise<void> => {
   }
 }
 
+/**
+ * Поля ввода с `type="number"` отдают число, а не строку, поэтому форму нельзя считать
+ * строго строковой: любое чтение значения нормализуем. Ключевое здесь — пустое значение
+ * означает «не задано», и ноль вместо него записывать нельзя (решение 18).
+ */
+const packingValue = (value: string | number | null | undefined): string =>
+  value === null || value === undefined ? '' : String(value).trim()
+
+const buildPackingUnitPayload = (): PackingUnit | undefined => {
+  const { lengthCm, widthCm, heightCm, weightKg } = form.value.packingUnit
+  const dimensions = [lengthCm, widthCm, heightCm].map(packingValue)
+
+  const dimensionsEmpty = dimensions.every(value => value === '')
+  if (dimensionsEmpty) {
+    return undefined
+  }
+
+  // Неполный набор уходит как есть (NaN на незаполненном поле): сервер отклоняет его,
+  // а подстановка нуля записала бы «неизвестный размер» как настоящий.
+  const unit: PackingUnit = {
+    lengthCm: Number.parseFloat(dimensions[0]),
+    widthCm: Number.parseFloat(dimensions[1]),
+    heightCm: Number.parseFloat(dimensions[2]),
+  }
+
+  const weight = packingValue(weightKg)
+  if (weight !== '') {
+    unit.weightKg = Number.parseFloat(weight)
+  }
+
+  return unit
+}
+
 const handleSave = async (): Promise<void> => {
   if (!form.value.sku.trim()) {
     toast.error('SKU обязателен')
@@ -172,18 +205,15 @@ const handleSave = async (): Promise<void> => {
 
   isSaving.value = true
   try {
-    const payload: UpdateProductRequest = {}
+    const payload: UpdateProductRequest = {
+      name: form.value.name.trim(),
+      description: form.value.description.trim(),
+      barcodes: form.value.barcodes,
+    }
 
-    if (!isLinked.value) {
-      payload.name = form.value.name.trim()
-      payload.description = form.value.description.trim()
-      payload.barcodes = form.value.barcodes
-      payload.packingUnit = {
-        lengthCm: parseFloat(form.value.packingUnit.lengthCm) || 0,
-        widthCm: parseFloat(form.value.packingUnit.widthCm) || 0,
-        heightCm: parseFloat(form.value.packingUnit.heightCm) || 0,
-        weightKg: parseFloat(form.value.packingUnit.weightKg) || undefined,
-      }
+    const packingUnit = buildPackingUnitPayload()
+    if (packingUnit) {
+      payload.packingUnit = packingUnit
     }
 
     const baselineSku = JSON.parse(formBaseline.value).sku
@@ -257,7 +287,13 @@ onMounted(() => {
         <div class="flex-1">
           <h1 class="text-2xl font-bold">{{ product?.name || 'Редактирование товара' }}</h1>
           <div class="flex items-center gap-2 mt-1">
-            <span class="text-sm text-muted-foreground">SKU: {{ product?.sku || '—' }}</span>
+            <span class="font-mono text-sm text-muted-foreground">Код: {{ product?.code || '—' }}</span>
+            <CopyButton
+              v-if="product?.code"
+              :value="product.code"
+              size="icon-sm"
+              tooltip-text="Копировать код"
+            />
             <ProductChannelBadges v-if="product?.channelLinks && product.channelLinks.length > 0" :links="product.channelLinks" />
           </div>
         </div>
@@ -273,6 +309,22 @@ onMounted(() => {
             <h2 class="text-lg font-bold">Основные данные</h2>
 
             <div class="flex flex-col gap-1">
+              <Label for="code">Код</Label>
+              <Input id="code" :model-value="product?.code ?? ''" class="mt-1 font-mono" disabled />
+            </div>
+
+            <div class="flex flex-col gap-1">
+              <Label for="name">Название</Label>
+              <Input
+                id="name"
+                v-model="form.name"
+                placeholder=""
+                class="mt-1"
+                :disabled="!canWrite"
+              />
+            </div>
+
+            <div class="flex flex-col gap-1">
               <Label for="sku">SKU *</Label>
               <Input
                 id="sku"
@@ -284,17 +336,6 @@ onMounted(() => {
             </div>
 
             <div class="flex flex-col gap-1">
-              <Label for="name">Название</Label>
-              <Input
-                id="name"
-                v-model="form.name"
-                placeholder=""
-                class="mt-1"
-                :disabled="!canWrite || isLinked"
-              />
-            </div>
-
-            <div class="flex flex-col gap-1">
               <Label for="description">Описание</Label>
               <Textarea
                 id="description"
@@ -302,7 +343,7 @@ onMounted(() => {
                 placeholder=""
                 :rows="4"
                 class="mt-1"
-                :disabled="!canWrite || isLinked"
+                :disabled="!canWrite"
               />
             </div>
 
@@ -319,7 +360,7 @@ onMounted(() => {
                       {{ barcode.value }}
                     </Badge>
                     <Button
-                      v-if="canWrite && !isLinked"
+                      v-if="canWrite"
                       variant="ghost"
                       size="icon"
                       class="size-6 ml-auto"
@@ -329,7 +370,7 @@ onMounted(() => {
                     </Button>
                   </div>
                 </div>
-                <div v-if="canWrite && !isLinked" class="flex gap-2">
+                <div v-if="canWrite" class="flex gap-2">
                   <Input
                     v-model="newBarcode.value"
                     placeholder=""
@@ -355,21 +396,21 @@ onMounted(() => {
                   placeholder="Длина"
                   type="number"
                   step="0.01"
-                  :disabled="!canWrite || isLinked"
+                  :disabled="!canWrite"
                 />
                 <Input
                   v-model="form.packingUnit.widthCm"
                   placeholder="Ширина"
                   type="number"
                   step="0.01"
-                  :disabled="!canWrite || isLinked"
+                  :disabled="!canWrite"
                 />
                 <Input
                   v-model="form.packingUnit.heightCm"
                   placeholder="Высота"
                   type="number"
                   step="0.01"
-                  :disabled="!canWrite || isLinked"
+                  :disabled="!canWrite"
                 />
               </div>
               <div class="flex gap-2 mt-2">
@@ -379,7 +420,7 @@ onMounted(() => {
                   type="number"
                   step="0.01"
                   class="w-full"
-                  :disabled="!canWrite || isLinked"
+                  :disabled="!canWrite"
                 />
               </div>
             </div>
@@ -401,6 +442,17 @@ onMounted(() => {
             </div>
 
           </div>
+        </div>
+      </div>
+
+      <div v-if="product?.channelLinks && product.channelLinks.length > 0" class="flex flex-col gap-4">
+        <h2 class="text-lg font-bold">Каналы продаж</h2>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <ProductChannelCard
+            v-for="link in product.channelLinks"
+            :key="link.channelId"
+            :link="link"
+          />
         </div>
       </div>
 	  <ProductBomEditor :product-id="productId" />

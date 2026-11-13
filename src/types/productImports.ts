@@ -15,11 +15,20 @@ export const ProductImportStatus = {
 export type ProductImportStatus = typeof ProductImportStatus[keyof typeof ProductImportStatus]
 
 /**
- * Токен типа задачи импорта товаров в унифицированном Jobs API
- * (используется в POST /api/integrations/jobs/{type} и в фильтре GET /api/integrations/jobs?type=).
- * Соответствует Backend JobTypeExtensions.ProductsImport.
+ * Токены типов заданий импорта товаров в унифицированном Jobs API
+ * (используются в POST /api/integrations/jobs/{type} и в фильтре GET /api/integrations/jobs?type=).
+ * Соответствуют Backend JobTypeExtensions.ProductsImport / OzonProductsImport.
  */
 export const PRODUCTS_IMPORT_JOB_TYPE = 'products-import'
+export const OZON_PRODUCTS_IMPORT_JOB_TYPE = 'ozon-products-import'
+
+/**
+ * Тип задания импорта карточек, которое умеет запускать экран импорта. Литералы, а не `string`:
+ * токен выбирается по шаблону канала, и опечатка в нём должна ломать сборку, а не запрос.
+ */
+export type ProductImportJobType =
+  | typeof PRODUCTS_IMPORT_JOB_TYPE
+  | typeof OZON_PRODUCTS_IMPORT_JOB_TYPE
 
 /**
  * Соответствует Backend JobDto

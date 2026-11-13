@@ -140,5 +140,5 @@ export interface CreateChannelResult {
 
 export type { ProductItem, ProductStatus, GetProductsResponse, GetProductResponse, ProductDeletionStatusResponse, ProductChannelLink } from './products'
 export { ProductStatus as ProductStatusEnum } from './products'
-export type { ProductImportJob, ProductImportCreateResponse, GetProductImportsResponse, StartProductImportRequest } from './productImports'
-export { ProductImportStatus, PRODUCTS_IMPORT_JOB_TYPE } from './productImports'
+export type { ProductImportJob, ProductImportCreateResponse, GetProductImportsResponse, StartProductImportRequest, ProductImportJobType } from './productImports'
+export { ProductImportStatus, PRODUCTS_IMPORT_JOB_TYPE, OZON_PRODUCTS_IMPORT_JOB_TYPE } from './productImports'

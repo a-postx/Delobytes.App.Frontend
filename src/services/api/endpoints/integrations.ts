@@ -10,8 +10,8 @@ import type {
   ProductImportCreateResponse,
   GetProductImportsResponse,
   StartProductImportRequest,
+  ProductImportJobType,
 } from '@/types'
-import { PRODUCTS_IMPORT_JOB_TYPE } from '@/types'
 
 interface ChannelsResponse {
   items: AvailableChannel[]
@@ -61,13 +61,17 @@ export const integrationsApi = {
   },
 
   /**
-   * Запуск импорта товаров из внешней системы (Wildberries).
-   * Унифицированный Jobs API (Stage 13): POST /api/integrations/jobs/{type}.
+   * Запуск импорта карточек из выбранного подключения.
+   * Унифицированный Jobs API: POST /api/integrations/jobs/{type}, где type — ProductImportJobType
+   * (products-import для Wildberries, ozon-products-import для Ozon).
    */
-  createProductImport: async (payload: StartProductImportRequest): Promise<ProductImportCreateResponse> => {
+  createProductImport: async (
+    type: ProductImportJobType,
+    payload: StartProductImportRequest,
+  ): Promise<ProductImportCreateResponse> => {
     try {
       const response = await axiosInstance.post<ProductImportCreateResponse>(
-        `/api/integrations/jobs/${PRODUCTS_IMPORT_JOB_TYPE}`,
+        `/api/integrations/jobs/${type}`,
         payload,
       )
       return response.data
@@ -82,10 +86,10 @@ export const integrationsApi = {
     }
   },
 
-  /** Получить список задач импорта товаров (унифицированный Jobs API, отфильтрованный по типу). */
-  getProductImports: async (): Promise<GetProductImportsResponse> => {
+  /** Задачи импорта карточек одного типа (унифицированный Jobs API, отфильтрованный по типу). */
+  getProductImports: async (type: ProductImportJobType): Promise<GetProductImportsResponse> => {
     const response = await axiosInstance.get<GetProductImportsResponse>('/api/integrations/jobs', {
-      params: { type: PRODUCTS_IMPORT_JOB_TYPE },
+      params: { type },
     })
     return response.data
   },

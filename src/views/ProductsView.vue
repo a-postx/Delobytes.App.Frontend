@@ -45,7 +45,6 @@ import {
   type VisibilityState,
 } from '@/components/ui/data-grid'
 import ProductStatusBadge from '@/components/products/ProductStatusBadge.vue'
-import ProductChannelBadges from '@/components/products/ProductChannelBadges.vue'
 import { channelDisplay, normalizeChannel } from '@/utils/channelBadges'
 import { toast } from 'vue-sonner'
 import { catalogProductsApi, integrationsApi } from '@/services/api'
@@ -247,9 +246,55 @@ const toProductSortKey = (columnId: string | undefined): ProductSortKey | undefi
 const getBarcodeVariant = (type?: string): 'default' | 'marketplace-wb' | 'marketplace-oz' | 'marketplace-ym' =>
   channelDisplay(normalizeChannel(type)).variant
 
+/**
+ * Колонки маркетплейсов ищут связку по коду канала: у товара может быть несколько каналов,
+ * но артикул WB и артикул Ozon — разные величины, и брать первый попавшийся нельзя.
+ */
+const findChannelLink = (item: ProductItem, channelCode: string) =>
+  item.channelLinks?.find(link => normalizeChannel(link.channelCode) === channelCode) ?? null
+
+const renderChannelArticleCell = (item: ProductItem, channelCode: string): unknown => {
+  const link = findChannelLink(item, channelCode)
+  if (!link) {
+    return h('span', { class: 'text-muted-foreground text-sm' }, '—')
+  }
+  return h(
+    RouterLink,
+    {
+      to: { name: 'product-edit', params: { id: item.id } },
+      class: 'font-mono text-sm no-underline hover:text-primary',
+    },
+    () => link.externalProductId,
+  )
+}
+
+const renderChannelSkuCell = (item: ProductItem, channelCode: string): unknown => {
+  const link = findChannelLink(item, channelCode)
+  if (!link || !link.externalSku) {
+    return h('span', { class: 'text-muted-foreground text-sm' }, '—')
+  }
+  return h('span', { class: 'font-mono text-sm text-muted-foreground' }, link.externalSku)
+}
+
 /** Сортируемым колонкам id совпадает с ключом из whitelist бэкенда; остальным он нужен для меню видимости. */
 const columns = computed<ColumnDef<ProductItem, unknown>[]>(() => {
   const definitions: ColumnDef<ProductItem, unknown>[] = [
+    {
+      id: 'code',
+      accessorKey: 'code',
+      enableSorting: true,
+      enableHiding: true,
+      meta: { title: 'Код' },
+      header: 'Код',
+      cell: ({ row }) => h(
+        RouterLink,
+        {
+          to: { name: 'product-edit', params: { id: row.original.id } },
+          class: 'font-mono text-sm font-medium no-underline hover:text-primary',
+        },
+        () => row.original.code,
+      ),
+    },
     {
       id: 'photos',
       accessorKey: 'photos',
@@ -280,31 +325,40 @@ const columns = computed<ColumnDef<ProductItem, unknown>[]>(() => {
       cell: ({ row }) => h('span', { class: 'font-mono text-sm' }, row.original.sku),
     },
     {
-      id: 'name',
-      accessorKey: 'name',
-      enableSorting: true,
-      enableHiding: true,
-      meta: { title: 'Название' },
-      header: 'Название',
-      cell: ({ row }) => h(
-        RouterLink,
-        {
-          to: { name: 'product-edit', query: { productId: row.original.id } },
-          class: 'font-medium no-underline hover:text-primary',
-        },
-        () => row.original.name,
-      ),
-    },
-    {
-      id: 'channelLinks',
-      accessorKey: 'channelLinks',
+      id: 'wbArticle',
+      accessorKey: 'wbArticle',
       enableSorting: false,
       enableHiding: true,
-      meta: { title: 'Артикул' },
-      header: 'Артикул',
-      cell: ({ row }) => row.original.channelLinks?.length
-        ? h(ProductChannelBadges, { links: row.original.channelLinks })
-        : h('span', { class: 'text-muted-foreground text-sm' }, '—'),
+      meta: { title: 'Артикул WB', sortDisabledReason: 'Бэкенд не поддерживает сортировку по каналам' },
+      header: 'Артикул WB',
+      cell: ({ row }) => renderChannelArticleCell(row.original, 'wildberries'),
+    },
+    {
+      id: 'ozArticle',
+      accessorKey: 'ozArticle',
+      enableSorting: false,
+      enableHiding: true,
+      meta: { title: 'Артикул Ozon', sortDisabledReason: 'Бэкенд не поддерживает сортировку по каналам' },
+      header: 'Артикул Ozon',
+      cell: ({ row }) => renderChannelArticleCell(row.original, 'ozon'),
+    },
+    {
+      id: 'wbSellerSku',
+      accessorKey: 'wbSellerSku',
+      enableSorting: false,
+      enableHiding: true,
+      meta: { title: 'Артикул продавца WB', sortDisabledReason: 'Бэкенд не поддерживает сортировку по каналам' },
+      header: 'Артикул продавца WB',
+      cell: ({ row }) => renderChannelSkuCell(row.original, 'wildberries'),
+    },
+    {
+      id: 'ozSellerSku',
+      accessorKey: 'ozSellerSku',
+      enableSorting: false,
+      enableHiding: true,
+      meta: { title: 'Артикул продавца Ozon', sortDisabledReason: 'Бэкенд не поддерживает сортировку по каналам' },
+      header: 'Артикул продавца Ozon',
+      cell: ({ row }) => renderChannelSkuCell(row.original, 'ozon'),
     },
     {
       id: 'barcodes',
@@ -439,10 +493,12 @@ const loadConnections = async (): Promise<void> => {
   }
 }
 
-const activeWildberriesConnection = computed<Connection | null>(() => {
-  return connections.value.find(
-    c => c.isActive && c.templateCode === 'wildberries'
-  ) ?? null
+const PRODUCT_IMPORT_TEMPLATE_CODES: readonly string[] = ['wildberries', 'ozon']
+
+const hasEligibleImportConnection = computed<boolean>(() => {
+  return connections.value.some(
+    c => c.isActive && PRODUCT_IMPORT_TEMPLATE_CODES.includes(c.templateCode)
+  )
 })
 
 const checkDeletionStatus = async (): Promise<void> => {
@@ -769,16 +825,16 @@ const inputClass = 'mt-1'
               Добавить товар
             </Button>
             <Button
-              v-if="!isLoadingConnections && activeWildberriesConnection"
+              v-if="!isLoadingConnections && hasEligibleImportConnection"
               @click="router.push('/catalogs/products/imports')"
               variant="default"
               class="gap-2"
             >
               <Download class="size-4" />
-              Импорт из Wildberries
+              Импортировать карточки
             </Button>
             <Button
-              v-else-if="!isLoadingConnections && !activeWildberriesConnection"
+              v-else-if="!isLoadingConnections && !hasEligibleImportConnection"
               @click="router.push('/catalogs/sales-channels')"
               variant="outline"
               class="gap-2"

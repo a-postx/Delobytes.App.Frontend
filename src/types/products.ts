@@ -38,13 +38,26 @@ export interface ProductChannelLink {
   channelId: string
   channelName: string
   channelCode: string | null
+  /** Артикул карточки в маркетплейсе: `nmID` для Wildberries, `sku` для Ozon. */
   externalProductId: string
+  /** Артикул продавца: `vendorCode` для Wildberries, `offer_id` для Ozon. */
   externalSku?: string | null
   isActive: boolean
+  /** Название карточки в том виде, в каком его отдал маркетплейс. */
+  name?: string | null
+  description?: string | null
+  /**
+   * Габариты карточки по данным канала. `null` означает, что канал не сообщил полный набор
+   * измерений, — это не ноль и не нулевая посылка.
+   */
+  packingUnit?: PackingUnit | null
+  lastSyncedAt?: string | null
 }
 
 export interface ProductItem {
   id: string
+  /** Внутренний код товара, присваивается нумератором тенанта и не редактируется. */
+  code: string
   sku: string
   name: string
   description?: string
@@ -91,12 +104,12 @@ export interface GetProductsResponse {
 }
 
 /**
- * Sort keys the products endpoint accepts. The backend resolves them against the same fixed
- * whitelist and falls back to `name` for anything unknown.
+ * Ключи сортировки, которые принимает эндпоинт товаров. Бэкенд сверяет их с тем же фиксированным
+ * списком; всё неизвестное сортируется по `name`, поэтому колонка «Код» передаёт `code`.
  */
-export type ProductSortKey = 'name' | 'sku' | 'status' | 'createdAt' | 'updatedAt'
+export type ProductSortKey = 'code' | 'sku' | 'status' | 'createdAt' | 'updatedAt'
 
-const PRODUCT_SORT_KEYS: readonly string[] = ['name', 'sku', 'status', 'createdAt', 'updatedAt']
+const PRODUCT_SORT_KEYS: readonly string[] = ['code', 'sku', 'status', 'createdAt', 'updatedAt']
 
 /**
  * Проверка значения на {@link ProductSortKey}. Грид отдаёт id колонок простыми строками,
@@ -112,7 +125,7 @@ export interface GetProductsParams {
   sortBy?: ProductSortKey
   sortDir?: 'asc' | 'desc'
   includeCounts?: boolean
-  /** Регистронезависимая подстрока по `Name` и `Sku`. Пустое значение бэкенд игнорирует. */
+  /** Регистронезависимая подстрока по `Code`, `Name` и `Sku`. Пустое значение бэкенд игнорирует. */
   search?: string
   /**
    * Добавляет `hasActiveWorkRate` каждому товару. Флаг опциональный: лишний подзапрос нужен только
@@ -124,6 +137,7 @@ export interface GetProductsParams {
 export interface GetProductResponse {
   found: boolean
   id: string
+  code: string
   sku: string
   name: string
   description?: string
@@ -150,15 +164,18 @@ export interface CreateProductRequest {
 
 export interface CreateProductResponse {
   id: string
+  /** Код, присвоенный нумератором. Опционален: старый ответ без него остаётся валидным. */
+  code?: string
 }
 
 /**
- * Partial update of a product: an omitted field is left untouched by the backend.
+ * Частичное обновление товара: пропущенное поле бэкенд не трогает.
  *
- * `sku` is the only field a marketplace-linked product may change — everything else keeps being
- * overwritten by the import until write-back ships, so the form does not send it for those
- * products. `description` is intentionally not nullable-clearing: an empty string clears it,
- * because the field is editable.
+ * Канонические поля (`name`, `description`, `barcodes`) редактируются всегда — импорт пишет их
+ * только при создании товара. `sku` по-прежнему уходит лишь при изменении: сервер считает
+ * отсутствие поля «не менять», а пустую строку — ошибкой. `packingUnit` уходит только с полным
+ * набором измерений, иначе отсутствие габаритов трактуется как «неизвестно», а не как ноль.
+ * `description` намеренно не чистится через `null`: пустая строка очищает поле.
  */
 export interface UpdateProductRequest {
   sku?: string

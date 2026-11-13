@@ -2,7 +2,24 @@
 import { ref, onMounted, computed } from 'vue'
 import type { ComputedRef } from 'vue'
 import { Plus, RefreshCw, Download, ArrowRightLeft } from 'lucide-vue-next'
+import {
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogOverlay,
+  DialogPortal,
+  DialogRoot,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
+import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Spinner } from '@/components/ui/spinner'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -16,9 +33,13 @@ import {
 } from '@/components/ui/table'
 import { toast } from 'vue-sonner'
 import { integrationsApi } from '@/services/api'
-import type { ProductImportJob, GetProductImportsResponse, Connection } from '@/types'
-import { ProductImportStatus } from '@/types'
-import { useCurrentUser } from '@/composables/useCurrentUser'
+import type { ProductImportJob, GetProductImportsResponse, Connection, ProductImportJobType } from '@/types'
+import {
+  ProductImportStatus,
+  PRODUCTS_IMPORT_JOB_TYPE,
+  OZON_PRODUCTS_IMPORT_JOB_TYPE,
+} from '@/types'
+import { usePermissions } from '@/composables/usePermissions'
 import { usePolling } from '@/composables/usePolling'
 import { useAsyncResource } from '@/composables/useAsyncResource'
 import { describeFailure } from '@/composables/useApiFailureCopy'
@@ -28,14 +49,41 @@ import ErrorState from '@/components/feedback/ErrorState.vue'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
-const { canWrite } = useCurrentUser()
+const { isAdministrator } = usePermissions()
+
+/**
+ * Шаблоны каналов, из которых возможен импорт карточек. Публикуемые задания ограничены администратором
+ * (StartJobCommand), поэтому права на запись товаров здесь не дают права на запуск импорта.
+ */
+const IMPORTABLE_TEMPLATE_CODES: readonly string[] = ['wildberries', 'ozon']
+
+const jobTypeByTemplateCode: Record<string, ProductImportJobType> = {
+  wildberries: PRODUCTS_IMPORT_JOB_TYPE,
+  ozon: OZON_PRODUCTS_IMPORT_JOB_TYPE,
+}
+
+const marketplaceByJobType: Record<string, string> = {
+  [PRODUCTS_IMPORT_JOB_TYPE]: 'Wildberries',
+  [OZON_PRODUCTS_IMPORT_JOB_TYPE]: 'Ozon',
+}
+
+/** Результат объединённой загрузки: без фиктивных page/pageSize, которых у двух независимых выборок нет. */
+interface CombinedJobsResult {
+  jobs: ProductImportJob[]
+}
 
 /**
  * Два независимых ресурса: упавшее подключение не должно скрывать историю задач
  * и наоборот. Каждый сам показывает свой сбой, поэтому один запрос не обнуляет второй.
  */
-const jobsResource = useAsyncResource<GetProductImportsResponse>({
-  fetcher: () => integrationsApi.getProductImports(),
+const jobsResource = useAsyncResource<CombinedJobsResult>({
+  fetcher: async () => {
+    const [wildberries, ozon] = await Promise.all([
+      integrationsApi.getProductImports(PRODUCTS_IMPORT_JOB_TYPE),
+      integrationsApi.getProductImports(OZON_PRODUCTS_IMPORT_JOB_TYPE),
+    ])
+    return { jobs: mergeJobs(wildberries, ozon) }
+  },
   fallbackMessage: 'Не удалось загрузить задачи импорта',
 })
 
@@ -43,6 +91,22 @@ const connectionsResource = useAsyncResource<Connection[]>({
   fetcher: () => integrationsApi.getConnections(),
   fallbackMessage: 'Не удалось загрузить подключения',
 })
+
+/**
+ * Оба запроса обязательны: частичный ответ одного типа нельзя выдавать за полную историю,
+ * поэтому сбой любого из них — сбой объединённой загрузки.
+ */
+const mergeJobs = (
+  first: GetProductImportsResponse,
+  second: GetProductImportsResponse,
+): ProductImportJob[] =>
+  [...first.jobs, ...second.jobs].sort((left, right) => {
+    const byCreatedAt = new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime()
+    if (byCreatedAt !== 0) {
+      return byCreatedAt
+    }
+    return left.id.localeCompare(right.id)
+  })
 
 const jobs: ComputedRef<ProductImportJob[]> = computed<ProductImportJob[]>(
   () => jobsResource.data.value?.jobs ?? [],
@@ -73,13 +137,14 @@ const connectionsFailureCopy: ComputedRef<FailureCopy | null> = computed<Failure
     : null
 })
 
-/** Подключения загружены успешно хотя бы раз — можно судить об отсутствии активного WB. */
 const connectionsLoaded: ComputedRef<boolean> = computed<boolean>(
   () => connectionsResource.status.value === 'success',
 )
 
-const isStarting = ref<boolean>(false)
 const isManualRefreshing = ref<boolean>(false)
+const isLaunchDialogOpen = ref<boolean>(false)
+const isStarting = ref<boolean>(false)
+const selectedConnectionId = ref<string>('')
 
 /** Время последнего успешного опроса в формате ЧЧ:ММ:СС. */
 const lastUpdatedLabel: ComputedRef<string | null> = computed<string | null>(() => {
@@ -94,24 +159,56 @@ const lastUpdatedLabel: ComputedRef<string | null> = computed<string | null>(() 
   })
 })
 
-const activeWildberriesConnection = computed<Connection | null>(() => {
-  return connections.value.find(c => c.isActive && c.templateCode === 'wildberries') ?? null
-})
+const isJobActive = (job: ProductImportJob): boolean =>
+  job.status === ProductImportStatus.Pending || job.status === ProductImportStatus.Running
 
-const hasActiveJobs = computed<boolean>(() => {
-  return jobs.value.some(
-    j => j.status === ProductImportStatus.Pending || j.status === ProductImportStatus.Running,
-  )
-})
+const hasActiveJobs = computed<boolean>(() => jobs.value.some(isJobActive))
+
+const activeEligibleConnections = computed<Connection[]>(() =>
+  connections.value.filter(
+    c => c.isActive && IMPORTABLE_TEMPLATE_CODES.includes(c.templateCode),
+  ),
+)
 
 const connectionById = computed<Map<string, Connection>>(
   () => new Map(connections.value.map(c => [c.id, c])),
 )
 
-/**
- * Backend JobDto больше не содержит агрегированного RecordsProcessed (Stage 13): счётчик
- * восстанавливается на фронтенде как сумма Created/Updated/Skipped/Failed.
- */
+const jobTypeForConnection = (connection: Connection): ProductImportJobType | null =>
+  jobTypeByTemplateCode[connection.templateCode] ?? null
+
+/** Задание этого подключения и его типа импорта уже в работе — запускать второе нельзя. */
+const hasRunningJobFor = (connection: Connection): boolean => {
+  const type = jobTypeForConnection(connection)
+  if (!type) {
+    return false
+  }
+  return jobs.value.some(job => job.connectionId === connection.id && job.type === type && isJobActive(job))
+}
+
+const selectedConnection = computed<Connection | null>(() =>
+  activeEligibleConnections.value.find(c => c.id === selectedConnectionId.value) ?? null,
+)
+
+const selectedJobType = computed<ProductImportJobType | null>(() =>
+  selectedConnection.value ? jobTypeForConnection(selectedConnection.value) : null,
+)
+
+const canSubmitLaunch = computed<boolean>(() =>
+  isAdministrator.value
+  && !isStarting.value
+  && selectedConnection.value !== null
+  && selectedJobType.value !== null
+  && !hasRunningJobFor(selectedConnection.value),
+)
+
+const shortConnectionId = (id: string): string => id.slice(0, 8)
+
+const connectionOptionLabel = (connection: Connection): string => {
+  const marketplace = connection.templateDisplayName || connection.templateCode
+  return `${marketplace} · ${shortConnectionId(connection.id)}`
+}
+
 const recordsProcessed = (job: ProductImportJob): number => {
   return job.recordsCreated + job.recordsUpdated + job.recordsSkipped + job.recordsFailed
 }
@@ -153,6 +250,18 @@ const getStatusLabel = (status: string): string => {
   }
 }
 
+/** Неизвестный тип не выдаём за Wildberries: показываем сам токен. */
+const marketplaceForJob = (job: ProductImportJob): string =>
+  marketplaceByJobType[job.type] ?? job.type
+
+const connectionLabelForJob = (job: ProductImportJob): string => {
+  const connection = connectionById.value.get(job.connectionId)
+  if (!connection) {
+    return `Подключение удалено · ${shortConnectionId(job.connectionId)}`
+  }
+  return connectionOptionLabel(connection)
+}
+
 const loadConnections = async (): Promise<void> => {
   await connectionsResource.load()
 }
@@ -162,7 +271,7 @@ const loadConnections = async (): Promise<void> => {
  * поэтому бэкофф и остановку опроса можно включить только по явному результату.
  */
 const loadJobs = async (): Promise<boolean> => {
-  const result: GetProductImportsResponse | null = await jobsResource.load()
+  const result: CombinedJobsResult | null = await jobsResource.load()
   return result !== null
 }
 
@@ -178,21 +287,41 @@ const { start: startPolling } = usePolling(loadJobs, {
   onError: (err) => console.error('Polling error:', err),
 })
 
+const openLaunchDialog = (): void => {
+  if (!isAdministrator.value || activeEligibleConnections.value.length === 0) {
+    return
+  }
+  // Выбор всегда начинается пустым: целевой маркетплейс должен быть явным.
+  selectedConnectionId.value = ''
+  isLaunchDialogOpen.value = true
+}
+
+const handleLaunchDialogOpenChange = (open: boolean): void => {
+  // Пока POST в полёте, диалог не закрываем: иначе пользователь потеряет контекст ошибки.
+  if (isStarting.value && !open) {
+    return
+  }
+  isLaunchDialogOpen.value = open
+  if (!open) {
+    selectedConnectionId.value = ''
+  }
+}
+
 const startImport = async (): Promise<void> => {
-  if (!activeWildberriesConnection.value) {
-    toast.error('Нет активного подключения Wildberries')
-    void router.push({ name: 'sales-channels' })
+  const connection = selectedConnection.value
+  const type = selectedJobType.value
+
+  if (!connection || !type || !canSubmitLaunch.value) {
     return
   }
 
   isStarting.value = true
   try {
-    await integrationsApi.createProductImport({
-      connectionId: activeWildberriesConnection.value.id,
-    })
-    toast.success('Импорт запущен')
+    await integrationsApi.createProductImport(type, { connectionId: connection.id })
+    toast.success(`Импорт карточек ${marketplaceByJobType[type] ?? connection.templateDisplayName} запущен`)
+    isLaunchDialogOpen.value = false
+    selectedConnectionId.value = ''
     await loadJobs()
-    // Запускаем polling после создания новой задачи
     if (hasActiveJobs.value) {
       startPolling()
     }
@@ -230,7 +359,7 @@ onMounted(async () => {
     <div class="flex items-center justify-between">
       <div class="flex flex-col gap-1">
         <h1 class="text-xl font-bold">Импорт товаров</h1>
-        <p class="text-sm text-muted-foreground">История задач импорта из внешних систем.</p>
+        <p class="text-sm text-muted-foreground">История задач импорта карточек из Wildberries и Ozon.</p>
       </div>
       <div class="flex items-center gap-2">
         <span v-if="lastUpdatedLabel" class="text-xs text-muted-foreground tabular-nums">
@@ -246,13 +375,12 @@ onMounted(async () => {
           <RefreshCw class="size-4" :class="{ 'animate-spin': isManualRefreshing }" />
         </Button>
         <Button
-          v-if="canWrite"
-          :disabled="isStarting || isInitialLoading || !activeWildberriesConnection"
-          @click="startImport"
+          v-if="isAdministrator"
+          :disabled="isInitialLoading || activeEligibleConnections.length === 0"
+          @click="openLaunchDialog"
           class="gap-2"
         >
-          <Spinner v-if="isStarting" class="size-4" />
-          <Plus v-else class="size-4" />
+          <Plus class="size-4" />
           Запустить импорт
         </Button>
       </div>
@@ -272,13 +400,13 @@ onMounted(async () => {
       </Button>
     </div>
 
-    <!-- Баннер: нет подключения WB -->
+    <!-- Баннер: нет ни одного активного подключения с поддержкой импорта карточек -->
     <div
-      v-else-if="!isInitialLoading && connectionsLoaded && !activeWildberriesConnection"
+      v-else-if="!isInitialLoading && connectionsLoaded && activeEligibleConnections.length === 0"
       class="rounded-xl border border-border bg-card p-4 flex items-center justify-between gap-4"
     >
       <p class="text-sm text-muted-foreground">
-        Для запуска импорта необходимо активное подключение Wildberries.
+        Для запуска импорта необходимо активное подключение Wildberries или Ozon.
       </p>
       <Button variant="outline" size="sm" class="shrink-0 gap-2" @click="router.push({ name: 'sales-channels' })">
         <ArrowRightLeft class="size-4" />
@@ -311,24 +439,23 @@ onMounted(async () => {
           <Download class="size-6 text-muted-foreground" />
         </div>
         <div>
-          <h3 class="font-semibold">Нет задач импорта</h3>
+          <h3 class="font-semibold">Задач импорта ещё нет</h3>
           <p class="text-sm text-muted-foreground">
-            Запустите первый импорт товаров из Wildberries.
+            Запустите первый импорт карточек из Wildberries или Ozon.
           </p>
         </div>
         <Button
-          v-if="canWrite && activeWildberriesConnection"
-          :disabled="isStarting"
-          @click="startImport"
+          v-if="isAdministrator && activeEligibleConnections.length > 0"
+          :disabled="isInitialLoading"
+          @click="openLaunchDialog"
           variant="outline"
           class="gap-2 mt-2"
         >
-          <Spinner v-if="isStarting" class="size-4" />
-          <Plus v-else class="size-4" />
+          <Plus class="size-4" />
           Запустить импорт
         </Button>
         <Button
-          v-else-if="canWrite && !activeWildberriesConnection"
+          v-else-if="isAdministrator && connectionsLoaded"
           variant="outline"
           class="gap-2 mt-2"
           @click="router.push({ name: 'sales-channels' })"
@@ -345,6 +472,7 @@ onMounted(async () => {
         <TableHeader>
           <TableRow>
             <TableHead>Создана</TableHead>
+            <TableHead>Маркетплейс</TableHead>
             <TableHead>Подключение</TableHead>
             <TableHead>Статус</TableHead>
             <TableHead>Завершена</TableHead>
@@ -360,15 +488,21 @@ onMounted(async () => {
             <TableCell class="font-medium whitespace-nowrap">
               {{ formatDate(job.createdAt) }}
             </TableCell>
+            <TableCell class="whitespace-nowrap">
+              <Badge variant="secondary">{{ marketplaceForJob(job) }}</Badge>
+            </TableCell>
             <TableCell>
-              <span class="text-sm">
-                {{ connectionById.get(job.connectionId)?.templateDisplayName ?? '—' }}
+              <span
+                class="text-sm"
+                :title="job.connectionId"
+              >
+                {{ connectionLabelForJob(job) }}
               </span>
             </TableCell>
             <TableCell>
               <div class="flex items-center gap-2">
                 <Spinner
-                  v-if="job.status === ProductImportStatus.Running || job.status === ProductImportStatus.Pending"
+                  v-if="isJobActive(job)"
                   class="size-3.5 shrink-0"
                 />
                 <Badge :variant="getStatusBadgeVariant(job.status)">
@@ -400,5 +534,72 @@ onMounted(async () => {
         </TableBody>
       </Table>
     </div>
+
+    <!-- Диалог запуска импорта -->
+    <DialogRoot :open="isLaunchDialogOpen" @update:open="handleLaunchDialogOpenChange">
+      <DialogPortal>
+        <DialogOverlay class="data-[state=open]:animate-overlayShow fixed inset-0 z-30 bg-black/80" />
+        <DialogContent
+          class="data-[state=open]:animate-contentShow bg-popover text-popover-foreground fixed top-[50%] left-[50%] max-h-[85vh] w-[90vw] max-w-[500px] translate-x-[-50%] translate-y-[-50%] rounded-lg border shadow-lg p-6 focus:outline-none z-[100]"
+          @escape-key-down="isStarting ? $event.preventDefault() : undefined"
+        >
+          <DialogTitle class="text-foreground m-0 text-lg font-semibold">
+            Запустить импорт карточек
+          </DialogTitle>
+          <DialogDescription class="text-muted-foreground mt-2 mb-4 text-sm leading-normal">
+            Импорт карточек из выбранного подключения. Задача выполняется в фоне, прогресс и результат
+            появятся в истории ниже.
+          </DialogDescription>
+
+          <div class="flex flex-col gap-1">
+            <Label for="import-connection">Подключение</Label>
+            <Select v-model="selectedConnectionId">
+              <SelectTrigger id="import-connection" class="mt-1 w-full">
+                <SelectValue placeholder="Выберите подключение" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem
+                  v-for="connection in activeEligibleConnections"
+                  :key="connection.id"
+                  :value="connection.id"
+                  :disabled="hasRunningJobFor(connection)"
+                >
+                  <span class="flex flex-col">
+                    <span>{{ connectionOptionLabel(connection) }}</span>
+                    <span v-if="hasRunningJobFor(connection)" class="text-xs text-muted-foreground">
+                      Импорт уже выполняется
+                    </span>
+                  </span>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+            <p
+              v-if="selectedConnection && selectedConnection.templateCode === 'ozon'"
+              class="text-xs text-muted-foreground mt-1"
+            >
+              Будут импортированы только видимые карточки, доступные к продаже на Ozon.
+            </p>
+            <p
+              v-if="selectedConnection && hasRunningJobFor(selectedConnection)"
+              class="text-xs text-warning mt-1"
+            >
+              Для этого подключения импорт уже выполняется. Дождитесь завершения текущей задачи.
+            </p>
+          </div>
+
+          <div class="mt-6 flex justify-end gap-2">
+            <DialogClose as-child>
+              <Button variant="outline" :disabled="isStarting">
+                Отмена
+              </Button>
+            </DialogClose>
+            <Button :disabled="!canSubmitLaunch" @click="startImport" class="gap-2">
+              <Spinner v-if="isStarting" class="size-4" />
+              Запустить импорт
+            </Button>
+          </div>
+        </DialogContent>
+      </DialogPortal>
+    </DialogRoot>
   </div>
 </template>

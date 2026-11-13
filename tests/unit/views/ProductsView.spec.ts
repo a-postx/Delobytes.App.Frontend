@@ -28,12 +28,18 @@ vi.mock('vue-router', () => ({
     template: '<a :href="href"><slot /></a>',
     computed: {
       href(): string {
-        const to = this.to as { name?: string; query?: Record<string, string> } | string
+        const to = this.to as {
+          name?: string
+          params?: Record<string, string>
+          query?: Record<string, string>
+        } | string
         if (typeof to === 'string') {
           return to
         }
+        const params = to.params ?? {}
+        const path = Object.keys(params).length > 0 ? `/${to.name}/${params.id}` : `/${to.name}`
         const query = Object.entries(to.query ?? {}).map(([key, value]) => `${key}=${value}`).join('&')
-        return query ? `/${to.name}?${query}` : `/${to.name}`
+        return query ? `${path}?${query}` : path
       },
     },
   },
@@ -52,6 +58,7 @@ const lastCall = (): [ProductStatus | undefined, GetProductsParams | undefined] 
 
 const product = (overrides: Partial<ProductItem> = {}): ProductItem => ({
   id: 'product-1',
+  code: 'P-000001',
   sku: 'SKU-001',
   name: 'Товар со связью',
   status: ProductStatus.Active,
@@ -68,6 +75,27 @@ const productWithLink = product({
     externalProductId: '123456789',
     isActive: true,
   }],
+})
+
+const productWithBothLinks = product({
+  channelLinks: [
+    {
+      channelId: 'channel-wb',
+      channelName: 'Wildberries',
+      channelCode: 'wildberries',
+      externalProductId: '123456789',
+      externalSku: 'WB-VENDOR',
+      isActive: true,
+    },
+    {
+      channelId: 'channel-oz',
+      channelName: 'Ozon',
+      channelCode: 'ozon',
+      externalProductId: 'OZ-SKU-1',
+      externalSku: 'OZ-OFFER',
+      isActive: true,
+    },
+  ],
 })
 
 const response = (
@@ -274,25 +302,42 @@ describe('ProductsView channel links', () => {
     getConnections.mockResolvedValue([])
   })
 
-  it('renders channel badges for a product with channel links', async () => {
+  it('renders the marketplace article columns independently of each other', async () => {
+    getProducts.mockResolvedValue(response([productWithBothLinks]))
+
+    const wrapper = factory()
+    await flushPromises()
+
+    const text = wrapper.text()
+
+    expect(text).toContain('123456789')
+    expect(text).toContain('OZ-SKU-1')
+    expect(text).toContain('WB-VENDOR')
+    expect(text).toContain('OZ-OFFER')
+  })
+
+  it('renders a dash when the product has no link for that marketplace', async () => {
     getProducts.mockResolvedValue(response([productWithLink]))
 
     const wrapper = factory()
     await flushPromises()
 
-    const badges = wrapper.find('.product-channel-badges')
+    const ozonArticle = wrapper.findAll('tbody a[href="/product-edit/product-1"]')
+      .filter(link => link.text() === '123456789')
 
-    expect(badges.exists()).toBe(true)
-    expect(badges.text()).toContain('123456789')
+    expect(ozonArticle.length).toBe(1)
+    // Ozon-колонки пусты: товар есть только в Wildberries.
+    expect(wrapper.findAll('tbody td').map(cell => cell.text())).toContain('—')
   })
 
-  it('does not render channel badges for an empty channel links array', async () => {
+  it('renders no article values for a product without channel links', async () => {
     getProducts.mockResolvedValue(response([product({ channelLinks: [] })]))
 
     const wrapper = factory()
     await flushPromises()
 
-    expect(wrapper.find('.product-channel-badges').exists()).toBe(false)
+    expect(wrapper.findAll('tbody a[href="/product-edit/product-1"]').length).toBe(1)
+    expect(wrapper.text()).not.toContain('123456789')
   })
 
   it('does not render the actions column for read-only users', async () => {
@@ -315,28 +360,38 @@ describe('ProductsView channel links', () => {
     expect(wrapper.find('tbody [data-slot="dropdown-menu-trigger"]').exists()).toBe(true)
   })
 
-  it('renders the product name as a link to the edit page', async () => {
+  it('renders the product code as a monospace link to the edit page', async () => {
     getProducts.mockResolvedValue(response([productWithLink]))
 
     const wrapper = factory()
     await flushPromises()
 
-    const link = wrapper.find('tbody a[href="/product-edit?productId=product-1"]')
+    const link = wrapper.find('tbody a[href="/product-edit/product-1"]')
 
     expect(link.exists()).toBe(true)
-    expect(link.text()).toBe('Товар со связью')
+    expect(link.text()).toBe('P-000001')
+    expect(link.classes()).toContain('font-mono')
     expect(link.classes()).toContain('no-underline')
     expect(link.classes()).toContain('hover:text-primary')
   })
 
-  it('keeps the name link for read-only users', async () => {
+  it('keeps the sku column next to the code column', async () => {
+    getProducts.mockResolvedValue(response([productWithLink]))
+
+    const wrapper = factory()
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('SKU-001')
+  })
+
+  it('keeps the code link for read-only users', async () => {
     canWrite.value = false
     getProducts.mockResolvedValue(response([productWithLink]))
 
     const wrapper = factory()
     await flushPromises()
 
-    expect(wrapper.find('tbody a[href="/product-edit?productId=product-1"]').exists()).toBe(true)
+    expect(wrapper.find('tbody a[href="/product-edit/product-1"]').exists()).toBe(true)
   })
 
   it('does not offer the edit action in the row menu', async () => {

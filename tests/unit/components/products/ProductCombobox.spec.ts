@@ -135,7 +135,7 @@ describe('ProductCombobox', () => {
     expect(productsGet).toHaveBeenCalledWith(ProductStatus.Active, {
       page: 1,
       pageSize: 20,
-      sortBy: 'name',
+      sortBy: 'code',
       sortDir: 'asc',
       includeWorkRateCoverage: true,
       search: undefined,

@@ -394,7 +394,7 @@ const renderProductName = (row: GridRow): VNode => {
   }
   return h('div', { class: 'flex flex-col gap-0.5' }, [
     h(RouterLink, {
-      to: { name: 'product-edit', query: { productId: row.productId } },
+      to: { name: 'product-edit', params: { id: row.productId } },
       class: 'font-medium hover:underline leading-snug',
     }, () => row.productName),
     h('span', { class: 'font-mono text-xs text-muted-foreground' }, row.productSku),

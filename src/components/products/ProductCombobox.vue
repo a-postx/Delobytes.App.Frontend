@@ -94,7 +94,7 @@ const loadPage = async (targetPage: number, term: string, append: boolean): Prom
     const response = await catalogProductsApi.getAll(ProductStatus.Active, {
       page: targetPage,
       pageSize: PAGE_SIZE,
-      sortBy: 'name',
+      sortBy: 'code',
       sortDir: 'asc',
       includeWorkRateCoverage: true,
       search: term.trim() || undefined,

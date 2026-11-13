@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { ref } from 'vue'
 import { mount, flushPromises } from '@vue/test-utils'
 
 vi.mock('@/services/api', () => ({
@@ -24,11 +25,12 @@ vi.mock('vue-router', () => ({
 }))
 
 vi.mock('@/composables/useCurrentUser', () => ({
-  useCurrentUser: () => ({ canWrite: true }),
+  useCurrentUser: () => ({ currentUser: ref({ role: 'Administrator' }), canWrite: true }),
 }))
 
 import { integrationsApi } from '@/services/api'
 import ProductImportsView from '@/views/ProductImportsView.vue'
+import { PRODUCTS_IMPORT_JOB_TYPE, OZON_PRODUCTS_IMPORT_JOB_TYPE } from '@/types'
 
 const getProductImports = integrationsApi.getProductImports as ReturnType<typeof vi.fn>
 const getConnections = integrationsApi.getConnections as ReturnType<typeof vi.fn>
@@ -58,6 +60,19 @@ const runningJob = {
 const finishedJob = { ...runningJob, status: 'Success', completedAt: '2026-01-01T10:05:00Z' }
 
 /**
+ * Экран запрашивает оба типа импорта параллельно, поэтому мок отвечает по типу:
+ * Wildberries отдаёт задачу, Ozon — пустую историю.
+ */
+const respondWildberries = (job: unknown) => ({
+  jobs: job ? [job] : [],
+  totalCount: job ? 1 : 0,
+  page: 1,
+  pageSize: 50,
+})
+
+const emptyOzon = () => respondWildberries(null)
+
+/**
  * Регрессия: фоновый опрос статуса не должен размонтировать таблицу задач.
  * До правки useAsyncResource поднимал общий loading на каждой итерации, и таблица
  * на время запроса подменялась скелетоном, а кнопка запуска блокировалась.
@@ -67,16 +82,12 @@ describe('ProductImportsView: фоновый опрос не скрывает т
     vi.clearAllMocks()
     vi.useFakeTimers()
     getConnections.mockResolvedValue([connection])
+    getProductImports.mockImplementation((type: string) =>
+      Promise.resolve(type === PRODUCTS_IMPORT_JOB_TYPE ? respondWildberries(runningJob) : emptyOzon()),
+    )
   })
 
   it('держит таблицу в DOM в момент запроса обновления статуса', async () => {
-    getProductImports.mockResolvedValue({
-      jobs: [runningJob],
-      totalCount: 1,
-      page: 1,
-      pageSize: 50,
-    })
-
     const wrapper = mount(ProductImportsView, {
       global: { stubs: { RouterLink: true } },
     })
@@ -99,7 +110,7 @@ describe('ProductImportsView: фоновый опрос не скрывает т
     // Скелетон не подменил таблицу.
     expect(wrapper.html()).toContain('Завершена')
 
-    releaseRefresh({ jobs: [finishedJob], totalCount: 1, page: 1, pageSize: 50 })
+    releaseRefresh(respondWildberries(finishedJob))
     await flushPromises()
 
     expect(wrapper.text()).toContain('Успешно')
@@ -107,20 +118,13 @@ describe('ProductImportsView: фоновый опрос не скрывает т
   })
 
   it('не вращает иконку Обновить во время фонового опроса', async () => {
-    getProductImports.mockResolvedValue({
-      jobs: [runningJob],
-      totalCount: 1,
-      page: 1,
-      pageSize: 50,
-    })
-
     const wrapper = mount(ProductImportsView, {
       global: { stubs: { RouterLink: true } },
     })
     await flushPromises()
 
     const refreshButton = (): ReturnType<typeof wrapper.find> =>
-      wrapper.find('button[aria-label="\u041e\u0431\u043d\u043e\u0432\u0438\u0442\u044c"]')
+      wrapper.find('button[aria-label="Обновить"]')
 
     expect(refreshButton().html()).not.toContain('animate-spin')
 
@@ -137,7 +141,7 @@ describe('ProductImportsView: фоновый опрос не скрывает т
     // начинает и бросает вращение каждые 2 секунды.
     expect(refreshButton().html()).not.toContain('animate-spin')
 
-    releaseRefresh({ jobs: [finishedJob], totalCount: 1, page: 1, pageSize: 50 })
+    releaseRefresh(respondWildberries(finishedJob))
     await flushPromises()
 
     expect(refreshButton().html()).not.toContain('animate-spin')
@@ -145,13 +149,6 @@ describe('ProductImportsView: фоновый опрос не скрывает т
   })
 
   it('оставляет таблицу при сбое фонового обновления', async () => {
-    getProductImports.mockResolvedValue({
-      jobs: [runningJob],
-      totalCount: 1,
-      page: 1,
-      pageSize: 50,
-    })
-
     const wrapper = mount(ProductImportsView, {
       global: { stubs: { RouterLink: true } },
     })
@@ -179,6 +176,39 @@ describe('ProductImportsView: фоновый опрос не скрывает т
     await flushPromises()
 
     expect(wrapper.text()).toContain('Сервер вернул ошибку')
+    wrapper.unmount()
+  })
+
+  it('объединяет историю обоих типов и подписывает маркетплейс по типу задания', async () => {
+    const ozonJob = {
+      ...finishedJob,
+      id: 'job-2',
+      type: OZON_PRODUCTS_IMPORT_JOB_TYPE,
+      connectionId: 'conn-deleted',
+      createdAt: '2026-01-02T10:00:00Z',
+    }
+
+    getProductImports.mockImplementation((type: string) =>
+      Promise.resolve(
+        type === PRODUCTS_IMPORT_JOB_TYPE ? respondWildberries(finishedJob) : respondWildberries(ozonJob),
+      ),
+    )
+
+    const wrapper = mount(ProductImportsView, {
+      global: { stubs: { RouterLink: true } },
+    })
+    await flushPromises()
+
+    const text = wrapper.text()
+    expect(text).toContain('Wildberries')
+    expect(text).toContain('Ozon')
+
+    // Ozon-задача старше по createdAt и идёт первой; подключение уже удалено.
+    const rows = wrapper.findAll('tbody tr')
+    expect(rows.length).toBe(2)
+    expect(rows[0].text()).toContain('Ozon')
+    expect(rows[0].text()).toContain('Подключение удалено')
+    expect(rows[1].text()).toContain('Wildberries')
     wrapper.unmount()
   })
 })
