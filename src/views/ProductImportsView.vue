@@ -141,6 +141,8 @@ const connectionsLoaded: ComputedRef<boolean> = computed<boolean>(
   () => connectionsResource.status.value === 'success',
 )
 
+const selectContentClass = 'z-[110] pointer-events-auto'
+
 const isManualRefreshing = ref<boolean>(false)
 const isLaunchDialogOpen = ref<boolean>(false)
 const isStarting = ref<boolean>(false)
@@ -557,7 +559,7 @@ onMounted(async () => {
               <SelectTrigger id="import-connection" class="mt-1 w-full">
                 <SelectValue placeholder="Выберите подключение" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent :class="selectContentClass">
                 <SelectItem
                   v-for="connection in activeEligibleConnections"
                   :key="connection.id"
