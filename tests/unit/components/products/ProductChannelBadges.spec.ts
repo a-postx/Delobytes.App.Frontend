@@ -41,11 +41,10 @@ describe('ProductChannelBadges', () => {
 
   it('marks inactive links as muted', () => {
     const wrapper = mount(ProductChannelBadges, { props: { links } })
-    const inactive = wrapper.findAll('[title]')
+    const inactive = wrapper.findAll('a')
       .find(node => node.text() === '987654321')
 
     expect(inactive).toBeTruthy()
-    expect(inactive!.attributes('title')).toContain('Ozon')
     expect(inactive!.classes()).toContain('opacity-50')
   })
 

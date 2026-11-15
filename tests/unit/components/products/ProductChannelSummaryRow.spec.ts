@@ -9,8 +9,8 @@ const wildberriesLink: ProductChannelLink = {
   channelCode: 'wildberries',
   externalProductId: '123456789',
   externalSku: 'WB-SKU',
-  name: 'Название на канале',
-  description: 'Описание на канале',
+  name: 'Название карточки',
+  description: 'Описание карточки',
   barcodes: [{ value: '4600000000001', type: 'wildberries' }],
   photos: [{ displayOrder: 1, sizeVariant: 'thumbnail', url: 'https://cdn.test/thumb.webp' }],
   packingUnit: { lengthCm: 1, widthCm: 2, heightCm: 3, weightKg: 0.5 },
@@ -32,25 +32,39 @@ describe('ProductChannelSummaryRow', () => {
   it('starts collapsed and reveals the channel data on toggle', async () => {
     const wrapper = mountRow(wildberriesLink)
 
-    expect(wrapper.text()).not.toContain('Баркоды канала')
-    expect(wrapper.text()).not.toContain('Фотографии канала')
+    expect(wrapper.text()).not.toContain('Артикул продавца')
+    expect(wrapper.text()).not.toContain('Фотографии')
 
     await wrapper.find('button[aria-expanded]').trigger('click')
 
-    expect(wrapper.text()).toContain('Баркоды канала')
-    expect(wrapper.text()).toContain('Фотографии канала')
+    expect(wrapper.text()).toContain('Артикул продавца')
+    expect(wrapper.text()).toContain('Фотографии')
   })
 
-  it('renders channel barcodes as external marketplace links', async () => {
+  it('renders barcodes as plain badges without links or tooltips', async () => {
     const wrapper = mountRow(wildberriesLink)
     await wrapper.find('button[aria-expanded]').trigger('click')
 
-    const link = wrapper.find('a[target="_blank"]')
+    const badge = wrapper.findAll('span').find(node => node.text() === '4600000000001')
 
-    expect(link.exists()).toBe(true)
-    expect(link.attributes('href')).toBe('https://www.wildberries.ru/catalog/123456789/detail.aspx')
-    expect(link.attributes('rel')).toBe('noopener noreferrer')
-    expect(link.text()).toContain('4600000000001')
+    expect(badge).toBeTruthy()
+    expect(badge!.classes()).toContain('bg-badge-wb')
+    expect(wrapper.findAll('a')).toHaveLength(0)
+    expect(wrapper.html()).not.toContain('title=')
+  })
+
+  it('names the card fields without repeating the channel word', async () => {
+    const wrapper = mountRow(wildberriesLink)
+    await wrapper.find('button[aria-expanded]').trigger('click')
+
+    const text = wrapper.text()
+
+    expect(text).toContain('Название карточки')
+    expect(text).toContain('Описание карточки')
+    expect(text).toContain('Габариты')
+    expect(text).not.toContain('на канале')
+    expect(text).not.toContain('Баркоды канала')
+    expect(text).not.toContain('Фотографии канала')
   })
 
   it('renders an explicit empty state when the channel has no photos', async () => {

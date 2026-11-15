@@ -23,19 +23,13 @@ const containerClass = computed<string>(() =>
 interface ChannelBadgeItem {
   link: ProductChannelLink
   url: string | null
-  title: string
 }
 
 const items = computed<ChannelBadgeItem[]>(() =>
-  props.links.map((link: ProductChannelLink) => {
-    const url: string | null = buildMarketplaceProductUrl(link.channelCode, link.externalProductId)
-    const channelName: string = link.channelName || link.channelCode || 'Канал'
-    return {
-      link,
-      url,
-      title: `${channelName} · ${url ? 'открыть карточку на маркетплейсе' : 'ссылка недоступна'}`,
-    }
-  }),
+  props.links.map((link: ProductChannelLink) => ({
+    link,
+    url: buildMarketplaceProductUrl(link.channelCode, link.externalProductId),
+  })),
 )
 </script>
 
@@ -48,7 +42,6 @@ const items = computed<ChannelBadgeItem[]>(() =>
       :href="item.url ?? undefined"
       :target="item.url ? '_blank' : undefined"
       :rel="item.url ? 'noopener noreferrer' : undefined"
-      :title="item.title"
       :class="['inline-flex', { 'opacity-50': !item.link.isActive }]"
     >
       <Badge :variant="channelDisplayForLink(item.link.channelCode, item.link.channelName).variant">

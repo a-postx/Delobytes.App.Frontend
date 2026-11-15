@@ -1,9 +1,8 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { ChevronDown, ChevronUp, ExternalLink, X } from 'lucide-vue-next'
+import { ChevronDown, ChevronUp, X } from 'lucide-vue-next'
 import { Badge } from '@/components/ui/badge'
 import { channelDisplayForLink } from '@/utils/channelBadges'
-import { buildMarketplaceProductUrl } from '@/utils/marketplaceLinks'
 import type { ChannelProductBarcode, ProductChannelLink, ProductChannelPhoto } from '@/types/products'
 
 // Deliberate placeholder for the planned comparison/propagation screen: this row is the only
@@ -22,10 +21,6 @@ const channelVariant = computed(() =>
   channelDisplayForLink(props.link.channelCode, props.link.channelName).variant,
 )
 
-const marketplaceUrl = computed<string | null>(() =>
-  buildMarketplaceProductUrl(props.link.channelCode, props.link.externalProductId),
-)
-
 const barcodes = computed<ChannelProductBarcode[]>(() => props.link.barcodes ?? [])
 
 const thumbnails = computed<ProductChannelPhoto[]>(() =>
@@ -34,11 +29,6 @@ const thumbnails = computed<ProductChannelPhoto[]>(() =>
     .slice()
     .sort((left: ProductChannelPhoto, right: ProductChannelPhoto) => left.displayOrder - right.displayOrder),
 )
-
-const barcodeTitle = computed<string>(() => {
-  const channelName: string = props.link.channelName || props.link.channelCode || 'Канал'
-  return `${channelName} · ${marketplaceUrl.value ? 'открыть карточку на маркетплейсе' : 'ссылка недоступна'}`
-})
 
 const packingUnitLabel = computed<string>(() => {
   const unit = props.link.packingUnit
@@ -114,25 +104,22 @@ const nextPhoto = (): void => {
 
     <div v-if="expanded" class="grid gap-6 border-t border-border p-4 lg:grid-cols-2">
       <div class="flex flex-col gap-3">
+        <div class="flex flex-col gap-0.5">
+          <span class="text-xs text-muted-foreground">Название</span>
+          <span class="text-sm">{{ link.name || '—' }}</span>
+        </div>
+
         <div class="flex flex-col gap-1">
-          <span class="text-xs text-muted-foreground">Баркоды канала</span>
-          <div v-if="barcodes.length === 0" class="text-sm text-muted-foreground">Канал не сообщил баркоды</div>
+          <span class="text-xs text-muted-foreground">Баркоды</span>
+          <div v-if="barcodes.length === 0" class="text-sm text-muted-foreground">Баркоды не указаны</div>
           <div v-else class="flex flex-wrap gap-1">
-            <component
-              :is="marketplaceUrl ? 'a' : 'span'"
+            <Badge
               v-for="barcode in barcodes"
               :key="barcode.value"
-              :href="marketplaceUrl ?? undefined"
-              :target="marketplaceUrl ? '_blank' : undefined"
-              :rel="marketplaceUrl ? 'noopener noreferrer' : undefined"
-              :title="barcodeTitle"
-              class="inline-flex"
+              :variant="channelVariant"
             >
-              <Badge :variant="channelVariant">
-                {{ barcode.value }}
-                <ExternalLink v-if="marketplaceUrl" class="size-3 ml-1" aria-hidden="true" />
-              </Badge>
-            </component>
+              {{ barcode.value }}
+            </Badge>
           </div>
         </div>
 
@@ -147,7 +134,7 @@ const nextPhoto = (): void => {
         </div>
 
         <div v-if="link.description" class="flex flex-col gap-1">
-          <span class="text-xs text-muted-foreground">Описание на канале</span>
+          <span class="text-xs text-muted-foreground">Описание</span>
           <p :class="['text-sm text-muted-foreground', descriptionExpanded ? '' : 'line-clamp-3']">
             {{ link.description }}
           </p>
@@ -161,13 +148,13 @@ const nextPhoto = (): void => {
         </div>
 
         <div class="flex flex-col gap-0.5">
-          <span class="text-xs text-muted-foreground">Габариты на канале</span>
+          <span class="text-xs text-muted-foreground">Габариты</span>
           <span class="text-sm">{{ packingUnitLabel }}</span>
         </div>
       </div>
 
       <div class="flex flex-col gap-2">
-        <span class="text-xs text-muted-foreground">Фотографии канала</span>
+        <span class="text-xs text-muted-foreground">Фотографии</span>
         <div v-if="thumbnails.length === 0" class="text-sm text-muted-foreground">
           Фотографии в канале отсутствуют
         </div>

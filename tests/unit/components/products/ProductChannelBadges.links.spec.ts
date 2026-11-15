@@ -41,8 +41,12 @@ describe('ProductChannelBadges: marketplace links', () => {
     expect(wrapper.find('a').exists()).toBe(false)
     expect(wrapper.find('span').exists()).toBe(true)
     expect(wrapper.text()).toContain('123456789')
-    expect(wrapper.attributes('title')).toBeUndefined()
-    expect(wrapper.find('[title]').attributes('title')).toContain('ссылка недоступна')
+  })
+
+  it('adds no tooltips to link badges', () => {
+    const wrapper = mount(ProductChannelBadges, { props: { links: [wildberriesLink] } })
+
+    expect(wrapper.html()).not.toContain('title=')
   })
 
   it('keeps the marketplace colour and mutes an inactive link', () => {
