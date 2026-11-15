@@ -12,7 +12,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { CopyButton } from '@/components/ui/copy-button'
 import ProductPhotoGallery from '@/components/products/ProductPhotoGallery.vue'
 import ProductChannelBadges from '@/components/products/ProductChannelBadges.vue'
-import ProductChannelCard from '@/components/products/ProductChannelCard.vue'
+import ProductChannelSummaryRow from '@/components/products/ProductChannelSummaryRow.vue'
 import ProductBomEditor from '@/components/products/ProductBomEditor.vue'
 import { toast } from 'vue-sonner'
 import { catalogProductsApi } from '@/services/api'
@@ -20,7 +20,6 @@ import { extractErrorCode, extractErrorMessage } from '@/composables/useApi'
 import { describeFailure } from '@/composables/useApiFailureCopy'
 import type { FailureCopy } from '@/composables/useApiFailureCopy'
 import ErrorState from '@/components/feedback/ErrorState.vue'
-import { channelDisplay, normalizeChannel } from '@/utils/channelBadges'
 import type { GetProductResponse, UpdateProductRequest, ProductBarcode, PackingUnit, ProductPhoto } from '@/types/products'
 import type { ApiError } from '@/types/errors'
 import { useCurrentUser } from '@/composables/useCurrentUser'
@@ -62,11 +61,9 @@ const form = ref<FormData>({
   packingUnit: { lengthCm: '', widthCm: '', heightCm: '', weightKg: '' },
 })
 
-const newBarcode = ref({ value: '', type: '', isDefault: false })
+const BARCODE_SYMBOLOGY_EAN13 = 'EAN13'
 
-const getBarcodeVariant = (
-  type?: string,
-): 'default' | 'marketplace-wb' | 'marketplace-oz' | 'marketplace-ym' => channelDisplay(normalizeChannel(type)).variant
+const newBarcode = ref({ value: '', type: BARCODE_SYMBOLOGY_EAN13, isDefault: false })
 
 /**
  * Снимок загруженных с сервера значений. Любое расхождение с ним — несохранённая правка:
@@ -109,7 +106,7 @@ const addBarcode = (): void => {
     return
   }
   form.value.barcodes.push({ ...newBarcode.value })
-  newBarcode.value = { value: '', type: '', isDefault: false }
+  newBarcode.value = { value: '', type: BARCODE_SYMBOLOGY_EAN13, isDefault: false }
 }
 
 const removeBarcode = (index: number): void => {
@@ -356,9 +353,15 @@ onMounted(() => {
                     :key="idx"
                     class="flex items-center gap-2 p-2 bg-muted rounded-md"
                   >
-                    <Badge :variant="getBarcodeVariant(barcode.type)" class="flex-shrink-0">
+                    <Badge variant="secondary" class="flex-shrink-0">
                       {{ barcode.value }}
                     </Badge>
+                    <span
+                      v-if="barcode.type && barcode.type !== BARCODE_SYMBOLOGY_EAN13"
+                      class="text-xs text-muted-foreground"
+                    >
+                      {{ barcode.type }}
+                    </span>
                     <Button
                       v-if="canWrite"
                       variant="ghost"
@@ -375,12 +378,15 @@ onMounted(() => {
                     v-model="newBarcode.value"
                     placeholder=""
                     class="flex-1"
+                    aria-label="Значение баркода"
                   />
-                  <Input
+                  <select
                     v-model="newBarcode.type"
-                    placeholder="Тип (опц.)"
-                    class="w-32"
-                  />
+                    class="w-32 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    aria-label="Символика баркода"
+                  >
+                    <option value="EAN13">EAN13</option>
+                  </select>
                   <Button variant="outline" size="sm" @click="addBarcode">
                     <Plus class="size-4" />
                   </Button>
@@ -447,8 +453,8 @@ onMounted(() => {
 
       <div v-if="product?.channelLinks && product.channelLinks.length > 0" class="flex flex-col gap-4">
         <h2 class="text-lg font-bold">Каналы продаж</h2>
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <ProductChannelCard
+        <div class="flex flex-col gap-2">
+          <ProductChannelSummaryRow
             v-for="link in product.channelLinks"
             :key="link.channelId"
             :link="link"

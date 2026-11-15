@@ -47,6 +47,7 @@ import type { FailureCopy } from '@/composables/useApiFailureCopy'
 import type { ApiError } from '@/types/errors'
 import ErrorState from '@/components/feedback/ErrorState.vue'
 import { useRouter } from 'vue-router'
+import { channelDisplay } from '@/utils/channelBadges'
 
 const router = useRouter()
 const { isAdministrator } = usePermissions()
@@ -65,6 +66,12 @@ const jobTypeByTemplateCode: Record<string, ProductImportJobType> = {
 const marketplaceByJobType: Record<string, string> = {
   [PRODUCTS_IMPORT_JOB_TYPE]: 'Wildberries',
   [OZON_PRODUCTS_IMPORT_JOB_TYPE]: 'Ozon',
+}
+
+/** Код канала для цвета бейджа. Неизвестный тип остаётся нейтральным (null → default). */
+const channelCodeByJobType: Record<string, string | null> = {
+  [PRODUCTS_IMPORT_JOB_TYPE]: 'wildberries',
+  [OZON_PRODUCTS_IMPORT_JOB_TYPE]: 'ozon',
 }
 
 /** Результат объединённой загрузки: без фиктивных page/pageSize, которых у двух независимых выборок нет. */
@@ -172,10 +179,6 @@ const activeEligibleConnections = computed<Connection[]>(() =>
   ),
 )
 
-const connectionById = computed<Map<string, Connection>>(
-  () => new Map(connections.value.map(c => [c.id, c])),
-)
-
 const jobTypeForConnection = (connection: Connection): ProductImportJobType | null =>
   jobTypeByTemplateCode[connection.templateCode] ?? null
 
@@ -204,11 +207,9 @@ const canSubmitLaunch = computed<boolean>(() =>
   && !hasRunningJobFor(selectedConnection.value),
 )
 
-const shortConnectionId = (id: string): string => id.slice(0, 8)
-
 const connectionOptionLabel = (connection: Connection): string => {
   const marketplace = connection.templateDisplayName || connection.templateCode
-  return `${marketplace} · ${shortConnectionId(connection.id)}`
+  return `${marketplace} · ${connection.id.slice(0, 8)}`
 }
 
 const recordsProcessed = (job: ProductImportJob): number => {
@@ -255,14 +256,6 @@ const getStatusLabel = (status: string): string => {
 /** Неизвестный тип не выдаём за Wildberries: показываем сам токен. */
 const marketplaceForJob = (job: ProductImportJob): string =>
   marketplaceByJobType[job.type] ?? job.type
-
-const connectionLabelForJob = (job: ProductImportJob): string => {
-  const connection = connectionById.value.get(job.connectionId)
-  if (!connection) {
-    return `Подключение удалено · ${shortConnectionId(job.connectionId)}`
-  }
-  return connectionOptionLabel(connection)
-}
 
 const loadConnections = async (): Promise<void> => {
   await connectionsResource.load()
@@ -475,7 +468,6 @@ onMounted(async () => {
           <TableRow>
             <TableHead>Создана</TableHead>
             <TableHead>Маркетплейс</TableHead>
-            <TableHead>Подключение</TableHead>
             <TableHead>Статус</TableHead>
             <TableHead>Завершена</TableHead>
             <TableHead class="text-right tabular-nums">Обработано</TableHead>
@@ -491,15 +483,9 @@ onMounted(async () => {
               {{ formatDate(job.createdAt) }}
             </TableCell>
             <TableCell class="whitespace-nowrap">
-              <Badge variant="secondary">{{ marketplaceForJob(job) }}</Badge>
-            </TableCell>
-            <TableCell>
-              <span
-                class="text-sm"
-                :title="job.connectionId"
-              >
-                {{ connectionLabelForJob(job) }}
-              </span>
+              <Badge :variant="channelDisplay(channelCodeByJobType[job.type]).variant">
+                {{ marketplaceForJob(job) }}
+              </Badge>
             </TableCell>
             <TableCell>
               <div class="flex items-center gap-2">

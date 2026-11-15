@@ -79,9 +79,9 @@ const factory = () => mount(ProductEditView, {
     stubs: {
       ProductPhotoGallery: true,
       ProductBomEditor: true,
-      ProductChannelCard: {
+      ProductChannelSummaryRow: {
         props: ['link'],
-        template: '<div class="product-channel-card">{{ link.externalProductId }}</div>',
+        template: '<div class="product-channel-summary-row">{{ link.externalProductId }}</div>',
       },
       ProductChannelBadges: {
         props: ['links'],
@@ -132,8 +132,8 @@ describe('ProductEditView: канонические поля связанног�
     expect(code.value).toBe('P-000001')
     expect(code.disabled).toBe(true)
 
-    expect(wrapper.find('.product-channel-card').exists()).toBe(true)
-    expect(wrapper.find('.product-channel-card').text()).toBe('123456789')
+    expect(wrapper.find('.product-channel-summary-row').exists()).toBe(true)
+    expect(wrapper.find('.product-channel-summary-row').text()).toBe('123456789')
   })
 
   it('отправляет канонические поля вместе с изменённым SKU', async () => {
@@ -256,6 +256,62 @@ describe('ProductEditView: габариты упаковки', () => {
 
     const payload = update.mock.calls.at(-1)?.[1] as { packingUnit?: Record<string, number> }
     expect(payload.packingUnit).toEqual({ lengthCm: 12, widthCm: 8, heightCm: 4 })
+  })
+})
+
+describe('ProductEditView: символика баркодов', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    routeParams.value = { id: 'product-1' }
+  })
+
+  it('renders a canonical barcode as a neutral badge, never in the channel colour', async () => {
+    const wrapper = await mountWith(baseProduct)
+
+    const badge = wrapper.findAll('span').find(node => node.text() === '4600000000001')
+
+    expect(badge).toBeTruthy()
+    expect(badge!.classes()).toContain('bg-muted')
+    expect(badge!.classes()).not.toContain('bg-badge-wb')
+    expect(wrapper.html()).not.toContain('bg-badge-wb')
+  })
+
+  it('offers a symbology selector with exactly one option', async () => {
+    const wrapper = await mountWith(baseProduct)
+
+    const select = wrapper.find('select[aria-label="Символика баркода"]')
+
+    expect(select.exists()).toBe(true)
+    expect((select.element as HTMLSelectElement).value).toBe('EAN13')
+
+    const options = select.findAll('option')
+    expect(options).toHaveLength(1)
+    expect(options[0].text()).toBe('EAN13')
+  })
+
+  it('saves a newly added barcode as EAN13', async () => {
+    const wrapper = await mountWith(baseProduct)
+    update.mockResolvedValue(undefined)
+
+    await wrapper.find('input[aria-label="Значение баркода"]').setValue('4600000000002')
+
+    const addButton = wrapper.find('select[aria-label="Символика баркода"]')
+      .element
+      .parentElement!
+      .querySelector('button')
+
+    addButton!.dispatchEvent(new MouseEvent('click'))
+    await flushPromises()
+
+    await saveButton(wrapper)!.trigger('click')
+    await flushPromises()
+
+    const payload = update.mock.calls.at(-1)?.[1] as { barcodes: Array<Record<string, unknown>> }
+    expect(payload.barcodes).toContainEqual({
+      value: '4600000000002',
+      type: 'EAN13',
+      isDefault: false,
+    })
   })
 })
 

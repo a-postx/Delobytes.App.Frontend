@@ -26,12 +26,24 @@ export interface PackingUnit {
 
 export interface ProductPhoto {
   id: string
-  channelId: string
   displayOrder: number
   sizeVariant: string
   url: string
   width?: number
   height?: number
+}
+
+/** Баркод, который канал сообщает для своей карточки. Тип — тип канала, не символика. */
+export interface ChannelProductBarcode {
+  value: string
+  type?: string | null
+}
+
+/** Фотография собственной галереи карточки канала. */
+export interface ProductChannelPhoto {
+  displayOrder: number
+  sizeVariant: string
+  url: string
 }
 
 export interface ProductChannelLink {
@@ -51,6 +63,13 @@ export interface ProductChannelLink {
    * измерений, — это не ноль и не нулевая посылка.
    */
   packingUnit?: PackingUnit | null
+  /**
+   * Баркоды канала для этой карточки. `undefined`/`null` — коллекция не загружена
+   * (список товаров её не запрашивает), пустой массив — канал не сообщил ни одного.
+   */
+  barcodes?: ChannelProductBarcode[] | null
+  /** Фотографии карточки, упорядочены по displayOrder; `null` — коллекция не загружена. */
+  photos?: ProductChannelPhoto[] | null
   lastSyncedAt?: string | null
 }
 

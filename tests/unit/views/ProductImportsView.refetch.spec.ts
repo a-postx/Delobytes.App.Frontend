@@ -202,12 +202,12 @@ describe('ProductImportsView: фоновый опрос не скрывает т
     const text = wrapper.text()
     expect(text).toContain('Wildberries')
     expect(text).toContain('Ozon')
+    expect(wrapper.find('thead').text()).not.toContain('Подключение')
 
-    // Ozon-задача старше по createdAt и идёт первой; подключение уже удалено.
+    // Ozon-задача новее по createdAt и идёт первой.
     const rows = wrapper.findAll('tbody tr')
     expect(rows.length).toBe(2)
     expect(rows[0].text()).toContain('Ozon')
-    expect(rows[0].text()).toContain('Подключение удалено')
     expect(rows[1].text()).toContain('Wildberries')
     wrapper.unmount()
   })

@@ -45,7 +45,7 @@ import {
   type VisibilityState,
 } from '@/components/ui/data-grid'
 import ProductStatusBadge from '@/components/products/ProductStatusBadge.vue'
-import { channelDisplay, normalizeChannel } from '@/utils/channelBadges'
+import ProductChannelBadges from '@/components/products/ProductChannelBadges.vue'
 import { toast } from 'vue-sonner'
 import { catalogProductsApi, integrationsApi } from '@/services/api'
 import type {
@@ -243,39 +243,6 @@ const lastModifiedAt = (item: ProductItem): string => item.updatedAt ?? item.cre
 const toProductSortKey = (columnId: string | undefined): ProductSortKey | undefined =>
   isProductSortKey(columnId) ? columnId : undefined
 
-const getBarcodeVariant = (type?: string): 'default' | 'marketplace-wb' | 'marketplace-oz' | 'marketplace-ym' =>
-  channelDisplay(normalizeChannel(type)).variant
-
-/**
- * Колонки маркетплейсов ищут связку по коду канала: у товара может быть несколько каналов,
- * но артикул WB и артикул Ozon — разные величины, и брать первый попавшийся нельзя.
- */
-const findChannelLink = (item: ProductItem, channelCode: string) =>
-  item.channelLinks?.find(link => normalizeChannel(link.channelCode) === channelCode) ?? null
-
-const renderChannelArticleCell = (item: ProductItem, channelCode: string): unknown => {
-  const link = findChannelLink(item, channelCode)
-  if (!link) {
-    return h('span', { class: 'text-muted-foreground text-sm' }, '—')
-  }
-  return h(
-    RouterLink,
-    {
-      to: { name: 'product-edit', params: { id: item.id } },
-      class: 'font-mono text-sm no-underline hover:text-primary',
-    },
-    () => link.externalProductId,
-  )
-}
-
-const renderChannelSkuCell = (item: ProductItem, channelCode: string): unknown => {
-  const link = findChannelLink(item, channelCode)
-  if (!link || !link.externalSku) {
-    return h('span', { class: 'text-muted-foreground text-sm' }, '—')
-  }
-  return h('span', { class: 'font-mono text-sm text-muted-foreground' }, link.externalSku)
-}
-
 /** Сортируемым колонкам id совпадает с ключом из whitelist бэкенда; остальным он нужен для меню видимости. */
 const columns = computed<ColumnDef<ProductItem, unknown>[]>(() => {
   const definitions: ColumnDef<ProductItem, unknown>[] = [
@@ -325,59 +292,20 @@ const columns = computed<ColumnDef<ProductItem, unknown>[]>(() => {
       cell: ({ row }) => h('span', { class: 'font-mono text-sm' }, row.original.sku),
     },
     {
-      id: 'wbArticle',
-      accessorKey: 'wbArticle',
+      id: 'channels',
+      accessorKey: 'channelLinks',
       enableSorting: false,
       enableHiding: true,
-      meta: { title: 'Артикул WB', sortDisabledReason: 'Бэкенд не поддерживает сортировку по каналам' },
-      header: 'Артикул WB',
-      cell: ({ row }) => renderChannelArticleCell(row.original, 'wildberries'),
-    },
-    {
-      id: 'ozArticle',
-      accessorKey: 'ozArticle',
-      enableSorting: false,
-      enableHiding: true,
-      meta: { title: 'Артикул Ozon', sortDisabledReason: 'Бэкенд не поддерживает сортировку по каналам' },
-      header: 'Артикул Ozon',
-      cell: ({ row }) => renderChannelArticleCell(row.original, 'ozon'),
-    },
-    {
-      id: 'wbSellerSku',
-      accessorKey: 'wbSellerSku',
-      enableSorting: false,
-      enableHiding: true,
-      meta: { title: 'Артикул продавца WB', sortDisabledReason: 'Бэкенд не поддерживает сортировку по каналам' },
-      header: 'Артикул продавца WB',
-      cell: ({ row }) => renderChannelSkuCell(row.original, 'wildberries'),
-    },
-    {
-      id: 'ozSellerSku',
-      accessorKey: 'ozSellerSku',
-      enableSorting: false,
-      enableHiding: true,
-      meta: { title: 'Артикул продавца Ozon', sortDisabledReason: 'Бэкенд не поддерживает сортировку по каналам' },
-      header: 'Артикул продавца Ozon',
-      cell: ({ row }) => renderChannelSkuCell(row.original, 'ozon'),
-    },
-    {
-      id: 'barcodes',
-      accessorKey: 'barcodes',
-      enableSorting: false,
-      enableHiding: true,
-      meta: { title: 'Баркоды' },
-      header: 'Баркоды',
+      meta: { title: 'Каналы', sortDisabledReason: 'Бэкенд не поддерживает сортировку по каналам' },
+      header: 'Каналы',
       cell: ({ row }) => {
-        if (!row.original.barcodes || row.original.barcodes.length === 0) {
+        if (!row.original.channelLinks || row.original.channelLinks.length === 0) {
           return h('span', { class: 'text-muted-foreground text-sm' }, '—')
         }
-        return h('div', { class: 'flex flex-wrap gap-1' }, row.original.barcodes.map((barcode, index) =>
-          h(Badge, {
-            key: index,
-            variant: getBarcodeVariant(barcode.type),
-            class: 'text-xs',
-          }, barcode.value)
-        ))
+        return h(ProductChannelBadges, {
+          links: row.original.channelLinks,
+          layout: 'column',
+        })
       },
     },
     {
@@ -769,7 +697,7 @@ const inputClass = 'mt-1'
     <div class="flex flex-wrap items-center gap-2">
       <SearchInput
         v-model="searchQuery"
-        placeholder="Поиск по названию или SKU"
+        placeholder="Поиск по номеру, названию или SKU"
         class="w-full sm:w-80"
       />
       <StatusFilter v-model="statusFilter" :options="filterOptions" />
@@ -912,7 +840,7 @@ const inputClass = 'mt-1'
                     :key="idx"
                     class="flex items-center gap-2 p-2 bg-muted rounded-md"
                   >
-                    <Badge :variant="getBarcodeVariant(barcode.type)" class="flex-shrink-0">
+                    <Badge variant="secondary" class="flex-shrink-0">
                       {{ barcode.value }}
                     </Badge>
                     <span v-if="barcode.type" class="text-xs text-muted-foreground">{{ barcode.type }}</span>

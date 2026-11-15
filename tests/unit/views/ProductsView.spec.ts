@@ -111,14 +111,6 @@ const response = (
 })
 
 const factory = (): VueWrapper => mount(ProductsView, {
-  global: {
-    stubs: {
-      ProductChannelBadges: {
-        props: ['links'],
-        template: '<div class="product-channel-badges">{{ links[0].externalProductId }}</div>',
-      },
-    },
-  },
   attachTo: document.body,
 })
 
@@ -302,41 +294,45 @@ describe('ProductsView channel links', () => {
     getConnections.mockResolvedValue([])
   })
 
-  it('renders the marketplace article columns independently of each other', async () => {
+  it('renders one channels column and none of the removed article columns', async () => {
     getProducts.mockResolvedValue(response([productWithBothLinks]))
 
     const wrapper = factory()
     await flushPromises()
 
-    const text = wrapper.text()
+    const header = wrapper.find('thead').text()
 
-    expect(text).toContain('123456789')
-    expect(text).toContain('OZ-SKU-1')
-    expect(text).toContain('WB-VENDOR')
-    expect(text).toContain('OZ-OFFER')
+    expect(header.match(/Каналы/g)?.length ?? 0).toBe(1)
+    expect(header).not.toContain('Артикул продавца WB')
+    expect(header).not.toContain('Артикул продавца Ozon')
+    expect(header).not.toContain('Артикул WB')
+    expect(header).not.toContain('Артикул Ozon')
+    expect(header).not.toContain('Баркоды')
   })
 
-  it('renders a dash when the product has no link for that marketplace', async () => {
-    getProducts.mockResolvedValue(response([productWithLink]))
+  it('renders one marketplace link per channel, in the order the API returned them', async () => {
+    getProducts.mockResolvedValue(response([productWithBothLinks]))
 
     const wrapper = factory()
     await flushPromises()
 
-    const ozonArticle = wrapper.findAll('tbody a[href="/product-edit/product-1"]')
-      .filter(link => link.text() === '123456789')
+    const links = wrapper.findAll('tbody a[target="_blank"]')
 
-    expect(ozonArticle.length).toBe(1)
-    // Ozon-колонки пусты: товар есть только в Wildberries.
-    expect(wrapper.findAll('tbody td').map(cell => cell.text())).toContain('—')
+    expect(links).toHaveLength(2)
+    expect(links[0].attributes('href')).toBe('https://www.wildberries.ru/catalog/123456789/detail.aspx')
+    expect(links[1].attributes('href')).toBe('https://www.ozon.ru/product/OZ-SKU-1/')
+    expect(links[0].text()).toBe('123456789')
+    expect(links[1].text()).toBe('OZ-SKU-1')
   })
 
-  it('renders no article values for a product without channel links', async () => {
+  it('renders a dash for a product without channel links', async () => {
     getProducts.mockResolvedValue(response([product({ channelLinks: [] })]))
 
     const wrapper = factory()
     await flushPromises()
 
-    expect(wrapper.findAll('tbody a[href="/product-edit/product-1"]').length).toBe(1)
+    expect(wrapper.findAll('tbody a[target="_blank"]')).toHaveLength(0)
+    expect(wrapper.findAll('tbody td').map(cell => cell.text())).toContain('—')
     expect(wrapper.text()).not.toContain('123456789')
   })
 
@@ -431,6 +427,13 @@ describe('ProductsView search', () => {
 
   afterEach(() => {
     vi.useRealTimers()
+  })
+
+  it('names the code field in the search hint', async () => {
+    const wrapper = factory()
+    await flushPromises()
+
+    expect(searchField(wrapper).attributes('placeholder')).toBe('Поиск по номеру, названию или SKU')
   })
 
   it('sends the trimmed search to the server after the debounce', async () => {

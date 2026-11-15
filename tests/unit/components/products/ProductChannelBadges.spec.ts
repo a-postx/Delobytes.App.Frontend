@@ -41,11 +41,12 @@ describe('ProductChannelBadges', () => {
 
   it('marks inactive links as muted', () => {
     const wrapper = mount(ProductChannelBadges, { props: { links } })
-    const badges = wrapper.findAll('[title]')
+    const inactive = wrapper.findAll('[title]')
+      .find(node => node.text() === '987654321')
 
-    expect(badges).toHaveLength(1)
-    expect(badges[0].attributes('title')).toBe('неактивно')
-    expect(badges[0].classes()).toContain('opacity-50')
+    expect(inactive).toBeTruthy()
+    expect(inactive!.attributes('title')).toContain('Ozon')
+    expect(inactive!.classes()).toContain('opacity-50')
   })
 
   it('uses the marketplace color when only the channel name identifies it', () => {
@@ -62,6 +63,6 @@ describe('ProductChannelBadges', () => {
     })
 
     expect(wrapper.text()).toContain('123456789')
-    expect(wrapper.find('span').classes()).toContain('bg-badge-wb')
+    expect(wrapper.find('.bg-badge-wb').exists()).toBe(true)
   })
 })
