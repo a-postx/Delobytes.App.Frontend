@@ -86,12 +86,25 @@ watch(open, (isOpen) => {
             </DialogDescription>
           </div>
           <DialogClose as-child>
-            <Button variant="ghost" size="icon" class="size-8"><X class="size-4" /></Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              class="size-8"
+            >
+              <X class="size-4" />
+            </Button>
           </DialogClose>
         </div>
 
-        <div v-if="isLoading" class="flex flex-col gap-3">
-          <Skeleton v-for="n in 4" :key="n" class="h-10 w-full rounded-lg" />
+        <div
+          v-if="isLoading"
+          class="flex flex-col gap-3"
+        >
+          <Skeleton
+            v-for="n in 4"
+            :key="n"
+            class="h-10 w-full rounded-lg"
+          />
         </div>
 
         <div
@@ -99,37 +112,59 @@ watch(open, (isOpen) => {
           class="flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-border py-12 text-center"
         >
           <History class="size-8 text-muted-foreground/40" />
-          <p class="text-sm text-muted-foreground">Снимков себестоимости пока нет</p>
+          <p class="text-sm text-muted-foreground">
+            Снимков себестоимости пока нет
+          </p>
         </div>
 
-        <div v-else class="rounded-lg border border-border overflow-hidden">
+        <div
+          v-else
+          class="rounded-lg border border-border overflow-hidden"
+        >
           <Table>
             <TableHeader>
               <TableRow class="border-b border-border">
                 <TableHead>Дата расчёта</TableHead>
                 <TableHead>Триггер изменения</TableHead>
-                <TableHead class="text-right">Итого</TableHead>
+                <TableHead class="text-right">
+                  Итого
+                </TableHead>
                 <TableHead>Статус</TableHead>
                 <TableHead>Зафиксировано</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              <TableRow v-for="item in items" :key="item.id" class="hover:bg-muted/40 transition-colors">
-                <TableCell class="tabular-nums">{{ formatIsoDateOnly(item.asOfDate) }}</TableCell>
-                <TableCell class="text-muted-foreground">{{ triggerLabel(item.triggerReason) }}</TableCell>
-                <TableCell class="text-right tabular-nums font-medium">{{ formatMoney(item.totalCost) }}</TableCell>
+              <TableRow
+                v-for="item in items"
+                :key="item.id"
+                class="hover:bg-muted/40 transition-colors"
+              >
+                <TableCell class="tabular-nums">
+                  {{ formatIsoDateOnly(item.asOfDate) }}
+                </TableCell>
+                <TableCell class="text-muted-foreground">
+                  {{ triggerLabel(item.triggerReason) }}
+                </TableCell>
+                <TableCell class="text-right tabular-nums font-medium">
+                  {{ formatMoney(item.totalCost) }}
+                </TableCell>
                 <TableCell>
                   <Badge :variant="item.isComplete ? 'success' : 'warning'">
                     {{ item.isComplete ? 'Полный' : 'Неполный' }}
                   </Badge>
                 </TableCell>
-                <TableCell class="tabular-nums text-muted-foreground text-sm">{{ formatCalculatedAt(item.calculatedAt) }}</TableCell>
+                <TableCell class="tabular-nums text-muted-foreground text-sm">
+                  {{ formatCalculatedAt(item.calculatedAt) }}
+                </TableCell>
               </TableRow>
             </TableBody>
           </Table>
         </div>
 
-        <p v-if="totalCount > items.length" class="text-xs text-muted-foreground mt-3">
+        <p
+          v-if="totalCount > items.length"
+          class="text-xs text-muted-foreground mt-3"
+        >
           Показаны последние {{ items.length }} из {{ totalCount }} записей
         </p>
       </DialogContent>

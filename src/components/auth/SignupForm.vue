@@ -82,12 +82,18 @@ const emit = defineEmits<{
           </Field>
           <FieldGroup>
             <Field>
-              <Button type="submit" class="w-full" :disabled="loading">
+              <Button
+                type="submit"
+                class="w-full"
+                :disabled="loading"
+              >
                 {{ loading ? 'Регистрация...' : 'Создать аккаунт' }}
               </Button>
               <FieldDescription class="text-center">
                 Уже есть аккаунт?
-                <router-link to="/login">Войти</router-link>
+                <router-link to="/login">
+                  Войти
+                </router-link>
               </FieldDescription>
             </Field>
           </FieldGroup>

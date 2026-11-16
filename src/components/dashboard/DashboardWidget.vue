@@ -25,10 +25,24 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <Card class="flex flex-col">
-    <CardHeader :class="cn('flex flex-row flex-wrap items-start justify-between gap-3', props.compact ? 'p-4' : undefined)">
+  <Card class="flex h-full flex-col">
+    <!--
+      Компактная карточка (KPI) не переносит шапку: иначе ширина бейджа дельты
+      решает, займёт ли шапка одну или две строки, и карточка прыгает по высоте.
+      У некомпактных виджетов (график) в слоте действий панель управления,
+      ей перенос по-прежнему нужен.
+    -->
+    <CardHeader
+      :class="cn(
+        'flex flex-row justify-between gap-3',
+        props.compact ? 'flex-nowrap items-center p-4' : 'flex-wrap items-start',
+      )"
+    >
       <div class="flex min-w-0 flex-col gap-1">
-        <CardTitle :class="props.compact ? 'text-base' : undefined">
+        <CardTitle
+          :class="cn(props.compact ? 'truncate text-base' : undefined)"
+          :title="props.compact ? props.title : undefined"
+        >
           {{ props.title }}
         </CardTitle>
         <p
@@ -38,7 +52,13 @@ const emit = defineEmits<{
           {{ props.description }}
         </p>
       </div>
-      <div class="flex w-full min-w-0 flex-wrap items-center justify-end gap-2 sm:w-auto">
+      <div
+        data-slot="dashboard-widget-actions"
+        :class="cn(
+          'flex min-w-0 items-center gap-2',
+          props.compact ? 'shrink-0 justify-end' : 'w-full flex-wrap justify-end sm:w-auto',
+        )"
+      >
         <slot name="actions" />
       </div>
     </CardHeader>

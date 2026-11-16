@@ -15,14 +15,20 @@ withDefaults(
 
 <template>
   <div class="relative flex min-h-svh items-center justify-center overflow-hidden bg-muted p-6 md:p-10">
-    <div class="auth-waiting__glow" aria-hidden="true" />
+    <div
+      class="auth-waiting__glow"
+      aria-hidden="true"
+    />
 
     <div
       class="relative flex w-full max-w-sm flex-col items-center gap-4 rounded-xl border bg-card px-6 py-8 text-center shadow-xs"
       role="status"
       aria-live="polite"
     >
-      <Spinner size="lg" class="text-primary" />
+      <Spinner
+        size="lg"
+        class="text-primary"
+      />
 
       <div class="flex flex-col gap-1">
         <h1 class="text-base font-semibold tracking-tight">

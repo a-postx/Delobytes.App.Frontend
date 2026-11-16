@@ -88,7 +88,10 @@ const handleOpenChange = (open: boolean): void => {
 </script>
 
 <template>
-  <DialogRoot :open="isOpen" @update:open="handleOpenChange">
+  <DialogRoot
+    :open="isOpen"
+    @update:open="handleOpenChange"
+  >
     <DialogTrigger as-child>
       <slot name="trigger">
         <Button>Пригласить пользователя</Button>
@@ -102,14 +105,23 @@ const handleOpenChange = (open: boolean): void => {
         <DialogTitle class="text-foreground m-0 text-lg font-semibold">
           {{ step === 'form' ? 'Пригласить пользователя' : 'Приглашение создано' }}
         </DialogTitle>
-        <DialogDescription v-if="step === 'form'" class="text-muted-foreground mt-2 mb-4 text-sm leading-normal">
+        <DialogDescription
+          v-if="step === 'form'"
+          class="text-muted-foreground mt-2 mb-4 text-sm leading-normal"
+        >
           Укажите email пользователя и роль, которая будет ему назначена в этом пространстве.
         </DialogDescription>
-        <DialogDescription v-else class="text-muted-foreground mt-2 mb-4 text-sm leading-normal">
+        <DialogDescription
+          v-else
+          class="text-muted-foreground mt-2 mb-4 text-sm leading-normal"
+        >
           Отправьте эту ссылку пользователю. Она действительна в течение 7 дней.
         </DialogDescription>
         
-        <form v-if="step === 'form'" @submit.prevent="handleSubmit">
+        <form
+          v-if="step === 'form'"
+          @submit.prevent="handleSubmit"
+        >
           <div class="space-y-4">
             <div class="space-y-2">
               <Label for="invite-email">Email</Label>
@@ -123,7 +135,10 @@ const handleOpenChange = (open: boolean): void => {
                   :disabled="isCreating"
                   required
                 />
-                <div v-if="isCreating" class="absolute right-3 top-1/2 -translate-y-1/2">
+                <div
+                  v-if="isCreating"
+                  class="absolute right-3 top-1/2 -translate-y-1/2"
+                >
                   <Spinner size="sm" />
                 </div>
               </div>
@@ -131,9 +146,15 @@ const handleOpenChange = (open: boolean): void => {
 
             <div class="space-y-2">
               <Label>Роль</Label>
-              <RadioGroup v-model="role" :disabled="isCreating">
+              <RadioGroup
+                v-model="role"
+                :disabled="isCreating"
+              >
                 <div class="flex items-center">
-                  <RadioGroupItem value="Administrator" id="role-admin" />
+                  <RadioGroupItem
+                    id="role-admin"
+                    value="Administrator"
+                  />
                   <Label
                     for="role-admin"
                     class="text-foreground text-sm leading-none pl-[15px] font-normal cursor-pointer"
@@ -142,7 +163,10 @@ const handleOpenChange = (open: boolean): void => {
                   </Label>
                 </div>
                 <div class="flex items-center">
-                  <RadioGroupItem value="Manager" id="role-manager" />
+                  <RadioGroupItem
+                    id="role-manager"
+                    value="Manager"
+                  />
                   <Label
                     for="role-manager"
                     class="text-foreground text-sm leading-none pl-[15px] font-normal cursor-pointer"
@@ -151,7 +175,10 @@ const handleOpenChange = (open: boolean): void => {
                   </Label>
                 </div>
                 <div class="flex items-center">
-                  <RadioGroupItem value="ReadOnly" id="role-readonly" />
+                  <RadioGroupItem
+                    id="role-readonly"
+                    value="ReadOnly"
+                  />
                   <Label
                     for="role-readonly"
                     class="text-foreground text-sm leading-none pl-[15px] font-normal cursor-pointer"
@@ -182,7 +209,10 @@ const handleOpenChange = (open: boolean): void => {
           </div>
         </form>
 
-        <div v-else class="space-y-4">
+        <div
+          v-else
+          class="space-y-4"
+        >
           <div class="space-y-2">
             <Label for="invitation-link">Ссылка-приглашение</Label>
             <div class="relative">
@@ -193,7 +223,10 @@ const handleOpenChange = (open: boolean): void => {
                 class="pr-10 select-text cursor-text font-mono text-sm"
               />
               <div class="absolute right-1 top-1/2 -translate-y-1/2">
-                <CopyButton :value="invitationLink" tooltip-text="Копировать ссылку" />
+                <CopyButton
+                  :value="invitationLink"
+                  tooltip-text="Копировать ссылку"
+                />
               </div>
             </div>
           </div>

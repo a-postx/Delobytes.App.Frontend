@@ -229,33 +229,45 @@ const handleRevokeInvitation = async (): Promise<void> => {
         <TableRow>
           <TableHead>Пользователи</TableHead>
           <TableHead>Роли</TableHead>
-          <TableHead class="w-12"></TableHead>
+          <TableHead class="w-12" />
         </TableRow>
       </TableHeader>
       <TableBody>
         <TableRow v-if="isLoading">
-          <TableCell colspan="3" class="text-center text-muted-foreground">
+          <TableCell
+            colspan="3"
+            class="text-center text-muted-foreground"
+          >
             Загрузка...
           </TableCell>
         </TableRow>
         <TableRow v-else-if="allRows.length === 0">
-          <TableCell colspan="3" class="text-center text-muted-foreground">
+          <TableCell
+            colspan="3"
+            class="text-center text-muted-foreground"
+          >
             Нет пользователей
           </TableCell>
         </TableRow>
         <TableRow
-          v-else
           v-for="row in allRows"
+          v-else
           :key="row.type === 'member' ? row.data.membershipId : row.data.invitationId"
           :class="{ 'opacity-50': row.type === 'invitation' }"
         >
           <TableCell>
             <div class="flex flex-col">
               <span>{{ row.email }}</span>
-              <span v-if="row.displayName" class="text-xs text-muted-foreground">
+              <span
+                v-if="row.displayName"
+                class="text-xs text-muted-foreground"
+              >
                 {{ row.displayName }}
               </span>
-              <span v-if="row.type === 'invitation'" class="text-xs text-muted-foreground italic">
+              <span
+                v-if="row.type === 'invitation'"
+                class="text-xs text-muted-foreground italic"
+              >
                 Приглашение отправлено
               </span>
             </div>
@@ -266,7 +278,11 @@ const handleRevokeInvitation = async (): Promise<void> => {
           <TableCell>
             <DropdownMenu>
               <DropdownMenuTrigger as-child>
-                <Button variant="ghost" size="icon" class="h-8 w-8">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  class="h-8 w-8"
+                >
                   <EllipsisVertical class="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
@@ -275,7 +291,10 @@ const handleRevokeInvitation = async (): Promise<void> => {
                   <DropdownMenuItem @click="openChangeRoleDialog(row.data)">
                     Изменить роль
                   </DropdownMenuItem>
-                  <DropdownMenuItem @click="openRemoveDialog(row.data)" class="text-destructive">
+                  <DropdownMenuItem
+                    class="text-destructive"
+                    @click="openRemoveDialog(row.data)"
+                  >
                     Удалить пользователя
                   </DropdownMenuItem>
                 </template>
@@ -283,7 +302,10 @@ const handleRevokeInvitation = async (): Promise<void> => {
                   <DropdownMenuItem @click="handleCopyInvitationLink(row.data)">
                     Скопировать ссылку-приглашение
                   </DropdownMenuItem>
-                  <DropdownMenuItem @click="openRevokeDialog(row.data)" class="text-destructive">
+                  <DropdownMenuItem
+                    class="text-destructive"
+                    @click="openRevokeDialog(row.data)"
+                  >
                     Отозвать приглашение
                   </DropdownMenuItem>
                 </template>
@@ -296,7 +318,10 @@ const handleRevokeInvitation = async (): Promise<void> => {
   </div>
 
   <!-- Dialog для изменения роли (не деструктивное действие — нужен обычный Dialog) -->
-  <DialogRoot :open="changeRoleDialog" @update:open="handleChangeRoleOpenChange">
+  <DialogRoot
+    :open="changeRoleDialog"
+    @update:open="handleChangeRoleOpenChange"
+  >
     <DialogPortal>
       <DialogOverlay class="data-[state=open]:animate-overlayShow fixed inset-0 z-30 bg-black/80" />
       <DialogContent
@@ -310,22 +335,43 @@ const handleRevokeInvitation = async (): Promise<void> => {
         </DialogDescription>
 
         <div class="py-2">
-          <RadioGroup v-model="newRole" :disabled="isUpdatingRole">
+          <RadioGroup
+            v-model="newRole"
+            :disabled="isUpdatingRole"
+          >
             <div class="flex items-center space-x-2">
-              <RadioGroupItem value="Administrator" id="change-role-admin" />
-              <Label for="change-role-admin" class="font-normal cursor-pointer">
+              <RadioGroupItem
+                id="change-role-admin"
+                value="Administrator"
+              />
+              <Label
+                for="change-role-admin"
+                class="font-normal cursor-pointer"
+              >
                 Администратор
               </Label>
             </div>
             <div class="flex items-center space-x-2">
-              <RadioGroupItem value="Manager" id="change-role-manager" />
-              <Label for="change-role-manager" class="font-normal cursor-pointer">
+              <RadioGroupItem
+                id="change-role-manager"
+                value="Manager"
+              />
+              <Label
+                for="change-role-manager"
+                class="font-normal cursor-pointer"
+              >
                 Менеджер
               </Label>
             </div>
             <div class="flex items-center space-x-2">
-              <RadioGroupItem value="ReadOnly" id="change-role-readonly" />
-              <Label for="change-role-readonly" class="font-normal cursor-pointer">
+              <RadioGroupItem
+                id="change-role-readonly"
+                value="ReadOnly"
+              />
+              <Label
+                for="change-role-readonly"
+                class="font-normal cursor-pointer"
+              >
                 Только чтение
               </Label>
             </div>
@@ -334,14 +380,18 @@ const handleRevokeInvitation = async (): Promise<void> => {
 
         <div class="flex justify-end gap-3 mt-6">
           <DialogClose as-child>
-            <Button type="button" variant="outline" :disabled="isUpdatingRole">
+            <Button
+              type="button"
+              variant="outline"
+              :disabled="isUpdatingRole"
+            >
               Отмена
             </Button>
           </DialogClose>
           <Button
             type="button"
-            @click="handleChangeRole"
             :disabled="isUpdatingRole || !newRole"
+            @click="handleChangeRole"
           >
             {{ isUpdatingRole ? 'Изменение...' : 'Изменить' }}
           </Button>
@@ -357,7 +407,10 @@ const handleRevokeInvitation = async (): Promise<void> => {
     </DialogPortal>
   </DialogRoot>
 
-  <AlertDialogRoot :open="removeDialog" @update:open="removeDialog = $event">
+  <AlertDialogRoot
+    :open="removeDialog"
+    @update:open="removeDialog = $event"
+  >
     <AlertDialogPortal>
       <AlertDialogOverlay />
       <AlertDialogContent>
@@ -366,8 +419,13 @@ const handleRevokeInvitation = async (): Promise<void> => {
           Вы уверены, что хотите удалить пользователя {{ memberToRemove?.email }} из пространства?
         </AlertDialogDescription>
         <div class="flex justify-end gap-3 mt-6">
-          <AlertDialogCancel :disabled="isRemoving">Отмена</AlertDialogCancel>
-          <AlertDialogAction @click="handleRemoveMember" :disabled="isRemoving">
+          <AlertDialogCancel :disabled="isRemoving">
+            Отмена
+          </AlertDialogCancel>
+          <AlertDialogAction
+            :disabled="isRemoving"
+            @click="handleRemoveMember"
+          >
             {{ isRemoving ? 'Удаление...' : 'Удалить' }}
           </AlertDialogAction>
         </div>
@@ -375,7 +433,10 @@ const handleRevokeInvitation = async (): Promise<void> => {
     </AlertDialogPortal>
   </AlertDialogRoot>
 
-  <AlertDialogRoot :open="revokeDialog" @update:open="revokeDialog = $event">
+  <AlertDialogRoot
+    :open="revokeDialog"
+    @update:open="revokeDialog = $event"
+  >
     <AlertDialogPortal>
       <AlertDialogOverlay />
       <AlertDialogContent>
@@ -384,8 +445,13 @@ const handleRevokeInvitation = async (): Promise<void> => {
           Вы уверены, что хотите отозвать приглашение для {{ invitationToRevoke?.email }}?
         </AlertDialogDescription>
         <div class="flex justify-end gap-3 mt-6">
-          <AlertDialogCancel :disabled="isRevoking">Отмена</AlertDialogCancel>
-          <AlertDialogAction @click="handleRevokeInvitation" :disabled="isRevoking">
+          <AlertDialogCancel :disabled="isRevoking">
+            Отмена
+          </AlertDialogCancel>
+          <AlertDialogAction
+            :disabled="isRevoking"
+            @click="handleRevokeInvitation"
+          >
             {{ isRevoking ? 'Отзыв...' : 'Отозвать' }}
           </AlertDialogAction>
         </div>

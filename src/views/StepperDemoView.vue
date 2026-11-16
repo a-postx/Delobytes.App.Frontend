@@ -39,13 +39,19 @@ const currentStep = ref<number>(1)
 <template>
   <div class="flex flex-col gap-8 p-6">
     <div class="flex flex-col gap-2">
-      <h1 class="text-xl font-bold">Пример Stepper</h1>
-      <p class="text-muted-foreground">Компонент пошагового прогресса из reka-ui.</p>
+      <h1 class="text-xl font-bold">
+        Пример Stepper
+      </h1>
+      <p class="text-muted-foreground">
+        Компонент пошагового прогресса из reka-ui.
+      </p>
     </div>
 
     <!-- Horizontal stepper -->
     <div class="flex flex-col gap-4">
-      <h2 class="text-base font-semibold text-foreground">Горизонтальный</h2>
+      <h2 class="text-base font-semibold text-foreground">
+        Горизонтальный
+      </h2>
       <StepperRoot
         ref="stepper"
         v-model="currentStep"
@@ -113,7 +119,9 @@ const currentStep = ref<number>(1)
 
     <!-- Vertical stepper -->
     <div class="flex flex-col gap-4">
-      <h2 class="text-base font-semibold text-foreground">Вертикальный </h2>
+      <h2 class="text-base font-semibold text-foreground">
+        Вертикальный
+      </h2>
       <StepperRoot
         :default-value="2"
         orientation="vertical"

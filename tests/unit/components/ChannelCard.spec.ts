@@ -6,10 +6,6 @@ import type { Connection } from '@/types'
 vi.mock('@/services/api', () => ({
   integrationsApi: { deleteConnection: vi.fn() },
   channelsApi: { rename: vi.fn() },
-  channelParametersApi: {
-    getActive: vi.fn().mockResolvedValue({ found: false }),
-    getAll: vi.fn().mockResolvedValue({ items: [] }),
-  },
 }))
 vi.mock('vue-sonner', () => ({ toast: { error: vi.fn(), success: vi.fn() } }))
 import { integrationsApi, channelsApi } from '@/services/api'
@@ -74,14 +70,6 @@ const stubs = {
     emits: ['click'],
     template: '<div data-testid="dropdown-item" @click="$emit(\'click\')"><slot /></div>',
   },
-  // Панель параметров подменяем на заглушку: она ходит в API,
-  // а тесты карточки проверяют только факт её открытия.
-  ChannelDetailsSheet: {
-    name: 'ChannelDetailsSheet',
-    props: ['modelValue', 'channel'],
-    emits: ['update:modelValue'],
-    template: '<div data-testid="channel-details-sheet" :data-open="String(modelValue)" />',
-  },
 }
 
 const factory = (channel: ChannelCardModel = base) =>
@@ -126,49 +114,6 @@ describe('ChannelCard — отображение независимого Channe
 
   it('показывает архивный статус Channel отдельно от Connection', () => {
     expect(factory({ ...base, isActive: false }).text()).toContain('Канал архивирован')
-  })
-})
-
-describe('ChannelCard — параметры канала', () => {
-  beforeEach(() => vi.clearAllMocks())
-
-  const openSheet = async (wrapper: ReturnType<typeof factory>): Promise<void> => {
-    const paramsButton = wrapper
-      .findAll('button')
-      .find(button => button.attributes('aria-label') === 'Параметры канала'
-        || button.text().trim() === 'Параметры')
-    if (!paramsButton) {
-      throw new Error('Кнопка открытия параметров не найдена')
-    }
-    await paramsButton.trigger('click')
-  }
-
-  it('панель параметров закрыта по умолчанию', () => {
-    const wrapper = factory()
-    expect(wrapper.find('[data-testid="channel-details-sheet"]').attributes('data-open')).toBe('false')
-  })
-
-  it('открывает панель параметров для канала без подключения', async () => {
-    const wrapper = factory()
-    await openSheet(wrapper)
-    const sheet = wrapper.findComponent({ name: 'ChannelDetailsSheet' })
-    expect(sheet.props('modelValue')).toBe(true)
-    expect(sheet.props('channel')).toMatchObject({ id: 'channel-1', name: 'Мой магазин' })
-  })
-
-  it('открывает панель параметров для подключённого канала', async () => {
-    const wrapper = factory(connected)
-    await openSheet(wrapper)
-    expect(wrapper.findComponent({ name: 'ChannelDetailsSheet' }).props('modelValue')).toBe(true)
-  })
-
-  it('не открывает панель при нажатии «Подключить»', async () => {
-    const wrapper = factory()
-    const connectButton = wrapper.findAll('button').find(button => button.text().trim() === 'Подключить')
-    await connectButton?.trigger('click')
-
-    expect(wrapper.emitted('connect')).toHaveLength(1)
-    expect(wrapper.findComponent({ name: 'ChannelDetailsSheet' }).props('modelValue')).toBe(false)
   })
 })
 

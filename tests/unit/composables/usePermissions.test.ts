@@ -13,7 +13,7 @@ vi.mock('@/composables/useCurrentUser', () => ({
   }),
 }))
 
-let mockCurrentUser = ref<CurrentUser | null>(null)
+const mockCurrentUser = ref<CurrentUser | null>(null)
 
 describe('usePermissions', () => {
   beforeEach(() => {

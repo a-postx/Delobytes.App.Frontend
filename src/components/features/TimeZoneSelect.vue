@@ -75,7 +75,10 @@ const handleOpenChange = (open: boolean): void => {
 </script>
 
 <template>
-  <Popover :open="isOpen" @update:open="handleOpenChange">
+  <Popover
+    :open="isOpen"
+    @update:open="handleOpenChange"
+  >
     <PopoverTrigger as-child>
       <Button
         variant="outline"
@@ -86,24 +89,38 @@ const handleOpenChange = (open: boolean): void => {
       >
         <span class="truncate">
           {{ selectedLabel }}
-          <span v-if="selectedOffset" class="text-muted-foreground">{{ selectedOffset }}</span>
+          <span
+            v-if="selectedOffset"
+            class="text-muted-foreground"
+          >{{ selectedOffset }}</span>
         </span>
         <ChevronsUpDown class="size-4 shrink-0 opacity-50" />
       </Button>
     </PopoverTrigger>
 
-    <PopoverContent class="w-[22rem] p-0" align="start">
+    <PopoverContent
+      class="w-[22rem] p-0"
+      align="start"
+    >
       <div class="p-2">
-        <SearchInput v-model="query" placeholder="Найти часовой пояс" />
+        <SearchInput
+          v-model="query"
+          placeholder="Найти часовой пояс"
+        />
       </div>
 
       <div class="max-h-72 overflow-y-auto px-1 pb-1">
-        <p v-if="filteredOptions.length === 0" class="px-3 py-6 text-center text-sm text-muted-foreground">
+        <p
+          v-if="filteredOptions.length === 0"
+          class="px-3 py-6 text-center text-sm text-muted-foreground"
+        >
           Часовой пояс не найден
         </p>
 
         <template v-if="russianOptions.length > 0">
-          <p class="px-3 pb-1 pt-2 text-xs font-medium text-muted-foreground">Россия</p>
+          <p class="px-3 pb-1 pt-2 text-xs font-medium text-muted-foreground">
+            Россия
+          </p>
           <button
             v-for="option in russianOptions"
             :key="option.id"
@@ -118,13 +135,18 @@ const handleOpenChange = (open: boolean): void => {
             <span class="truncate">{{ option.label }}</span>
             <span class="flex shrink-0 items-center gap-2 text-xs text-muted-foreground">
               {{ option.offset }}
-              <Check v-if="option.id === modelValue" class="size-4" />
+              <Check
+                v-if="option.id === modelValue"
+                class="size-4"
+              />
             </span>
           </button>
         </template>
 
         <template v-if="otherOptions.length > 0">
-          <p class="px-3 pb-1 pt-2 text-xs font-medium text-muted-foreground">Другие пояса</p>
+          <p class="px-3 pb-1 pt-2 text-xs font-medium text-muted-foreground">
+            Другие пояса
+          </p>
           <button
             v-for="option in otherOptions"
             :key="option.id"
@@ -139,7 +161,10 @@ const handleOpenChange = (open: boolean): void => {
             <span class="truncate">{{ option.label }}</span>
             <span class="flex shrink-0 items-center gap-2 text-xs text-muted-foreground">
               {{ option.offset }}
-              <Check v-if="option.id === modelValue" class="size-4" />
+              <Check
+                v-if="option.id === modelValue"
+                class="size-4"
+              />
             </span>
           </button>
         </template>

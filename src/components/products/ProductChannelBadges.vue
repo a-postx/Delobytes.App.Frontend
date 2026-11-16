@@ -46,7 +46,11 @@ const items = computed<ChannelBadgeItem[]>(() =>
     >
       <Badge :variant="channelDisplayForLink(item.link.channelCode, item.link.channelName).variant">
         {{ item.link.externalProductId }}
-        <ExternalLink v-if="item.url" class="size-3 ml-1" aria-hidden="true" />
+        <ExternalLink
+          v-if="item.url"
+          class="size-3 ml-1"
+          aria-hidden="true"
+        />
       </Badge>
     </component>
   </div>

@@ -26,7 +26,6 @@ export type {
 } from './endpoints/tenantTaxProfiles'
 export {
   channelsApi,
-  channelParametersApi,
   suppliersApi,
   componentsApi,
   workRatesApi,
@@ -54,11 +53,6 @@ export type {
   GetChannelsResponse,
   CreateChannelRequest,
   CreateChannelResponse,
-  ChannelParameterSetItem,
-  GetChannelParameterSetsResponse,
-  GetActiveChannelParameterSetResponse,
-  CreateChannelParameterSetRequest,
-  CreateChannelParameterSetResponse,
   SupplierItem,
   GetSuppliersResponse,
   CreateSupplierRequest,

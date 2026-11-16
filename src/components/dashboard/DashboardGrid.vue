@@ -27,7 +27,7 @@ const visibleWidgets: ComputedRef<DashboardWidgetDefinition[]> = computed<Dashbo
     <div
       v-for="def in visibleWidgets"
       :key="def.id"
-      :class="SPAN_CLASS_MAP[def.span]"
+      :class="[SPAN_CLASS_MAP[def.span], 'h-full']"
     >
       <!-- Компактный вид: полноразмерная заглушка внутри виджета раздувала бы карточку. -->
       <AppErrorBoundary variant="compact">

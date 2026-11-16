@@ -50,7 +50,10 @@ onMounted(async () => {
   <div class="bg-muted flex min-h-svh flex-col items-center justify-center gap-6 p-6 md:p-10">
     <div class="flex w-full max-w-sm flex-col items-center gap-4 text-center">
       <template v-if="!error">
-        <Spinner size="lg" class="text-muted-foreground" />
+        <Spinner
+          size="lg"
+          class="text-muted-foreground"
+        />
         <p class="text-sm text-muted-foreground">
           Обработка приглашения…
         </p>

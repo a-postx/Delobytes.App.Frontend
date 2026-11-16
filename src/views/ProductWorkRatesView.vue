@@ -728,9 +728,16 @@ const emptyText = computed<string>(() => {
           <Gauge class="size-5 text-primary" />
           Нормы выработки
         </h1>
-        <p class="text-sm text-muted-foreground">Количество единиц товара в день на одного сотрудника по товару</p>
+        <p class="text-sm text-muted-foreground">
+          Количество единиц товара в день на одного сотрудника по товару
+        </p>
       </div>
-      <Button v-if="canWrite" @click="openCreate" :disabled="hasEmptyCatalog" class="gap-2">
+      <Button
+        v-if="canWrite"
+        :disabled="hasEmptyCatalog"
+        class="gap-2"
+        @click="openCreate"
+      >
         <Plus class="size-4" />
         Добавить запись
       </Button>
@@ -742,14 +749,27 @@ const emptyText = computed<string>(() => {
         placeholder="Название или SKU"
         class="w-full sm:w-80"
       />
-      <StatusFilter v-model="statusFilter" :options="filterOptions" />
-      <span v-if="isRefetching" class="text-xs text-muted-foreground">Обновление…</span>
+      <StatusFilter
+        v-model="statusFilter"
+        :options="filterOptions"
+      />
+      <span
+        v-if="isRefetching"
+        class="text-xs text-muted-foreground"
+      >Обновление…</span>
     </div>
 
     <!-- Loading -->
-    <div v-if="isLoading" class="rounded-xl border border-border bg-card overflow-hidden">
+    <div
+      v-if="isLoading"
+      class="rounded-xl border border-border bg-card overflow-hidden"
+    >
       <div class="p-4 flex flex-col gap-3">
-        <Skeleton v-for="n in 4" :key="n" class="h-10 w-full rounded-lg" />
+        <Skeleton
+          v-for="n in 4"
+          :key="n"
+          class="h-10 w-full rounded-lg"
+        />
       </div>
     </div>
 
@@ -770,8 +790,12 @@ const emptyText = computed<string>(() => {
     >
       <SearchX class="size-10 text-muted-foreground/40" />
       <div>
-        <p class="text-sm font-medium">Ничего не найдено</p>
-        <p class="text-sm text-muted-foreground">Измените запрос или очистите поле поиска</p>
+        <p class="text-sm font-medium">
+          Ничего не найдено
+        </p>
+        <p class="text-sm text-muted-foreground">
+          Измените запрос или очистите поле поиска
+        </p>
       </div>
     </div>
 
@@ -794,7 +818,9 @@ const emptyText = computed<string>(() => {
       <template #empty>
         <div class="flex flex-col items-center justify-center gap-3 text-center">
           <Gauge class="size-10 text-muted-foreground/40" />
-          <p class="text-sm text-muted-foreground">{{ emptyText }}</p>
+          <p class="text-sm text-muted-foreground">
+            {{ emptyText }}
+          </p>
           <Button
             v-if="canWrite && statusFilter !== 'inactive' && !hasEmptyCatalog"
             variant="outline"
@@ -814,9 +840,17 @@ const emptyText = computed<string>(() => {
         <DialogOverlay class="bg-background/80 backdrop-blur-sm fixed inset-0 z-50" />
         <DialogContent :class="dialogContentClass">
           <div class="flex items-center justify-between mb-4">
-            <DialogTitle class="text-lg font-semibold">Новая норма</DialogTitle>
+            <DialogTitle class="text-lg font-semibold">
+              Новая норма
+            </DialogTitle>
             <DialogClose as-child>
-              <Button variant="ghost" size="icon" class="size-8"><X class="size-4" /></Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                class="size-8"
+              >
+                <X class="size-4" />
+              </Button>
             </DialogClose>
           </div>
           <DialogDescription class="text-sm text-muted-foreground mb-4">
@@ -826,10 +860,16 @@ const emptyText = computed<string>(() => {
           <div class="flex flex-col gap-4">
             <div :class="fieldClass">
               <Label>Товар *</Label>
-              <p v-if="isProductLocked" class="text-sm font-medium mt-1">
+              <p
+                v-if="isProductLocked"
+                class="text-sm font-medium mt-1"
+              >
                 {{ lockedProductName }}
               </p>
-              <ProductCombobox v-else v-model="form.productId" />
+              <ProductCombobox
+                v-else
+                v-model="form.productId"
+              />
             </div>
 
             <div :class="fieldClass">
@@ -838,25 +878,51 @@ const emptyText = computed<string>(() => {
                 v-model="form.workRateId"
                 :class="selectClass"
               >
-                <option v-if="activeWorkRates().length === 0" value="">Нет активных ставок</option>
-                <option v-for="r in activeWorkRates()" :key="r.id" :value="r.id">
+                <option
+                  v-if="activeWorkRates().length === 0"
+                  value=""
+                >
+                  Нет активных ставок
+                </option>
+                <option
+                  v-for="r in activeWorkRates()"
+                  :key="r.id"
+                  :value="r.id"
+                >
                   {{ r.name }} ({{ formatMoney(r.dailyWage) }}/день)
                 </option>
               </select>
-              <p v-if="activeWorkRates().length === 0" class="text-xs text-destructive">
+              <p
+                v-if="activeWorkRates().length === 0"
+                class="text-xs text-destructive"
+              >
                 Сначала добавьте ставку работы в справочнике «Нормы выработки».
               </p>
             </div>
 
             <div :class="fieldClass">
               <Label>Норма в день (шт.)</Label>
-              <Input :class="inputClass" v-model.number="form.assemblyRatePerDay" type="number" min="1" step="1" placeholder="100" />
+              <Input
+                v-model.number="form.assemblyRatePerDay"
+                :class="inputClass"
+                type="number"
+                min="1"
+                step="1"
+                placeholder="100"
+              />
             </div>
 
             <div :class="fieldClass">
               <Label>Действует с</Label>
-              <Input :class="inputClass" v-model="form.validFrom" type="date" />
-              <p v-if="isNewRateDateInPast" class="text-xs text-warning mt-1">
+              <Input
+                v-model="form.validFrom"
+                :class="inputClass"
+                type="date"
+              />
+              <p
+                v-if="isNewRateDateInPast"
+                class="text-xs text-warning mt-1"
+              >
                 Дата в прошлом изменит расчёты себестоимости задним числом
               </p>
             </div>
@@ -864,10 +930,19 @@ const emptyText = computed<string>(() => {
 
           <div class="flex justify-end gap-2 mt-6">
             <DialogClose as-child>
-              <Button variant="outline">Отмена</Button>
+              <Button variant="outline">
+                Отмена
+              </Button>
             </DialogClose>
-            <Button @click="handleCreate" :disabled="isSaving || !form.workRateId || !form.productId" class="gap-2">
-              <Spinner v-if="isSaving" class="size-4" />
+            <Button
+              :disabled="isSaving || !form.workRateId || !form.productId"
+              class="gap-2"
+              @click="handleCreate"
+            >
+              <Spinner
+                v-if="isSaving"
+                class="size-4"
+              />
               Добавить
             </Button>
           </div>
@@ -882,13 +957,18 @@ const emptyText = computed<string>(() => {
         <DialogContent :class="dialogContentClass">
           <div class="flex items-start justify-between mb-4">
             <div>
-              <DialogTitle class="text-lg font-semibold">Изменить норму</DialogTitle>
+              <DialogTitle class="text-lg font-semibold">
+                Изменить норму
+              </DialogTitle>
               <DialogDescription class="text-sm text-muted-foreground mt-1">
                 Исправление ставки, нормы или даты в текущей версии без создания новой записи истории
               </DialogDescription>
             </div>
             <DialogClose as-child>
-              <Button variant="ghost" size="icon-sm">
+              <Button
+                variant="ghost"
+                size="icon-sm"
+              >
                 <X class="size-4" />
               </Button>
             </DialogClose>
@@ -897,19 +977,29 @@ const emptyText = computed<string>(() => {
           <div class="flex flex-col gap-4">
             <div :class="fieldClass">
               <Label>Товар</Label>
-              <p class="text-sm font-medium mt-1">{{ editTarget ? editTarget.productName : '' }}</p>
+              <p class="text-sm font-medium mt-1">
+                {{ editTarget ? editTarget.productName : '' }}
+              </p>
             </div>
 
             <div :class="fieldClass">
               <Label for="edit-work-rate">Ставка работы *</Label>
-              <select id="edit-work-rate" v-model="editForm.workRateId" :class="selectClass">
+              <select
+                id="edit-work-rate"
+                v-model="editForm.workRateId"
+                :class="selectClass"
+              >
                 <option
                   v-if="editTarget && !activeWorkRates().some(r => r.id === editTarget!.workRateId)"
                   :value="editTarget.workRateId"
                 >
                   {{ workRateLabel(editTarget.workRateId) }} (неактивна)
                 </option>
-                <option v-for="r in activeWorkRates()" :key="r.id" :value="r.id">
+                <option
+                  v-for="r in activeWorkRates()"
+                  :key="r.id"
+                  :value="r.id"
+                >
                   {{ r.name }} ({{ formatMoney(r.dailyWage) }}/день)
                 </option>
               </select>
@@ -917,21 +1007,42 @@ const emptyText = computed<string>(() => {
 
             <div :class="fieldClass">
               <Label for="edit-rate-per-day">Норма в день (шт.)</Label>
-              <Input id="edit-rate-per-day" :class="inputClass" v-model.number="editForm.assemblyRatePerDay" type="number" min="1" step="1" />
+              <Input
+                id="edit-rate-per-day"
+                v-model.number="editForm.assemblyRatePerDay"
+                :class="inputClass"
+                type="number"
+                min="1"
+                step="1"
+              />
             </div>
 
             <div :class="fieldClass">
               <Label for="edit-valid-from">Действует с</Label>
-              <Input id="edit-valid-from" :class="inputClass" v-model="editForm.validFrom" type="date" />
+              <Input
+                id="edit-valid-from"
+                v-model="editForm.validFrom"
+                :class="inputClass"
+                type="date"
+              />
             </div>
           </div>
 
           <div class="flex justify-end gap-2 mt-6">
             <DialogClose as-child>
-              <Button variant="outline">Отмена</Button>
+              <Button variant="outline">
+                Отмена
+              </Button>
             </DialogClose>
-            <Button @click="handleUpdate" :disabled="isSaving" class="gap-2">
-              <Spinner v-if="isSaving" class="size-4" />
+            <Button
+              :disabled="isSaving"
+              class="gap-2"
+              @click="handleUpdate"
+            >
+              <Spinner
+                v-if="isSaving"
+                class="size-4"
+              />
               Сохранить
             </Button>
           </div>
@@ -944,17 +1055,29 @@ const emptyText = computed<string>(() => {
       <AlertDialogPortal>
         <AlertDialogOverlay class="bg-background/80 backdrop-blur-sm fixed inset-0 z-50" />
         <AlertDialogContent class="bg-popover text-popover-foreground fixed top-[50%] left-[50%] w-[90vw] max-w-[400px] translate-x-[-50%] translate-y-[-50%] rounded-lg border shadow-lg p-6 focus:outline-none z-[100]">
-          <AlertDialogTitle class="text-lg font-semibold mb-2">Снять норму?</AlertDialogTitle>
+          <AlertDialogTitle class="text-lg font-semibold mb-2">
+            Снять норму?
+          </AlertDialogTitle>
           <AlertDialogDescription class="text-sm text-muted-foreground mb-6">
             {{ deletionSummary }}
           </AlertDialogDescription>
           <div class="flex justify-end gap-2">
             <AlertDialogCancel as-child>
-              <Button variant="outline">Отмена</Button>
+              <Button variant="outline">
+                Отмена
+              </Button>
             </AlertDialogCancel>
             <AlertDialogAction as-child>
-              <Button variant="destructive" @click="handleDelete" :disabled="isDeleting" class="gap-2">
-                <Spinner v-if="isDeleting" class="size-4" />
+              <Button
+                variant="destructive"
+                :disabled="isDeleting"
+                class="gap-2"
+                @click="handleDelete"
+              >
+                <Spinner
+                  v-if="isDeleting"
+                  class="size-4"
+                />
                 Снять
               </Button>
             </AlertDialogAction>

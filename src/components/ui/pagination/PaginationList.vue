@@ -12,9 +12,9 @@ const props = withDefaults(defineProps<Props>(), {})
 
 <template>
   <PaginationList
+    v-slot="slotProps"
     v-bind="props"
     :class="cn('flex items-center justify-center gap-1', props.class)"
-    v-slot="slotProps"
   >
     <slot v-bind="slotProps" />
   </PaginationList>

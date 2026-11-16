@@ -21,6 +21,9 @@ const props = defineProps<{
     >
       <slot />
     </span>
-    <Separator v-if="$slots.default" class="flex-1" />
+    <Separator
+      v-if="$slots.default"
+      class="flex-1"
+    />
   </div>
 </template>

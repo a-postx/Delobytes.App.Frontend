@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { Ellipsis, Settings2, Trash2 } from 'lucide-vue-next'
+import { Ellipsis, Trash2 } from 'lucide-vue-next'
 import { toast } from 'vue-sonner'
 import {
   Card,
@@ -30,7 +30,6 @@ import {
 import { integrationsApi, channelsApi } from '@/services/api'
 import type { Connection } from '@/types'
 import EditableChannelTitle from './EditableChannelTitle.vue'
-import ChannelDetailsSheet from './ChannelDetailsSheet.vue'
 
 /**
  * Channel — самостоятельная бизнес-сущность (Catalog), Connection — техническое
@@ -59,7 +58,6 @@ const emit = defineEmits<{
 const isDeleting = ref<boolean>(false)
 const isDeleteDialogOpen = ref<boolean>(false)
 const isRenaming = ref<boolean>(false)
-const isDetailsSheetOpen = ref<boolean>(false)
 
 const hasAccountInfo = (connection: Connection): boolean => {
   return !!(connection.customerName || connection.customerLegalName || connection.customerInn)
@@ -100,7 +98,10 @@ const handleRename = async (newName: string): Promise<void> => {
 </script>
 
 <template>
-  <Card class="flex flex-col" :class="!props.channel.connection?.isActive ? '' : 'bg-muted/40'">
+  <Card
+    class="flex flex-col"
+    :class="!props.channel.connection?.isActive ? '' : 'bg-muted/40'"
+  >
     <CardHeader class="relative">
       <EditableChannelTitle
         :title="props.channel.name"
@@ -126,11 +127,17 @@ const handleRename = async (newName: string): Promise<void> => {
       </Badge>
     </CardHeader>
     <CardContent>
-      <span v-if="!props.channel.isActive" class="text-xs text-warning">Канал архивирован</span>
+      <span
+        v-if="!props.channel.isActive"
+        class="text-xs text-warning"
+      >Канал архивирован</span>
     </CardContent>
 
     <!-- Подключённое состояние: информация об аккаунте слева, меню действий справа -->
-    <CardFooter v-if="props.channel.connection?.isActive" class="mt-auto flex items-end justify-between">
+    <CardFooter
+      v-if="props.channel.connection?.isActive"
+      class="mt-auto flex items-end justify-between"
+    >
       <div
         v-if="hasAccountInfo(props.channel.connection)"
         class="flex flex-col gap-0.5"
@@ -151,15 +158,6 @@ const handleRename = async (newName: string): Promise<void> => {
       <div v-else />
 
       <div class="flex items-center gap-1">
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          aria-label="Параметры канала"
-          @click="isDetailsSheetOpen = true"
-        >
-          <Settings2 />
-        </Button>
-
         <DropdownMenu>
           <DropdownMenuTrigger as-child>
             <Button
@@ -168,7 +166,10 @@ const handleRename = async (newName: string): Promise<void> => {
               :disabled="isDeleting"
               aria-label="Действия с подключением"
             >
-              <Spinner v-if="isDeleting" size="sm" />
+              <Spinner
+                v-if="isDeleting"
+                size="sm"
+              />
               <Ellipsis v-else />
             </Button>
           </DropdownMenuTrigger>
@@ -186,20 +187,19 @@ const handleRename = async (newName: string): Promise<void> => {
     </CardFooter>
 
     <!-- Нет активного подключения: канал существует, но данные не собираются автоматически -->
-    <CardFooter v-else class="flex items-center justify-between gap-2">
-      <span v-if="props.channel.connection && !props.channel.connection.isActive" class="text-xs text-muted-foreground">
+    <CardFooter
+      v-else
+      class="flex items-center justify-between gap-2"
+    >
+      <span
+        v-if="props.channel.connection && !props.channel.connection.isActive"
+        class="text-xs text-muted-foreground"
+      >
         Подключение отключено — старые данные сохранены
       </span>
       <span v-else />
 
       <div class="flex items-center gap-2">
-        <Button
-          variant="outline"
-          @click="isDetailsSheetOpen = true"
-        >
-          <Settings2 class="size-4 mr-1" />
-          Параметры
-        </Button>
         <Button @click="emit('connect')">
           Подключить
         </Button>
@@ -208,7 +208,10 @@ const handleRename = async (newName: string): Promise<void> => {
   </Card>
 
   <!-- Диалог подтверждения удаления -->
-  <AlertDialogRoot :open="isDeleteDialogOpen" @update:open="isDeleteDialogOpen = $event">
+  <AlertDialogRoot
+    :open="isDeleteDialogOpen"
+    @update:open="isDeleteDialogOpen = $event"
+  >
     <AlertDialogPortal>
       <AlertDialogOverlay class="data-[state=open]:animate-overlayShow fixed inset-0 z-30 bg-black/80" />
       <AlertDialogContent>
@@ -221,7 +224,10 @@ const handleRename = async (newName: string): Promise<void> => {
         </AlertDialogDescription>
         <div class="flex justify-end gap-3">
           <AlertDialogCancel as-child>
-            <Button variant="outline" :disabled="isDeleting">
+            <Button
+              variant="outline"
+              :disabled="isDeleting"
+            >
               Отмена
             </Button>
           </AlertDialogCancel>
@@ -230,17 +236,15 @@ const handleRename = async (newName: string): Promise<void> => {
             :disabled="isDeleting"
             @click="handleDelete"
           >
-            <Spinner v-if="isDeleting" size="sm" class="mr-2" />
+            <Spinner
+              v-if="isDeleting"
+              size="sm"
+              class="mr-2"
+            />
             {{ isDeleting ? 'Удаляем...' : 'Да' }}
           </Button>
         </div>
       </AlertDialogContent>
     </AlertDialogPortal>
   </AlertDialogRoot>
-
-  <!-- Панель параметров канала: комиссия, эквайринг, СПП и история версий -->
-  <ChannelDetailsSheet
-    v-model="isDetailsSheetOpen"
-    :channel="props.channel"
-  />
 </template>

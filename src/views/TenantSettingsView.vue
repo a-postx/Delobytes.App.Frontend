@@ -103,7 +103,9 @@ const handleMembersRefresh = (): void => {
 <template>
   <div class="flex flex-col gap-6 p-6">
     <div class="flex flex-col gap-2">
-      <h1 class="text-xl font-bold">Настройки пространства</h1>
+      <h1 class="text-xl font-bold">
+        Настройки пространства
+      </h1>
       <p class="text-muted-foreground">
         Дайте вашему пространству понятное имя, чтобы другие пользователи могли удобно переключаться между ними.
       </p>
@@ -111,7 +113,9 @@ const handleMembersRefresh = (): void => {
 
     <Card>
       <CardHeader>
-        <CardTitle class="text-lg">Главное</CardTitle>
+        <CardTitle class="text-lg">
+          Главное
+        </CardTitle>
       </CardHeader>
       <CardContent class="space-y-4">
         <div class="space-y-2">
@@ -126,11 +130,17 @@ const handleMembersRefresh = (): void => {
               :class="{ 'cursor-not-allowed opacity-60': !canEditTenantSettings }"
               @blur="handleBlur"
             />
-            <div v-if="isUpdating" class="absolute right-3 top-1/2 -translate-y-1/2">
+            <div
+              v-if="isUpdating"
+              class="absolute right-3 top-1/2 -translate-y-1/2"
+            >
               <Spinner size="sm" />
             </div>
           </div>
-          <p v-if="!canEditTenantSettings" class="text-xs text-muted-foreground">
+          <p
+            v-if="!canEditTenantSettings"
+            class="text-xs text-muted-foreground"
+          >
             Только администраторы могут изменять имя
           </p>
         </div>
@@ -145,7 +155,10 @@ const handleMembersRefresh = (): void => {
               class="pr-10 select-text cursor-text"
             />
             <div class="absolute right-1 top-1/2 -translate-y-1/2">
-              <CopyButton :value="tenantId" tooltip-text="Копировать ID" />
+              <CopyButton
+                :value="tenantId"
+                tooltip-text="Копировать ID"
+              />
             </div>
           </div>
         </div>
@@ -160,7 +173,9 @@ const handleMembersRefresh = (): void => {
 
     <Card v-if="canManageMembers">
       <CardHeader>
-        <CardTitle class="text-lg">Доступы</CardTitle>
+        <CardTitle class="text-lg">
+          Доступы
+        </CardTitle>
         <CardDescription>
           Управляйте пользователями и их ролями в этом пространстве
         </CardDescription>
@@ -175,13 +190,18 @@ const handleMembersRefresh = (): void => {
             </template>
           </TenantMemberAccessDialog>
         </div>
-        <TenantMembersTable ref="membersTableRef" @refresh="handleMembersRefresh" />
+        <TenantMembersTable
+          ref="membersTableRef"
+          @refresh="handleMembersRefresh"
+        />
       </CardContent>
     </Card>
 
     <Card v-if="canCreateTenant">
       <CardHeader>
-        <CardTitle class="text-lg">Новое</CardTitle>
+        <CardTitle class="text-lg">
+          Новое
+        </CardTitle>
         <CardDescription>
           Вы можете создать дополнительное рабочее пространство.
         </CardDescription>

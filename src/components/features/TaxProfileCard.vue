@@ -364,11 +364,16 @@ const selectContentClass = 'z-[110] pointer-events-auto'
 <template>
   <Card>
     <CardHeader>
-      <CardTitle class="text-lg">Налоговые настройки</CardTitle>
+      <CardTitle class="text-lg">
+        Налоговые настройки
+      </CardTitle>
       <CardDescription>Ставки налога с датами начала действия.</CardDescription>
     </CardHeader>
     <CardContent class="space-y-4">
-      <div v-if="isLoading" class="flex justify-center py-6">
+      <div
+        v-if="isLoading"
+        class="flex justify-center py-6"
+      >
         <Spinner size="md" />
       </div>
 
@@ -383,17 +388,26 @@ const selectContentClass = 'z-[110] pointer-events-auto'
       />
 
       <template v-else>
-        <div v-if="!canEditTenantSettings" class="text-xs text-muted-foreground">
+        <div
+          v-if="!canEditTenantSettings"
+          class="text-xs text-muted-foreground"
+        >
           Только администраторы могут изменять налоговые настройки.
         </div>
 
-        <div v-if="sortedItems.length === 0" class="rounded-lg border border-dashed border-border bg-card px-4 py-8 text-center">
+        <div
+          v-if="sortedItems.length === 0"
+          class="rounded-lg border border-dashed border-border bg-card px-4 py-8 text-center"
+        >
           <p class="text-sm text-muted-foreground">
             Налоговые ставки не заданы — без них налог в расчётах не учитывается.
           </p>
         </div>
 
-        <ul v-else class="flex flex-col gap-2">
+        <ul
+          v-else
+          class="flex flex-col gap-2"
+        >
           <li
             v-for="item in sortedItems"
             :key="item.id"
@@ -402,7 +416,12 @@ const selectContentClass = 'z-[110] pointer-events-auto'
             <div class="flex flex-col gap-1">
               <div class="flex items-center gap-2">
                 <span class="text-sm font-medium">{{ regimeLabel(item.regime) }}</span>
-                <Badge v-if="item.id === activeProfileId" variant="secondary">Текущий</Badge>
+                <Badge
+                  v-if="item.id === activeProfileId"
+                  variant="secondary"
+                >
+                  Текущий
+                </Badge>
               </div>
               <span class="text-sm text-muted-foreground">Ставка {{ item.ratePercent }} %</span>
               <span class="text-xs text-muted-foreground">НДС: {{ vatLabel(item.vat) }}</span>
@@ -422,8 +441,14 @@ const selectContentClass = 'z-[110] pointer-events-auto'
           </li>
         </ul>
 
-        <div v-if="canEditTenantSettings" class="flex justify-end">
-          <Button class="gap-2" @click="openCreate">
+        <div
+          v-if="canEditTenantSettings"
+          class="flex justify-end"
+        >
+          <Button
+            class="gap-2"
+            @click="openCreate"
+          >
             <Plus class="size-4" />
             Добавить ставку
           </Button>
@@ -436,7 +461,9 @@ const selectContentClass = 'z-[110] pointer-events-auto'
       <DialogPortal>
         <DialogOverlay class="fixed inset-0 z-[99] bg-black/50" />
         <DialogContent :class="dialogContentClass">
-          <DialogTitle class="text-lg font-semibold">Новые ставки налогов</DialogTitle>
+          <DialogTitle class="text-lg font-semibold">
+            Новые ставки налогов
+          </DialogTitle>
           <DialogDescription class="mt-1 text-sm text-muted-foreground">
             Введите налоговый режим и применяемые ставки.
           </DialogDescription>
@@ -463,8 +490,8 @@ const selectContentClass = 'z-[110] pointer-events-auto'
             <div :class="fieldClass">
               <Label>Ставка, %</Label>
               <Input
-                :class="inputClass"
                 v-model="form.ratePercent"
+                :class="inputClass"
                 type="number"
                 inputmode="decimal"
                 min="0"
@@ -494,8 +521,16 @@ const selectContentClass = 'z-[110] pointer-events-auto'
 
             <div :class="fieldClass">
               <Label>Дата начала действия</Label>
-              <Input :class="inputClass" v-model="form.validFrom" type="date" :min="minValidFrom" />
-              <p v-if="minValidFrom" class="text-xs text-muted-foreground">
+              <Input
+                v-model="form.validFrom"
+                :class="inputClass"
+                type="date"
+                :min="minValidFrom"
+              />
+              <p
+                v-if="minValidFrom"
+                class="text-xs text-muted-foreground"
+              >
                 Доступны даты начиная с {{ formatValidFrom(minValidFrom) }}: более ранняя дата изменила бы уже закрытые периоды.
               </p>
             </div>
@@ -503,10 +538,19 @@ const selectContentClass = 'z-[110] pointer-events-auto'
 
           <div class="mt-6 flex justify-end gap-2">
             <DialogClose as-child>
-              <Button variant="outline">Отмена</Button>
+              <Button variant="outline">
+                Отмена
+              </Button>
             </DialogClose>
-            <Button :disabled="isSaving" @click="handleCreate">
-              <Spinner v-if="isSaving" size="sm" class="mr-2" />
+            <Button
+              :disabled="isSaving"
+              @click="handleCreate"
+            >
+              <Spinner
+                v-if="isSaving"
+                size="sm"
+                class="mr-2"
+              />
               Сохранить
             </Button>
           </div>
@@ -519,16 +563,26 @@ const selectContentClass = 'z-[110] pointer-events-auto'
       <AlertDialogPortal>
         <AlertDialogOverlay class="fixed inset-0 z-[99] bg-black/50" />
         <AlertDialogContent class="bg-popover text-popover-foreground fixed top-[50%] left-[50%] w-[90vw] max-w-[420px] translate-x-[-50%] translate-y-[-50%] rounded-lg border shadow-lg p-6 z-[100]">
-          <AlertDialogTitle class="text-lg font-semibold">Удалить ставку?</AlertDialogTitle>
+          <AlertDialogTitle class="text-lg font-semibold">
+            Удалить ставку?
+          </AlertDialogTitle>
           <AlertDialogDescription class="mt-2 text-sm text-muted-foreground">
             Ставка {{ deleteTarget?.ratePercent }} % — {{ vatLabel(deleteTarget?.vat ?? VatType.None) }} будет удалена без возможности восстановления.
           </AlertDialogDescription>
           <div class="flex justify-end gap-2 mt-6">
             <AlertDialogCancel as-child>
-              <Button variant="outline">Отмена</Button>
+              <Button variant="outline">
+                Отмена
+              </Button>
             </AlertDialogCancel>
             <AlertDialogAction as-child>
-              <Button variant="destructive" :disabled="isDeleting" @click="handleDelete">Удалить</Button>
+              <Button
+                variant="destructive"
+                :disabled="isDeleting"
+                @click="handleDelete"
+              >
+                Удалить
+              </Button>
             </AlertDialogAction>
           </div>
         </AlertDialogContent>

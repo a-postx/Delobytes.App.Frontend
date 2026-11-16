@@ -92,7 +92,9 @@ const handleSave = async (): Promise<void> => {
 <template>
   <Card>
     <CardHeader>
-      <CardTitle class="text-lg">Часовой пояс</CardTitle>
+      <CardTitle class="text-lg">
+        Часовой пояс
+      </CardTitle>
       <CardDescription>
         В этом поясе считаются календарные даты: «сегодня» в отчётах, даты вступления в силу
         цен, тарифов и состава изделий, расписания фоновых заданий.
@@ -106,22 +108,40 @@ const handleSave = async (): Promise<void> => {
           v-model="timeZone"
           :disabled="!canEditTenantSettings || isSaving"
         />
-        <p v-if="!canEditTenantSettings" class="text-xs text-muted-foreground">
+        <p
+          v-if="!canEditTenantSettings"
+          class="text-xs text-muted-foreground"
+        >
           Только администраторы могут изменять часовой пояс
         </p>
       </div>
 
       <div class="space-y-1 rounded-md border bg-muted/40 px-3 py-2">
-        <p class="text-xs text-muted-foreground">Текущая дата и время</p>
+        <p class="text-xs text-muted-foreground">
+          Текущая дата и время
+        </p>
         <p class="text-sm font-medium">
           {{ currentDateTime }}
-          <span v-if="currentOffset" class="text-muted-foreground">{{ currentOffset }}</span>
+          <span
+            v-if="currentOffset"
+            class="text-muted-foreground"
+          >{{ currentOffset }}</span>
         </p>
       </div>
     </CardContent>
-    <CardFooter v-if="canEditTenantSettings" class="flex justify-end">
-      <Button :disabled="isSaving || !isDirty" @click="handleSave">
-        <Spinner v-if="isSaving" size="sm" class="mr-2" />
+    <CardFooter
+      v-if="canEditTenantSettings"
+      class="flex justify-end"
+    >
+      <Button
+        :disabled="isSaving || !isDirty"
+        @click="handleSave"
+      >
+        <Spinner
+          v-if="isSaving"
+          size="sm"
+          class="mr-2"
+        />
         Сохранить
       </Button>
     </CardFooter>

@@ -81,7 +81,10 @@ const referenceItems = [
             <SidebarMenuSub>
               <SidebarMenuSubItem>
                 <SidebarMenuSubButton as-child>
-                  <RouterLink to="/catalogs/products" class="flex items-center gap-2">
+                  <RouterLink
+                    to="/catalogs/products"
+                    class="flex items-center gap-2"
+                  >
                     <GalleryHorizontalEnd class="size-3.5 shrink-0" />
                     <span>Каталог</span>
                   </RouterLink>
@@ -190,7 +193,10 @@ const referenceItems = [
             <SidebarMenuSub>
               <SidebarMenuSubItem>
                 <SidebarMenuSubButton as-child>
-                  <RouterLink to="/catalogs/sales-channels" class="flex items-center gap-2">
+                  <RouterLink
+                    to="/catalogs/sales-channels"
+                    class="flex items-center gap-2"
+                  >
                     <Store class="size-3.5 shrink-0" />
                     <span>Каналы продаж</span>
                   </RouterLink>
@@ -198,7 +204,10 @@ const referenceItems = [
               </SidebarMenuSubItem>
               <SidebarMenuSubItem>
                 <SidebarMenuSubButton as-child>
-                  <RouterLink to="/catalogs/products/imports" class="flex items-center gap-2">
+                  <RouterLink
+                    to="/catalogs/products/imports"
+                    class="flex items-center gap-2"
+                  >
                     <Download class="size-3.5 shrink-0" />
                     <span>Импорт товаров</span>
                   </RouterLink>

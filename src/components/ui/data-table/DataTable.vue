@@ -156,8 +156,14 @@ const menuItemClass = 'flex cursor-default select-none items-center gap-2 rounde
                   aria-label="Выбрать все строки на странице"
                 >
                   <CheckboxIndicator class="text-primary-foreground">
-                    <Minus v-if="pageSelection === 'indeterminate'" class="size-3" />
-                    <Check v-else class="size-3" />
+                    <Minus
+                      v-if="pageSelection === 'indeterminate'"
+                      class="size-3"
+                    />
+                    <Check
+                      v-else
+                      class="size-3"
+                    />
                   </CheckboxIndicator>
                 </CheckboxRoot>
               </th>
@@ -176,9 +182,18 @@ const menuItemClass = 'flex cursor-default select-none items-center gap-2 rounde
                   @click="toggleSort(column.key)"
                 >
                   {{ column.label }}
-                  <ArrowDown v-if="sortState.key === column.key && sortState.descending" class="size-3.5" />
-                  <ArrowUp v-else-if="sortState.key === column.key" class="size-3.5" />
-                  <ChevronsUpDown v-else class="size-3.5" />
+                  <ArrowDown
+                    v-if="sortState.key === column.key && sortState.descending"
+                    class="size-3.5"
+                  />
+                  <ArrowUp
+                    v-else-if="sortState.key === column.key"
+                    class="size-3.5"
+                  />
+                  <ChevronsUpDown
+                    v-else
+                    class="size-3.5"
+                  />
                 </button>
                 <span
                   v-else
@@ -265,7 +280,10 @@ const menuItemClass = 'flex cursor-default select-none items-center gap-2 rounde
                           :class="[menuItemClass, action.destructive && 'text-destructive']"
                           @select="action.handler(row)"
                         >
-                          <component :is="action.icon" class="size-4" />
+                          <component
+                            :is="action.icon"
+                            class="size-4"
+                          />
                           {{ action.label }}
                         </DropdownMenuItem>
                       </template>

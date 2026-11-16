@@ -11,7 +11,9 @@ const testStatus = async () => {
 
 <template>
   <div class="bg-white shadow rounded-lg p-6">
-    <h2 class="text-2xl font-bold text-gray-900 mb-4">API Connection Test</h2>
+    <h2 class="text-2xl font-bold text-gray-900 mb-4">
+      API Connection Test
+    </h2>
     
     <div class="mb-6">
       <p class="text-gray-600 mb-4">
@@ -20,21 +22,33 @@ const testStatus = async () => {
       </p>
       
       <button
-        @click="testStatus"
         :disabled="statusLoading"
         class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded disabled:bg-gray-400 transition-colors"
+        @click="testStatus"
       >
         {{ statusLoading ? 'Testing...' : 'Test /status endpoint' }}
       </button>
     </div>
 
-    <div v-if="statusError" class="mb-4 p-4 bg-red-50 border border-red-200 rounded">
-      <p class="text-red-800 font-semibold">Error:</p>
-      <p class="text-red-600">{{ statusError }}</p>
+    <div
+      v-if="statusError"
+      class="mb-4 p-4 bg-red-50 border border-red-200 rounded"
+    >
+      <p class="text-red-800 font-semibold">
+        Error:
+      </p>
+      <p class="text-red-600">
+        {{ statusError }}
+      </p>
     </div>
 
-    <div v-if="statusResult" class="mb-4">
-      <p class="text-green-800 font-semibold mb-2">Success:</p>
+    <div
+      v-if="statusResult"
+      class="mb-4"
+    >
+      <p class="text-green-800 font-semibold mb-2">
+        Success:
+      </p>
       <pre class="bg-gray-100 p-4 rounded border border-gray-200 overflow-x-auto text-sm">{{ JSON.stringify(statusResult, null, 2) }}</pre>
     </div>
   </div>

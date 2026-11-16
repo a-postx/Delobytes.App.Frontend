@@ -61,7 +61,10 @@ const handleKeydown = (e: KeyboardEvent): void => {
 </script>
 
 <template>
-  <div v-if="isEditing" class="relative">
+  <div
+    v-if="isEditing"
+    class="relative"
+  >
     <input
       ref="inputRef"
       v-model="editValue"
@@ -69,7 +72,7 @@ const handleKeydown = (e: KeyboardEvent): void => {
       class="text-xl font-semibold w-full bg-transparent outline-none border-b border-input focus:border-ring"
       @blur="save"
       @keydown="handleKeydown"
-    />
+    >
   </div>
   <div
     v-else

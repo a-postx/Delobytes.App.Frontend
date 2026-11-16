@@ -689,9 +689,15 @@ const selectClass = 'flex h-10 w-full rounded-md border border-input bg-backgrou
           <PackageOpen class="size-5 text-primary" />
           Компоненты
         </h1>
-        <p class="text-sm text-muted-foreground">Справочник материалов и компонентов</p>
+        <p class="text-sm text-muted-foreground">
+          Справочник материалов и компонентов
+        </p>
       </div>
-      <Button v-if="canWrite" @click="openCreate" class="gap-2">
+      <Button
+        v-if="canWrite"
+        class="gap-2"
+        @click="openCreate"
+      >
         <Plus class="size-4" />
         Добавить
       </Button>
@@ -703,8 +709,14 @@ const selectClass = 'flex h-10 w-full rounded-md border border-input bg-backgrou
         placeholder="Поиск по названию"
         class="w-full sm:w-80"
       />
-      <StatusFilter v-model="statusFilter" :options="filterOptions" />
-      <span v-if="isRefetching" class="text-xs text-muted-foreground">Обновление…</span>
+      <StatusFilter
+        v-model="statusFilter"
+        :options="filterOptions"
+      />
+      <span
+        v-if="isRefetching"
+        class="text-xs text-muted-foreground"
+      >Обновление…</span>
     </div>
 
     <!-- Ошибка загрузки перед гридом: иначе недоступный бэкенд читается как «компонентов ещё нет» -->
@@ -752,7 +764,11 @@ const selectClass = 'flex h-10 w-full rounded-md border border-input bg-backgrou
             v-if="canWrite && statusFilter !== 'inactive' && !searchQuery.trim()"
             class="flex flex-col sm:flex-row gap-2 mt-2"
           >
-            <Button @click="openCreate" variant="outline" class="gap-2">
+            <Button
+              variant="outline"
+              class="gap-2"
+              @click="openCreate"
+            >
               <Plus class="size-4" />
               Добавить первый
             </Button>
@@ -768,13 +784,18 @@ const selectClass = 'flex h-10 w-full rounded-md border border-input bg-backgrou
         <DialogContent :class="dialogContentClass">
           <div class="flex items-start justify-between mb-4">
             <div>
-              <DialogTitle class="text-lg font-semibold">Добавить компонент</DialogTitle>
+              <DialogTitle class="text-lg font-semibold">
+                Добавить компонент
+              </DialogTitle>
               <DialogDescription class="text-sm text-muted-foreground mt-1">
                 Укажите название и параметры компонента и его первую цену
               </DialogDescription>
             </div>
             <DialogClose as-child>
-              <Button variant="ghost" size="icon-sm">
+              <Button
+                variant="ghost"
+                size="icon-sm"
+              >
                 <X class="size-4" />
               </Button>
             </DialogClose>
@@ -809,7 +830,11 @@ const selectClass = 'flex h-10 w-full rounded-md border border-input bg-backgrou
                   v-model.number="form.unit"
                   :class="selectClass"
                 >
-                  <option v-for="opt in unitOptions" :key="opt.value" :value="opt.value">
+                  <option
+                    v-for="opt in unitOptions"
+                    :key="opt.value"
+                    :value="opt.value"
+                  >
                     {{ opt.label }}
                   </option>
                 </select>
@@ -822,7 +847,11 @@ const selectClass = 'flex h-10 w-full rounded-md border border-input bg-backgrou
                   v-model="form.category"
                   :class="selectClass"
                 >
-                  <option v-for="opt in categoryOptions" :key="opt.value" :value="opt.value">
+                  <option
+                    v-for="opt in categoryOptions"
+                    :key="opt.value"
+                    :value="opt.value"
+                  >
                     {{ opt.label }}
                   </option>
                 </select>
@@ -850,8 +879,14 @@ const selectClass = 'flex h-10 w-full rounded-md border border-input bg-backgrou
                   v-model="form.supplierId"
                   :class="selectClass"
                 >
-                  <option value="">Не выбран</option>
-                  <option v-for="s in activeSuppliers()" :key="s.id" :value="s.id">
+                  <option value="">
+                    Не выбран
+                  </option>
+                  <option
+                    v-for="s in activeSuppliers()"
+                    :key="s.id"
+                    :value="s.id"
+                  >
                     {{ s.name }}
                   </option>
                 </select>
@@ -871,10 +906,19 @@ const selectClass = 'flex h-10 w-full rounded-md border border-input bg-backgrou
 
           <div class="flex justify-end gap-2 mt-6">
             <DialogClose as-child>
-              <Button variant="outline">Отмена</Button>
+              <Button variant="outline">
+                Отмена
+              </Button>
             </DialogClose>
-            <Button @click="handleCreate" :disabled="isSaving" class="gap-2">
-              <Spinner v-if="isSaving" class="size-4" />
+            <Button
+              :disabled="isSaving"
+              class="gap-2"
+              @click="handleCreate"
+            >
+              <Spinner
+                v-if="isSaving"
+                class="size-4"
+              />
               Создать
             </Button>
           </div>
@@ -889,13 +933,18 @@ const selectClass = 'flex h-10 w-full rounded-md border border-input bg-backgrou
         <DialogContent :class="dialogContentClass">
           <div class="flex items-start justify-between mb-4">
             <div>
-              <DialogTitle class="text-lg font-semibold">Редактировать компонент</DialogTitle>
+              <DialogTitle class="text-lg font-semibold">
+                Редактировать компонент
+              </DialogTitle>
               <DialogDescription class="text-sm text-muted-foreground mt-1">
                 Изменение категории влияет на распределение затрат в последующих расчётах себестоимости
               </DialogDescription>
             </div>
             <DialogClose as-child>
-              <Button variant="ghost" size="icon-sm">
+              <Button
+                variant="ghost"
+                size="icon-sm"
+              >
                 <X class="size-4" />
               </Button>
             </DialogClose>
@@ -930,7 +979,11 @@ const selectClass = 'flex h-10 w-full rounded-md border border-input bg-backgrou
                   v-model.number="editForm.unit"
                   :class="selectClass"
                 >
-                  <option v-for="opt in unitOptions" :key="opt.value" :value="opt.value">
+                  <option
+                    v-for="opt in unitOptions"
+                    :key="opt.value"
+                    :value="opt.value"
+                  >
                     {{ opt.label }}
                   </option>
                 </select>
@@ -943,7 +996,11 @@ const selectClass = 'flex h-10 w-full rounded-md border border-input bg-backgrou
                   v-model="editForm.category"
                   :class="selectClass"
                 >
-                  <option v-for="opt in categoryOptions" :key="opt.value" :value="opt.value">
+                  <option
+                    v-for="opt in categoryOptions"
+                    :key="opt.value"
+                    :value="opt.value"
+                  >
                     {{ opt.label }}
                   </option>
                 </select>
@@ -953,10 +1010,19 @@ const selectClass = 'flex h-10 w-full rounded-md border border-input bg-backgrou
 
           <div class="flex justify-end gap-2 mt-6">
             <DialogClose as-child>
-              <Button variant="outline">Отмена</Button>
+              <Button variant="outline">
+                Отмена
+              </Button>
             </DialogClose>
-            <Button @click="handleUpdate" :disabled="isSaving" class="gap-2">
-              <Spinner v-if="isSaving" class="size-4" />
+            <Button
+              :disabled="isSaving"
+              class="gap-2"
+              @click="handleUpdate"
+            >
+              <Spinner
+                v-if="isSaving"
+                class="size-4"
+              />
               Сохранить
             </Button>
           </div>
@@ -971,13 +1037,18 @@ const selectClass = 'flex h-10 w-full rounded-md border border-input bg-backgrou
         <DialogContent :class="dialogContentClass">
           <div class="flex items-start justify-between mb-4">
             <div>
-              <DialogTitle class="text-lg font-semibold">Новая цена</DialogTitle>
+              <DialogTitle class="text-lg font-semibold">
+                Новая цена
+              </DialogTitle>
               <DialogDescription class="text-sm text-muted-foreground mt-1">
                 Компонент «{{ priceTarget?.name }}»: текущая активная цена будет закрыта, вместо неё будет создана новая
               </DialogDescription>
             </div>
             <DialogClose as-child>
-              <Button variant="ghost" size="icon-sm">
+              <Button
+                variant="ghost"
+                size="icon-sm"
+              >
                 <X class="size-4" />
               </Button>
             </DialogClose>
@@ -1004,8 +1075,14 @@ const selectClass = 'flex h-10 w-full rounded-md border border-input bg-backgrou
                 v-model="priceForm.supplierId"
                 :class="selectClass"
               >
-                <option value="">Не выбран</option>
-                <option v-for="s in activeSuppliers()" :key="s.id" :value="s.id">
+                <option value="">
+                  Не выбран
+                </option>
+                <option
+                  v-for="s in activeSuppliers()"
+                  :key="s.id"
+                  :value="s.id"
+                >
                   {{ s.name }}
                 </option>
               </select>
@@ -1019,7 +1096,10 @@ const selectClass = 'flex h-10 w-full rounded-md border border-input bg-backgrou
                 type="date"
                 :class="inputClass"
               />
-              <p v-if="isPriceDateInPast" class="text-xs text-warning mt-1">
+              <p
+                v-if="isPriceDateInPast"
+                class="text-xs text-warning mt-1"
+              >
                 Дата в прошлом изменит стоимость компонента в прошлых расчётах
               </p>
             </div>
@@ -1027,10 +1107,19 @@ const selectClass = 'flex h-10 w-full rounded-md border border-input bg-backgrou
 
           <div class="flex justify-end gap-2 mt-6">
             <DialogClose as-child>
-              <Button variant="outline">Отмена</Button>
+              <Button variant="outline">
+                Отмена
+              </Button>
             </DialogClose>
-            <Button @click="handleCreatePrice" :disabled="isSaving" class="gap-2">
-              <Spinner v-if="isSaving" class="size-4" />
+            <Button
+              :disabled="isSaving"
+              class="gap-2"
+              @click="handleCreatePrice"
+            >
+              <Spinner
+                v-if="isSaving"
+                class="size-4"
+              />
               Сохранить
             </Button>
           </div>
@@ -1043,17 +1132,29 @@ const selectClass = 'flex h-10 w-full rounded-md border border-input bg-backgrou
       <AlertDialogPortal>
         <AlertDialogOverlay class="bg-background/80 backdrop-blur-sm fixed inset-0 z-50" />
         <AlertDialogContent class="bg-popover text-popover-foreground fixed top-[50%] left-[50%] max-h-[90vh] w-[90vw] max-w-[420px] translate-x-[-50%] translate-y-[-50%] rounded-lg border shadow-lg p-6 focus:outline-none z-[100]">
-          <AlertDialogTitle class="text-lg font-semibold">Деактивировать компонент?</AlertDialogTitle>
+          <AlertDialogTitle class="text-lg font-semibold">
+            Деактивировать компонент?
+          </AlertDialogTitle>
           <AlertDialogDescription class="text-sm text-muted-foreground mt-2">
             Компонент "{{ deleteTarget?.name }}" будет деактивирован и скрыт из основного списка. Вы сможете восстановить его позже.
           </AlertDialogDescription>
           <div class="flex justify-end gap-2 mt-6">
             <AlertDialogCancel as-child>
-              <Button variant="outline">Отмена</Button>
+              <Button variant="outline">
+                Отмена
+              </Button>
             </AlertDialogCancel>
             <AlertDialogAction as-child>
-              <Button @click="handleDelete" :disabled="isDeleting" variant="destructive" class="gap-2">
-                <Spinner v-if="isDeleting" class="size-4" />
+              <Button
+                :disabled="isDeleting"
+                variant="destructive"
+                class="gap-2"
+                @click="handleDelete"
+              >
+                <Spinner
+                  v-if="isDeleting"
+                  class="size-4"
+                />
                 Деактивировать
               </Button>
             </AlertDialogAction>
@@ -1067,17 +1168,28 @@ const selectClass = 'flex h-10 w-full rounded-md border border-input bg-backgrou
       <AlertDialogPortal>
         <AlertDialogOverlay class="bg-background/80 backdrop-blur-sm fixed inset-0 z-50" />
         <AlertDialogContent class="bg-popover text-popover-foreground fixed top-[50%] left-[50%] max-h-[90vh] w-[90vw] max-w-[420px] translate-x-[-50%] translate-y-[-50%] rounded-lg border shadow-lg p-6 focus:outline-none z-[100]">
-          <AlertDialogTitle class="text-lg font-semibold">Восстановить компонент?</AlertDialogTitle>
+          <AlertDialogTitle class="text-lg font-semibold">
+            Восстановить компонент?
+          </AlertDialogTitle>
           <AlertDialogDescription class="text-sm text-muted-foreground mt-2">
             Компонент "{{ restoreTarget?.name }}" снова станет активным вместе с его последней ценой.
           </AlertDialogDescription>
           <div class="flex justify-end gap-2 mt-6">
             <AlertDialogCancel as-child>
-              <Button variant="outline">Отмена</Button>
+              <Button variant="outline">
+                Отмена
+              </Button>
             </AlertDialogCancel>
             <AlertDialogAction as-child>
-              <Button @click="handleRestore" :disabled="isSaving" class="gap-2">
-                <Spinner v-if="isSaving" class="size-4" />
+              <Button
+                :disabled="isSaving"
+                class="gap-2"
+                @click="handleRestore"
+              >
+                <Spinner
+                  v-if="isSaving"
+                  class="size-4"
+                />
                 Восстановить
               </Button>
             </AlertDialogAction>

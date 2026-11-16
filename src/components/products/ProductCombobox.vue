@@ -245,8 +245,11 @@ const optionSkuClass = 'text-xs text-muted-foreground font-mono truncate'
                 :alt="selectedProduct.name"
                 class="size-full object-contain"
                 loading="lazy"
+              >
+              <Package
+                v-else
+                class="size-3 text-muted-foreground/40"
               />
-              <Package v-else class="size-3 text-muted-foreground/40" />
             </div>
             <span class="shrink-0 font-mono text-xs text-muted-foreground">{{ selectedProduct.sku }}</span>
             <span class="min-w-0 truncate text-sm font-medium leading-tight">{{ selectedProduct.name }}</span>
@@ -294,14 +297,35 @@ const optionSkuClass = 'text-xs text-muted-foreground font-mono truncate'
           :side-offset="4"
           class="z-[120] w-[var(--reka-combobox-trigger-width)] rounded-md border border-border bg-popover p-1 shadow-lg"
         >
-          <ComboboxViewport class="max-h-[280px]" @scroll="handleScroll">
-            <div v-if="isLoading" class="flex flex-col gap-2 p-2">
-              <div v-for="n in 3" :key="n" class="h-12 w-full animate-pulse rounded-md bg-muted" />
+          <ComboboxViewport
+            class="max-h-[280px]"
+            @scroll="handleScroll"
+          >
+            <div
+              v-if="isLoading"
+              class="flex flex-col gap-2 p-2"
+            >
+              <div
+                v-for="n in 3"
+                :key="n"
+                class="h-12 w-full animate-pulse rounded-md bg-muted"
+              />
             </div>
 
-            <div v-else-if="loadFailed" class="flex flex-col items-start gap-2 p-3">
-              <p class="text-xs text-destructive">Не удалось загрузить товары</p>
-              <Button variant="outline" size="sm" @click="retry">Повторить</Button>
+            <div
+              v-else-if="loadFailed"
+              class="flex flex-col items-start gap-2 p-3"
+            >
+              <p class="text-xs text-destructive">
+                Не удалось загрузить товары
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                @click="retry"
+              >
+                Повторить
+              </Button>
             </div>
 
             <template v-else>
@@ -320,8 +344,11 @@ const optionSkuClass = 'text-xs text-muted-foreground font-mono truncate'
                     :alt="product.name"
                     class="size-full object-contain"
                     loading="lazy"
+                  >
+                  <Package
+                    v-else
+                    class="size-4 text-muted-foreground/40"
                   />
-                  <Package v-else class="size-4 text-muted-foreground/40" />
                 </div>
 
                 <div class="flex min-w-0 flex-1 flex-col">
@@ -338,21 +365,41 @@ const optionSkuClass = 'text-xs text-muted-foreground font-mono truncate'
                   {{ product.hasActiveWorkRate ? 'Норма заведена' : 'Норма не заведена' }}
                 </span>
 
-                <Check v-if="product.id === modelValue" class="size-4 shrink-0 text-primary" />
+                <Check
+                  v-if="product.id === modelValue"
+                  class="size-4 shrink-0 text-primary"
+                />
               </ComboboxItem>
 
-              <ComboboxEmpty v-if="!emptyCatalog" class="px-3 py-4 text-center text-sm text-muted-foreground">
+              <ComboboxEmpty
+                v-if="!emptyCatalog"
+                class="px-3 py-4 text-center text-sm text-muted-foreground"
+              >
                 Ничего не найдено
               </ComboboxEmpty>
 
-              <p v-if="emptyCatalog" class="px-3 py-4 text-center text-xs text-muted-foreground">
+              <p
+                v-if="emptyCatalog"
+                class="px-3 py-4 text-center text-xs text-muted-foreground"
+              >
                 В каталоге нет активных товаров.
-                <RouterLink to="/catalogs/products" class="text-primary hover:underline">Перейти в товары</RouterLink>
+                <RouterLink
+                  to="/catalogs/products"
+                  class="text-primary hover:underline"
+                >
+                  Перейти в товары
+                </RouterLink>
               </p>
-              <p v-else-if="isLoadingMore" class="py-2 text-center text-xs text-muted-foreground">
+              <p
+                v-else-if="isLoadingMore"
+                class="py-2 text-center text-xs text-muted-foreground"
+              >
                 Загрузка…
               </p>
-              <p v-else-if="hasMore" class="py-2 text-center text-xs text-muted-foreground">
+              <p
+                v-else-if="hasMore"
+                class="py-2 text-center text-xs text-muted-foreground"
+              >
                 Прокрутите вниз для загрузки
               </p>
             </template>
@@ -361,7 +408,10 @@ const optionSkuClass = 'text-xs text-muted-foreground font-mono truncate'
       </ComboboxPortal>
     </ComboboxRoot>
 
-    <p v-if="activeWriteRateFrom" class="text-xs text-warning">
+    <p
+      v-if="activeWriteRateFrom"
+      class="text-xs text-warning"
+    >
       Уже есть активная норма с {{ formatIsoDate(activeWriteRateFrom) }}. Новая запись деактивирует её.
     </p>
   </div>

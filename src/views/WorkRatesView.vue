@@ -295,9 +295,15 @@ const inputClass = 'mt-1'
           <Hammer class="size-5 text-primary" />
           Ставки работ
         </h1>
-        <p class="text-sm text-muted-foreground">Ставки оплаты труда за сборку и упаковку</p>
+        <p class="text-sm text-muted-foreground">
+          Ставки оплаты труда за сборку и упаковку
+        </p>
       </div>
-      <Button v-if="canWrite" @click="openCreate" class="gap-2">
+      <Button
+        v-if="canWrite"
+        class="gap-2"
+        @click="openCreate"
+      >
         <Plus class="size-4" />
         Добавить
       </Button>
@@ -305,14 +311,27 @@ const inputClass = 'mt-1'
 
     <!-- Status Filter -->
     <div class="flex items-center gap-2">
-      <StatusFilter v-model="statusFilter" :options="filterOptions" />
-      <span v-if="isRefetching" class="text-xs text-muted-foreground">Обновление…</span>
+      <StatusFilter
+        v-model="statusFilter"
+        :options="filterOptions"
+      />
+      <span
+        v-if="isRefetching"
+        class="text-xs text-muted-foreground"
+      >Обновление…</span>
     </div>
 
     <!-- Loading -->
-    <div v-if="isLoading" class="rounded-xl border border-border bg-card overflow-hidden">
+    <div
+      v-if="isLoading"
+      class="rounded-xl border border-border bg-card overflow-hidden"
+    >
       <div class="p-4 flex flex-col gap-3">
-        <Skeleton v-for="n in 4" :key="n" class="h-10 w-full rounded-lg" />
+        <Skeleton
+          v-for="n in 4"
+          :key="n"
+          class="h-10 w-full rounded-lg"
+        />
       </div>
     </div>
 
@@ -335,22 +354,38 @@ const inputClass = 'mt-1'
       <p class="text-sm text-muted-foreground">
         {{ statusFilter === 'active' ? 'Активные ставки работ не найдены' : statusFilter === 'inactive' ? 'Неактивные ставки работ не найдены' : 'Ставки работ не добавлены' }}
       </p>
-      <Button v-if="canWrite && statusFilter === 'active' && items.length === 0" variant="outline" size="sm" @click="openCreate" class="gap-2">
+      <Button
+        v-if="canWrite && statusFilter === 'active' && items.length === 0"
+        variant="outline"
+        size="sm"
+        class="gap-2"
+        @click="openCreate"
+      >
         <Plus class="size-4" /> Добавить первую
       </Button>
     </div>
 
     <!-- Table -->
-    <div v-else class="rounded-xl border border-border bg-card overflow-hidden">
+    <div
+      v-else
+      class="rounded-xl border border-border bg-card overflow-hidden"
+    >
       <Table>
         <TableHeader>
           <TableRow class="border-b border-border">
             <TableHead>Название</TableHead>
-            <TableHead class="text-right">Дневная ставка</TableHead>
+            <TableHead class="text-right">
+              Дневная ставка
+            </TableHead>
             <TableHead>Действует с</TableHead>
             <TableHead>Статус</TableHead>
             <TableHead>Добавлена</TableHead>
-            <TableHead v-if="canWrite" class="w-24 text-right">Действия</TableHead>
+            <TableHead
+              v-if="canWrite"
+              class="w-24 text-right"
+            >
+              Действия
+            </TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -359,36 +394,58 @@ const inputClass = 'mt-1'
             :key="item.id"
             class="hover:bg-muted/40 transition-colors"
           >
-            <TableCell class="font-medium">{{ item.name }}</TableCell>
-            <TableCell class="text-right tabular-nums">{{ formatMoney(item.activeVersion?.dailyWage ?? item.dailyWage) }}</TableCell>
-            <TableCell class="tabular-nums text-muted-foreground">{{ item.activeVersion?.validFrom ?? item.validFrom }}</TableCell>
+            <TableCell class="font-medium">
+              {{ item.name }}
+            </TableCell>
+            <TableCell class="text-right tabular-nums">
+              {{ formatMoney(item.activeVersion?.dailyWage ?? item.dailyWage) }}
+            </TableCell>
+            <TableCell class="tabular-nums text-muted-foreground">
+              {{ item.activeVersion?.validFrom ?? item.validFrom }}
+            </TableCell>
             <TableCell>
               <Badge :variant="item.isActive ? 'success' : 'warning'">
                 {{ item.isActive ? 'Активна' : 'Неактивна' }}
               </Badge>
             </TableCell>
-            <TableCell class="text-muted-foreground text-sm">{{ formatDate(item.createdAt) }}</TableCell>
-            <TableCell v-if="canWrite" class="text-right">
+            <TableCell class="text-muted-foreground text-sm">
+              {{ formatDate(item.createdAt) }}
+            </TableCell>
+            <TableCell
+              v-if="canWrite"
+              class="text-right"
+            >
               <div class="flex items-center justify-end gap-1">
-                <Button variant="ghost" size="icon-sm" @click="openEdit(item)" title="Редактировать">
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  title="Редактировать"
+                  @click="openEdit(item)"
+                >
                   <Pencil class="size-4" />
                 </Button>
-                <Button v-if="item.isActive" variant="ghost" size="icon-sm" @click="openNewVersion(item)" title="Новая ставка">
+                <Button
+                  v-if="item.isActive"
+                  variant="ghost"
+                  size="icon-sm"
+                  title="Новая ставка"
+                  @click="openNewVersion(item)"
+                >
                   <Tag class="size-4" />
                 </Button>
                 <button
                   v-if="item.isActive"
-                  @click="openDelete(item)"
                   class="p-2 hover:bg-muted rounded-md transition-colors"
                   title="Деактивировать"
+                  @click="openDelete(item)"
                 >
                   <Trash2 class="size-4 text-muted-foreground hover:text-destructive" />
                 </button>
                 <button
                   v-else
-                  @click="openRestore(item)"
                   class="p-2 hover:bg-muted rounded-md transition-colors"
                   title="Восстановить"
+                  @click="openRestore(item)"
                 >
                   <Undo2 class="size-4 text-muted-foreground hover:text-primary" />
                 </button>
@@ -405,7 +462,9 @@ const inputClass = 'mt-1'
         <DialogOverlay class="bg-background/80 backdrop-blur-sm fixed inset-0 z-50" />
         <DialogContent :class="dialogContentClass">
           <div class="flex items-center justify-between mb-4">
-            <DialogTitle class="text-lg font-semibold">Добавить ставку работ</DialogTitle>
+            <DialogTitle class="text-lg font-semibold">
+              Добавить ставку работ
+            </DialogTitle>
             <DialogClose as-child>
               <button class="p-1 hover:bg-muted rounded-md transition-colors">
                 <X class="size-4" />
@@ -420,26 +479,55 @@ const inputClass = 'mt-1'
           <div class="flex flex-col gap-4">
             <div :class="fieldClass">
               <Label for="create-name">Название</Label>
-              <Input id="create-name" v-model="form.name" placeholder="" :class="inputClass" />
+              <Input
+                id="create-name"
+                v-model="form.name"
+                placeholder=""
+                :class="inputClass"
+              />
             </div>
 
             <div :class="fieldClass">
               <Label for="create-wage">Дневная ставка (руб.)</Label>
-              <Input id="create-wage" v-model.number="form.dailyWage" type="number" step="0.01" min="0" :class="inputClass" />
+              <Input
+                id="create-wage"
+                v-model.number="form.dailyWage"
+                type="number"
+                step="0.01"
+                min="0"
+                :class="inputClass"
+              />
             </div>
 
             <div :class="fieldClass">
               <Label for="create-validFrom">Действует с</Label>
-              <Input id="create-validFrom" v-model="form.validFrom" type="date" :class="inputClass" />
+              <Input
+                id="create-validFrom"
+                v-model="form.validFrom"
+                type="date"
+                :class="inputClass"
+              />
             </div>
 
             <div class="flex gap-2 mt-2">
-              <Button @click="handleCreate" :disabled="isSaving" class="flex-1">
-                <Spinner v-if="isSaving" class="size-4 mr-2" />
+              <Button
+                :disabled="isSaving"
+                class="flex-1"
+                @click="handleCreate"
+              >
+                <Spinner
+                  v-if="isSaving"
+                  class="size-4 mr-2"
+                />
                 {{ isSaving ? 'Создание...' : 'Создать' }}
               </Button>
               <DialogClose as-child>
-                <Button variant="outline" :disabled="isSaving">Отмена</Button>
+                <Button
+                  variant="outline"
+                  :disabled="isSaving"
+                >
+                  Отмена
+                </Button>
               </DialogClose>
             </div>
           </div>
@@ -453,7 +541,9 @@ const inputClass = 'mt-1'
         <DialogOverlay class="bg-background/80 backdrop-blur-sm fixed inset-0 z-50" />
         <DialogContent :class="dialogContentClass">
           <div class="flex items-center justify-between mb-4">
-            <DialogTitle class="text-lg font-semibold">Редактировать ставку работ</DialogTitle>
+            <DialogTitle class="text-lg font-semibold">
+              Редактировать ставку работ
+            </DialogTitle>
             <DialogClose as-child>
               <button class="p-1 hover:bg-muted rounded-md transition-colors">
                 <X class="size-4" />
@@ -468,16 +558,33 @@ const inputClass = 'mt-1'
           <div class="flex flex-col gap-4">
             <div :class="fieldClass">
               <Label for="edit-name">Название</Label>
-              <Input id="edit-name" v-model="editForm.name" placeholder="" :class="inputClass" />
+              <Input
+                id="edit-name"
+                v-model="editForm.name"
+                placeholder=""
+                :class="inputClass"
+              />
             </div>
 
             <div class="flex gap-2 mt-2">
-              <Button @click="handleUpdate" :disabled="isSaving" class="flex-1">
-                <Spinner v-if="isSaving" class="size-4 mr-2" />
+              <Button
+                :disabled="isSaving"
+                class="flex-1"
+                @click="handleUpdate"
+              >
+                <Spinner
+                  v-if="isSaving"
+                  class="size-4 mr-2"
+                />
                 {{ isSaving ? 'Сохранение...' : 'Сохранить' }}
               </Button>
               <DialogClose as-child>
-                <Button variant="outline" :disabled="isSaving">Отмена</Button>
+                <Button
+                  variant="outline"
+                  :disabled="isSaving"
+                >
+                  Отмена
+                </Button>
               </DialogClose>
             </div>
           </div>
@@ -491,7 +598,9 @@ const inputClass = 'mt-1'
         <DialogOverlay class="bg-background/80 backdrop-blur-sm fixed inset-0 z-50" />
         <DialogContent :class="dialogContentClass">
           <div class="flex items-center justify-between mb-4">
-            <DialogTitle class="text-lg font-semibold">Новая ставка</DialogTitle>
+            <DialogTitle class="text-lg font-semibold">
+              Новая ставка
+            </DialogTitle>
             <DialogClose as-child>
               <button class="p-1 hover:bg-muted rounded-md transition-colors">
                 <X class="size-4" />
@@ -518,19 +627,39 @@ const inputClass = 'mt-1'
 
             <div :class="fieldClass">
               <Label for="version-validFrom">Действует с</Label>
-              <Input id="version-validFrom" v-model="versionForm.validFrom" type="date" :class="inputClass" />
-              <p v-if="isVersionDateInPast" class="text-xs text-warning mt-1">
+              <Input
+                id="version-validFrom"
+                v-model="versionForm.validFrom"
+                type="date"
+                :class="inputClass"
+              />
+              <p
+                v-if="isVersionDateInPast"
+                class="text-xs text-warning mt-1"
+              >
                 Дата в прошлом изменит стоимость работ в прошлых расчётах
               </p>
             </div>
 
             <div class="flex gap-2 mt-2">
-              <Button @click="handleCreateVersion" :disabled="isSaving" class="flex-1">
-                <Spinner v-if="isSaving" class="size-4 mr-2" />
+              <Button
+                :disabled="isSaving"
+                class="flex-1"
+                @click="handleCreateVersion"
+              >
+                <Spinner
+                  v-if="isSaving"
+                  class="size-4 mr-2"
+                />
                 {{ isSaving ? 'Сохранение...' : 'Сохранить' }}
               </Button>
               <DialogClose as-child>
-                <Button variant="outline" :disabled="isSaving">Отмена</Button>
+                <Button
+                  variant="outline"
+                  :disabled="isSaving"
+                >
+                  Отмена
+                </Button>
               </DialogClose>
             </div>
           </div>
@@ -543,20 +672,35 @@ const inputClass = 'mt-1'
       <AlertDialogPortal>
         <AlertDialogOverlay class="fixed inset-0 bg-black/60 z-[99]" />
         <AlertDialogContent :class="dialogContentClass">
-          <AlertDialogTitle class="text-lg font-semibold mb-2">Деактивировать ставку работ</AlertDialogTitle>
+          <AlertDialogTitle class="text-lg font-semibold mb-2">
+            Деактивировать ставку работ
+          </AlertDialogTitle>
           <AlertDialogDescription class="text-sm text-muted-foreground mb-4">
             Вы уверены, что хотите деактивировать ставку «{{ deleteTarget?.name }}»?
             Запись останется в системе для исторических расчётов, но будет помечена как неактивная.
           </AlertDialogDescription>
           <div class="flex gap-2">
             <AlertDialogAction as-child>
-              <Button @click="handleDelete" variant="destructive" :disabled="isDeleting" class="flex-1">
-                <Spinner v-if="isDeleting" class="size-4 mr-2" />
+              <Button
+                variant="destructive"
+                :disabled="isDeleting"
+                class="flex-1"
+                @click="handleDelete"
+              >
+                <Spinner
+                  v-if="isDeleting"
+                  class="size-4 mr-2"
+                />
                 {{ isDeleting ? 'Деактивация...' : 'Деактивировать' }}
               </Button>
             </AlertDialogAction>
             <AlertDialogCancel as-child>
-              <Button variant="outline" :disabled="isDeleting">Отмена</Button>
+              <Button
+                variant="outline"
+                :disabled="isDeleting"
+              >
+                Отмена
+              </Button>
             </AlertDialogCancel>
           </div>
         </AlertDialogContent>
@@ -568,20 +712,34 @@ const inputClass = 'mt-1'
       <AlertDialogPortal>
         <AlertDialogOverlay class="fixed inset-0 bg-black/60 z-[99]" />
         <AlertDialogContent :class="dialogContentClass">
-          <AlertDialogTitle class="text-lg font-semibold mb-2">Восстановить ставку работ</AlertDialogTitle>
+          <AlertDialogTitle class="text-lg font-semibold mb-2">
+            Восстановить ставку работ
+          </AlertDialogTitle>
           <AlertDialogDescription class="text-sm text-muted-foreground mb-4">
             Вы уверены, что хотите восстановить ставку «{{ restoreTarget?.name }}»?
             Запись станет активной.
           </AlertDialogDescription>
           <div class="flex gap-2">
             <AlertDialogAction as-child>
-              <Button @click="handleRestore" :disabled="isSaving" class="flex-1">
-                <Spinner v-if="isSaving" class="size-4 mr-2" />
+              <Button
+                :disabled="isSaving"
+                class="flex-1"
+                @click="handleRestore"
+              >
+                <Spinner
+                  v-if="isSaving"
+                  class="size-4 mr-2"
+                />
                 {{ isSaving ? 'Восстановление...' : 'Восстановить' }}
               </Button>
             </AlertDialogAction>
             <AlertDialogCancel as-child>
-              <Button variant="outline" :disabled="isSaving">Отмена</Button>
+              <Button
+                variant="outline"
+                :disabled="isSaving"
+              >
+                Отмена
+              </Button>
             </AlertDialogCancel>
           </div>
         </AlertDialogContent>

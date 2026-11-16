@@ -104,7 +104,10 @@ const handleSubmit = async (): Promise<void> => {
 </script>
 
 <template>
-  <DialogRoot :open="props.modelValue" @update:open="handleOpenChange">
+  <DialogRoot
+    :open="props.modelValue"
+    @update:open="handleOpenChange"
+  >
     <DialogPortal>
       <DialogOverlay class="data-[state=open]:animate-overlayShow fixed inset-0 z-30 bg-black/80" />
       <DialogContent
@@ -120,7 +123,10 @@ const handleSubmit = async (): Promise<void> => {
         <form @submit.prevent="handleSubmit">
           <div class="space-y-4">
             <!-- Client ID (ozon only) -->
-            <div v-if="props.templateCode === 'ozon'" class="space-y-2">
+            <div
+              v-if="props.templateCode === 'ozon'"
+              class="space-y-2"
+            >
               <Label for="conn-seller-id">Client ID</Label>
               <Input
                 id="conn-seller-id"
@@ -144,13 +150,19 @@ const handleSubmit = async (): Promise<void> => {
                 :disabled="isSubmitting"
                 required
               />
-              <p v-if="apiKeyError" class="text-sm text-destructive mt-1">
+              <p
+                v-if="apiKeyError"
+                class="text-sm text-destructive mt-1"
+              >
                 {{ apiKeyError }}
               </p>
             </div>
 
             <!-- API Secret (ozon only, optional) -->
-            <div v-if="props.templateCode === 'ozon'" class="space-y-2">
+            <div
+              v-if="props.templateCode === 'ozon'"
+              class="space-y-2"
+            >
               <Label for="conn-api-secret">API-секрет <span class="text-muted-foreground">(необязательно)</span></Label>
               <Input
                 id="conn-api-secret"
@@ -175,7 +187,11 @@ const handleSubmit = async (): Promise<void> => {
                 type="submit"
                 :disabled="isSubmitting"
               >
-                <Spinner v-if="isSubmitting" size="sm" class="mr-2" />
+                <Spinner
+                  v-if="isSubmitting"
+                  size="sm"
+                  class="mr-2"
+                />
                 {{ isSubmitting ? 'Проверяем ключ...' : 'Подключить' }}
               </Button>
             </div>

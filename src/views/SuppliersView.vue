@@ -249,22 +249,41 @@ const inputClass = 'mt-1'
           <Truck class="size-5 text-primary" />
           Контрагенты
         </h1>
-        <p class="text-sm text-muted-foreground">Справочник поставщиков и партнёров</p>
+        <p class="text-sm text-muted-foreground">
+          Справочник поставщиков и партнёров
+        </p>
       </div>
-      <Button v-if="canWrite" @click="openCreate" class="gap-2">
+      <Button
+        v-if="canWrite"
+        class="gap-2"
+        @click="openCreate"
+      >
         <Plus class="size-4" />
         Добавить
       </Button>
     </div>
 
     <div class="flex items-center gap-2">
-      <StatusFilter v-model="statusFilter" :options="filterOptions" />
-      <span v-if="isRefetching" class="text-xs text-muted-foreground">Обновление…</span>
+      <StatusFilter
+        v-model="statusFilter"
+        :options="filterOptions"
+      />
+      <span
+        v-if="isRefetching"
+        class="text-xs text-muted-foreground"
+      >Обновление…</span>
     </div>
 
-    <div v-if="isLoading" class="rounded-xl border border-border bg-card overflow-hidden">
+    <div
+      v-if="isLoading"
+      class="rounded-xl border border-border bg-card overflow-hidden"
+    >
       <div class="p-4 flex flex-col gap-3">
-        <Skeleton v-for="n in 5" :key="n" class="h-10 w-full rounded-lg" />
+        <Skeleton
+          v-for="n in 5"
+          :key="n"
+          class="h-10 w-full rounded-lg"
+        />
       </div>
     </div>
 
@@ -286,12 +305,21 @@ const inputClass = 'mt-1'
       <p class="text-sm text-muted-foreground">
         {{ statusFilter === 'inactive' ? 'Нет неактивных поставщиков' : 'Поставщики не добавлены' }}
       </p>
-      <Button v-if="canWrite && statusFilter !== 'inactive'" variant="outline" size="sm" @click="openCreate" class="gap-2">
+      <Button
+        v-if="canWrite && statusFilter !== 'inactive'"
+        variant="outline"
+        size="sm"
+        class="gap-2"
+        @click="openCreate"
+      >
         <Plus class="size-4" /> Добавить первого
       </Button>
     </div>
 
-    <div v-else class="rounded-xl border border-border bg-card overflow-hidden">
+    <div
+      v-else
+      class="rounded-xl border border-border bg-card overflow-hidden"
+    >
       <Table>
         <TableHeader>
           <TableRow class="border-b border-border">
@@ -301,7 +329,12 @@ const inputClass = 'mt-1'
             <TableHead>Email</TableHead>
             <TableHead>Статус</TableHead>
             <TableHead>Добавлен</TableHead>
-            <TableHead v-if="canWrite" class="w-24 text-right">Действия</TableHead>
+            <TableHead
+              v-if="canWrite"
+              class="w-24 text-right"
+            >
+              Действия
+            </TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -310,28 +343,59 @@ const inputClass = 'mt-1'
             :key="item.id"
             class="hover:bg-muted/40 transition-colors"
           >
-            <TableCell class="tabular-nums text-sm text-muted-foreground">{{ item.inn }}</TableCell>
+            <TableCell class="tabular-nums text-sm text-muted-foreground">
+              {{ item.inn }}
+            </TableCell>
             <TableCell class="font-medium">
               {{ item.name }}
-              <p v-if="item.description" class="text-xs text-muted-foreground mt-0.5 font-normal">{{ item.description }}</p>
+              <p
+                v-if="item.description"
+                class="text-xs text-muted-foreground mt-0.5 font-normal"
+              >
+                {{ item.description }}
+              </p>
             </TableCell>
-            <TableCell class="text-sm">{{ item.phone || '—' }}</TableCell>
-            <TableCell class="text-sm">{{ item.email || '—' }}</TableCell>
+            <TableCell class="text-sm">
+              {{ item.phone || '—' }}
+            </TableCell>
+            <TableCell class="text-sm">
+              {{ item.email || '—' }}
+            </TableCell>
             <TableCell>
               <Badge :variant="item.isActive ? 'success' : 'secondary'">
                 {{ item.isActive ? 'Активен' : 'Неактивен' }}
               </Badge>
             </TableCell>
-            <TableCell class="text-sm text-muted-foreground tabular-nums">{{ formatDate(item.createdAt) }}</TableCell>
-            <TableCell v-if="canWrite" class="text-right">
+            <TableCell class="text-sm text-muted-foreground tabular-nums">
+              {{ formatDate(item.createdAt) }}
+            </TableCell>
+            <TableCell
+              v-if="canWrite"
+              class="text-right"
+            >
               <div class="flex items-center justify-end gap-1">
-                <Button variant="ghost" size="icon-sm" @click="openEdit(item)">
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  @click="openEdit(item)"
+                >
                   <Pencil class="size-4" />
                 </Button>
-                <Button v-if="item.isActive" variant="ghost" size="icon-sm" @click="openDelete(item)">
+                <Button
+                  v-if="item.isActive"
+                  variant="ghost"
+                  size="icon-sm"
+                  @click="openDelete(item)"
+                >
                   <Trash2 class="size-4 text-destructive" />
                 </Button>
-                <Button v-else variant="ghost" size="icon-sm" @click="openRestore(item)" title="Восстановить">
+                <Button
+                  v-else
+                  variant="ghost"
+                  size="icon-sm"
+                  title="Восстановить"
+                  @click="openRestore(item)"
+                >
                   <Undo2 class="size-4 text-success" />
                 </Button>
               </div>
@@ -348,13 +412,18 @@ const inputClass = 'mt-1'
         <DialogContent :class="dialogContentClass">
           <div class="flex items-start justify-between mb-4">
             <div>
-              <DialogTitle class="text-lg font-semibold">Добавить поставщика</DialogTitle>
+              <DialogTitle class="text-lg font-semibold">
+                Добавить поставщика
+              </DialogTitle>
               <DialogDescription class="text-sm text-muted-foreground mt-1">
                 Укажите ИНН и название поставщика
               </DialogDescription>
             </div>
             <DialogClose as-child>
-              <Button variant="ghost" size="icon-sm">
+              <Button
+                variant="ghost"
+                size="icon-sm"
+              >
                 <X class="size-4" />
               </Button>
             </DialogClose>
@@ -419,10 +488,19 @@ const inputClass = 'mt-1'
 
           <div class="flex justify-end gap-2 mt-6">
             <DialogClose as-child>
-              <Button variant="outline">Отмена</Button>
+              <Button variant="outline">
+                Отмена
+              </Button>
             </DialogClose>
-            <Button @click="handleCreate" :disabled="isSaving" class="gap-2">
-              <Spinner v-if="isSaving" class="size-4" />
+            <Button
+              :disabled="isSaving"
+              class="gap-2"
+              @click="handleCreate"
+            >
+              <Spinner
+                v-if="isSaving"
+                class="size-4"
+              />
               Создать
             </Button>
           </div>
@@ -437,13 +515,18 @@ const inputClass = 'mt-1'
         <DialogContent :class="dialogContentClass">
           <div class="flex items-start justify-between mb-4">
             <div>
-              <DialogTitle class="text-lg font-semibold">Редактировать поставщика</DialogTitle>
+              <DialogTitle class="text-lg font-semibold">
+                Редактировать поставщика
+              </DialogTitle>
               <DialogDescription class="text-sm text-muted-foreground mt-1">
                 Измените данные поставщика
               </DialogDescription>
             </div>
             <DialogClose as-child>
-              <Button variant="ghost" size="icon-sm">
+              <Button
+                variant="ghost"
+                size="icon-sm"
+              >
                 <X class="size-4" />
               </Button>
             </DialogClose>
@@ -508,10 +591,19 @@ const inputClass = 'mt-1'
 
           <div class="flex justify-end gap-2 mt-6">
             <DialogClose as-child>
-              <Button variant="outline">Отмена</Button>
+              <Button variant="outline">
+                Отмена
+              </Button>
             </DialogClose>
-            <Button @click="handleEdit" :disabled="isSaving" class="gap-2">
-              <Spinner v-if="isSaving" class="size-4" />
+            <Button
+              :disabled="isSaving"
+              class="gap-2"
+              @click="handleEdit"
+            >
+              <Spinner
+                v-if="isSaving"
+                class="size-4"
+              />
               Сохранить
             </Button>
           </div>
@@ -524,17 +616,29 @@ const inputClass = 'mt-1'
       <AlertDialogPortal>
         <AlertDialogOverlay class="bg-background/80 backdrop-blur-sm fixed inset-0 z-50" />
         <AlertDialogContent class="bg-popover text-popover-foreground fixed top-[50%] left-[50%] max-h-[90vh] w-[90vw] max-w-[420px] translate-x-[-50%] translate-y-[-50%] rounded-lg border shadow-lg p-6 focus:outline-none z-[100]">
-          <AlertDialogTitle class="text-lg font-semibold">Деактивировать поставщика?</AlertDialogTitle>
+          <AlertDialogTitle class="text-lg font-semibold">
+            Деактивировать поставщика?
+          </AlertDialogTitle>
           <AlertDialogDescription class="text-sm text-muted-foreground mt-2">
             Поставщик "{{ deleteTarget?.name }}" будет деактивирован и скрыт из основного списка. Вы сможете восстановить его позже.
           </AlertDialogDescription>
           <div class="flex justify-end gap-2 mt-6">
             <AlertDialogCancel as-child>
-              <Button variant="outline">Отмена</Button>
+              <Button variant="outline">
+                Отмена
+              </Button>
             </AlertDialogCancel>
             <AlertDialogAction as-child>
-              <Button @click="handleDelete" :disabled="isDeleting" variant="destructive" class="gap-2">
-                <Spinner v-if="isDeleting" class="size-4" />
+              <Button
+                :disabled="isDeleting"
+                variant="destructive"
+                class="gap-2"
+                @click="handleDelete"
+              >
+                <Spinner
+                  v-if="isDeleting"
+                  class="size-4"
+                />
                 Деактивировать
               </Button>
             </AlertDialogAction>
@@ -548,17 +652,29 @@ const inputClass = 'mt-1'
       <AlertDialogPortal>
         <AlertDialogOverlay class="bg-background/80 backdrop-blur-sm fixed inset-0 z-50" />
         <AlertDialogContent class="bg-popover text-popover-foreground fixed top-[50%] left-[50%] max-h-[90vh] w-[90vw] max-w-[420px] translate-x-[-50%] translate-y-[-50%] rounded-lg border shadow-lg p-6 focus:outline-none z-[100]">
-          <AlertDialogTitle class="text-lg font-semibold">Восстановить поставщика?</AlertDialogTitle>
+          <AlertDialogTitle class="text-lg font-semibold">
+            Восстановить поставщика?
+          </AlertDialogTitle>
           <AlertDialogDescription class="text-sm text-muted-foreground mt-2">
             Поставщик "{{ restoreTarget?.name }}" будет активирован и появится в основном списке.
           </AlertDialogDescription>
           <div class="flex justify-end gap-2 mt-6">
             <AlertDialogCancel as-child>
-              <Button variant="outline">Отмена</Button>
+              <Button variant="outline">
+                Отмена
+              </Button>
             </AlertDialogCancel>
             <AlertDialogAction as-child>
-              <Button @click="handleRestore" :disabled="isSaving" variant="success" class="gap-2">
-                <Spinner v-if="isSaving" class="size-4" />
+              <Button
+                :disabled="isSaving"
+                variant="success"
+                class="gap-2"
+                @click="handleRestore"
+              >
+                <Spinner
+                  v-if="isSaving"
+                  class="size-4"
+                />
                 Восстановить
               </Button>
             </AlertDialogAction>

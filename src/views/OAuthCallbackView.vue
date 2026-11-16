@@ -86,7 +86,10 @@ onMounted(async () => {
     <AuthWaitingScreen />
   </div>
 
-  <div v-else class="relative flex min-h-svh items-center justify-center overflow-hidden bg-muted p-6 md:p-10">
+  <div
+    v-else
+    class="relative flex min-h-svh items-center justify-center overflow-hidden bg-muted p-6 md:p-10"
+  >
     <div class="flex w-full max-w-sm flex-col items-center gap-4 text-center">
       <div class="w-full rounded-md bg-destructive/10 px-4 py-3 text-sm text-destructive">
         {{ error }}

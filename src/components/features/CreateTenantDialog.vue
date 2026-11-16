@@ -61,7 +61,10 @@ const handleOpenChange = (open: boolean): void => {
 </script>
 
 <template>
-  <DialogRoot :open="isOpen" @update:open="handleOpenChange">
+  <DialogRoot
+    :open="isOpen"
+    @update:open="handleOpenChange"
+  >
     <DialogTrigger as-child>
       <slot name="trigger">
         <Button>Создать пространство</Button>

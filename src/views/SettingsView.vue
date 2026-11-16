@@ -24,7 +24,9 @@ const userEmail = computed(() => currentUser.value?.email ?? '')
 <template>
   <div class="flex flex-col gap-6 p-6">
     <div class="flex flex-col gap-2">
-      <h1 class="text-xl font-bold">Настройки</h1>
+      <h1 class="text-xl font-bold">
+        Настройки
+      </h1>
       <p class="text-muted-foreground">
         Настройте всё как надо.
       </p>
@@ -32,14 +34,18 @@ const userEmail = computed(() => currentUser.value?.email ?? '')
 
     <Card>
       <CardHeader>
-        <CardTitle class="text-lg">Пароль</CardTitle>
+        <CardTitle class="text-lg">
+          Пароль
+        </CardTitle>
         <CardDescription>
           Мы отправим письмо с волшебной ссылкой на {{ userEmail }}.
           Эта ссылка позволит создать новый пароль.
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <Button disabled>Сменить пароль</Button>
+        <Button disabled>
+          Сменить пароль
+        </Button>
       </CardContent>
     </Card>
   </div>

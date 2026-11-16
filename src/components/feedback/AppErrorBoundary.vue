@@ -92,7 +92,9 @@ defineExpose({ reset })
       #footer
     >
       <details class="mt-2 w-full max-w-md text-left text-xs text-muted-foreground">
-        <summary class="cursor-pointer select-none">Подробности (только в режиме разработки)</summary>
+        <summary class="cursor-pointer select-none">
+          Подробности (только в режиме разработки)
+        </summary>
         <pre class="mt-2 max-h-64 overflow-auto whitespace-pre-wrap break-words rounded-md border border-border bg-muted/40 p-3">{{ errorDetails }}</pre>
       </details>
     </template>

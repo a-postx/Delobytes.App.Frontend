@@ -79,7 +79,11 @@ const emit = defineEmits<{
               </div>
             </Field>
             <Field>
-              <Button type="submit" class="w-full" :disabled="loading">
+              <Button
+                type="submit"
+                class="w-full"
+                :disabled="loading"
+              >
                 {{ loading ? 'Вход...' : 'Войти' }}
               </Button>
               <FieldDescription class="text-center">

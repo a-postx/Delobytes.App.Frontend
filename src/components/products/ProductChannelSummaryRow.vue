@@ -89,20 +89,36 @@ const nextPhoto = (): void => {
       :aria-expanded="expanded"
       @click="expanded = !expanded"
     >
-      <Badge :variant="channelVariant">{{ link.channelName }}</Badge>
+      <Badge :variant="channelVariant">
+        {{ link.channelName }}
+      </Badge>
       <span class="font-mono text-sm">{{ link.externalProductId }}</span>
       <span class="text-xs text-muted-foreground">Фото: {{ thumbnails.length }}</span>
       <span class="text-xs text-muted-foreground">Баркоды: {{ barcodes.length }}</span>
       <span class="text-xs text-muted-foreground">Синхронизация: {{ lastSyncedAtLabel }}</span>
-      <Badge v-if="!link.isActive" variant="secondary">Неактивна</Badge>
+      <Badge
+        v-if="!link.isActive"
+        variant="secondary"
+      >
+        Неактивна
+      </Badge>
       <span class="ml-auto inline-flex items-center gap-1 text-xs text-muted-foreground">
         {{ expanded ? 'Свернуть' : 'Подробнее' }}
-        <ChevronUp v-if="expanded" class="size-4" />
-        <ChevronDown v-else class="size-4" />
+        <ChevronUp
+          v-if="expanded"
+          class="size-4"
+        />
+        <ChevronDown
+          v-else
+          class="size-4"
+        />
       </span>
     </button>
 
-    <div v-if="expanded" class="grid gap-6 border-t border-border p-4 lg:grid-cols-2">
+    <div
+      v-if="expanded"
+      class="grid gap-6 border-t border-border p-4 lg:grid-cols-2"
+    >
       <div class="flex flex-col gap-3">
         <div class="flex flex-col gap-0.5">
           <span class="text-xs text-muted-foreground">Название</span>
@@ -111,8 +127,16 @@ const nextPhoto = (): void => {
 
         <div class="flex flex-col gap-1">
           <span class="text-xs text-muted-foreground">Баркоды</span>
-          <div v-if="barcodes.length === 0" class="text-sm text-muted-foreground">Баркоды не указаны</div>
-          <div v-else class="flex flex-wrap gap-1">
+          <div
+            v-if="barcodes.length === 0"
+            class="text-sm text-muted-foreground"
+          >
+            Баркоды не указаны
+          </div>
+          <div
+            v-else
+            class="flex flex-wrap gap-1"
+          >
             <Badge
               v-for="barcode in barcodes"
               :key="barcode.value"
@@ -133,7 +157,10 @@ const nextPhoto = (): void => {
           <span class="text-sm">{{ link.channelName }}</span>
         </div>
 
-        <div v-if="link.description" class="flex flex-col gap-1">
+        <div
+          v-if="link.description"
+          class="flex flex-col gap-1"
+        >
           <span class="text-xs text-muted-foreground">Описание</span>
           <p :class="['text-sm text-muted-foreground', descriptionExpanded ? '' : 'line-clamp-3']">
             {{ link.description }}
@@ -155,10 +182,16 @@ const nextPhoto = (): void => {
 
       <div class="flex flex-col gap-2">
         <span class="text-xs text-muted-foreground">Фотографии</span>
-        <div v-if="thumbnails.length === 0" class="text-sm text-muted-foreground">
+        <div
+          v-if="thumbnails.length === 0"
+          class="text-sm text-muted-foreground"
+        >
           Фотографии в канале отсутствуют
         </div>
-        <div v-else class="grid grid-cols-3 gap-2 sm:grid-cols-4">
+        <div
+          v-else
+          class="grid grid-cols-3 gap-2 sm:grid-cols-4"
+        >
           <button
             v-for="(photo, index) in thumbnails"
             :key="`${photo.displayOrder}-${photo.sizeVariant}-${index}`"
@@ -167,7 +200,12 @@ const nextPhoto = (): void => {
             :aria-label="`Открыть фото ${photo.displayOrder}`"
             @click="openPhoto(index)"
           >
-            <img :src="photo.url" :alt="`Фото ${photo.displayOrder}`" class="size-full object-cover" loading="lazy" />
+            <img
+              :src="photo.url"
+              :alt="`Фото ${photo.displayOrder}`"
+              class="size-full object-cover"
+              loading="lazy"
+            >
           </button>
         </div>
       </div>
@@ -204,7 +242,7 @@ const nextPhoto = (): void => {
           :alt="`Фото ${activeThumbnail.displayOrder}`"
           class="max-h-[85vh] max-w-[90vw] object-contain"
           @click.stop
-        />
+        >
         <button
           v-if="thumbnails.length > 1"
           type="button"

@@ -413,7 +413,12 @@ const selectClass = 'flex h-9 w-full rounded-md border border-input bg-backgroun
           Материалы, логистика и упаковка, из которых складывается единица товара
         </p>
       </div>
-      <Button variant="outline" size="sm" class="gap-2" @click="historyDialogOpen = true">
+      <Button
+        variant="outline"
+        size="sm"
+        class="gap-2"
+        @click="historyDialogOpen = true"
+      >
         <History class="size-4" />
         История
       </Button>
@@ -430,11 +435,17 @@ const selectClass = 'flex h-9 w-full rounded-md border border-input bg-backgroun
           Есть несохранённые изменения в составе товара
         </span>
         <!-- Что произойдёт после сохранения: ответ заранее, до нажатия кнопки -->
-        <span v-if="isPreviewLoading" class="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+        <span
+          v-if="isPreviewLoading"
+          class="inline-flex items-center gap-1.5 text-xs text-muted-foreground"
+        >
           <Spinner class="size-3" />
           Пересчёт итога…
         </span>
-        <span v-else-if="savedCost && draftCost && draftDelta" class="flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
+        <span
+          v-else-if="savedCost && draftCost && draftDelta"
+          class="flex flex-wrap items-center gap-1 text-xs text-muted-foreground"
+        >
           Итого: <span class="tabular-nums">{{ formatMoney(savedCost.totalCost) }}</span>
           <ArrowRight class="size-3 shrink-0" />
           <span class="font-medium tabular-nums text-foreground">{{ formatMoney(draftCost.totalCost) }}</span>
@@ -443,12 +454,28 @@ const selectClass = 'flex h-9 w-full rounded-md border border-input bg-backgroun
           </Badge>
         </span>
       </div>
-      <div v-if="canWrite" class="flex items-center gap-2 shrink-0">
-        <Button variant="outline" size="sm" :disabled="isSavingBom" @click="resetDraftChanges">
+      <div
+        v-if="canWrite"
+        class="flex items-center gap-2 shrink-0"
+      >
+        <Button
+          variant="outline"
+          size="sm"
+          :disabled="isSavingBom"
+          @click="resetDraftChanges"
+        >
           Отменить правки
         </Button>
-        <Button size="sm" class="gap-2" :disabled="isSavingBom" @click="handleSaveBom">
-          <Spinner v-if="isSavingBom" class="size-4" />
+        <Button
+          size="sm"
+          class="gap-2"
+          :disabled="isSavingBom"
+          @click="handleSaveBom"
+        >
+          <Spinner
+            v-if="isSavingBom"
+            class="size-4"
+          />
           Сохранить состав
         </Button>
       </div>
@@ -458,8 +485,15 @@ const selectClass = 'flex h-9 w-full rounded-md border border-input bg-backgroun
 
     <!-- Таблица строк BOM -->
     <div class="flex flex-col gap-4">
-      <div v-if="isLoadingBom" class="flex flex-col gap-3">
-        <Skeleton v-for="n in 3" :key="n" class="h-12 w-full rounded-lg" />
+      <div
+        v-if="isLoadingBom"
+        class="flex flex-col gap-3"
+      >
+        <Skeleton
+          v-for="n in 3"
+          :key="n"
+          class="h-12 w-full rounded-lg"
+        />
       </div>
 
       <div
@@ -468,8 +502,12 @@ const selectClass = 'flex h-9 w-full rounded-md border border-input bg-backgroun
       >
         <Boxes class="size-10 text-muted-foreground/40" />
         <div class="flex flex-col gap-1">
-          <p class="text-sm font-medium text-foreground">Состав товара не задан</p>
-          <p class="text-xs text-muted-foreground">Добавьте компоненты, чтобы описать единицу товара</p>
+          <p class="text-sm font-medium text-foreground">
+            Состав товара не задан
+          </p>
+          <p class="text-xs text-muted-foreground">
+            Добавьте компоненты, чтобы описать единицу товара
+          </p>
         </div>
         <Button
           v-if="canWrite"
@@ -484,29 +522,65 @@ const selectClass = 'flex h-9 w-full rounded-md border border-input bg-backgroun
         </Button>
       </div>
 
-      <div v-else class="rounded-lg border border-border overflow-hidden">
+      <div
+        v-else
+        class="rounded-lg border border-border overflow-hidden"
+      >
         <Table>
           <TableHeader>
             <TableRow class="border-b border-border">
-              <TableHead class="w-12">#</TableHead>
+              <TableHead class="w-12">
+                #
+              </TableHead>
               <TableHead>Компонент</TableHead>
-              <TableHead class="w-32">Категория</TableHead>
-              <TableHead class="w-36 text-right">Количество</TableHead>
-              <TableHead class="w-20 text-right">Ед. изм.</TableHead>
-              <TableHead v-if="canWrite" class="w-12"></TableHead>
+              <TableHead class="w-32">
+                Категория
+              </TableHead>
+              <TableHead class="w-36 text-right">
+                Количество
+              </TableHead>
+              <TableHead class="w-20 text-right">
+                Ед. изм.
+              </TableHead>
+              <TableHead
+                v-if="canWrite"
+                class="w-12"
+              />
             </TableRow>
           </TableHeader>
           <TableBody>
-            <TableRow v-for="(row, idx) in rows" :key="row.key" class="hover:bg-muted/40 transition-colors">
-              <TableCell class="text-muted-foreground tabular-nums">{{ idx + 1 }}</TableCell>
+            <TableRow
+              v-for="(row, idx) in rows"
+              :key="row.key"
+              class="hover:bg-muted/40 transition-colors"
+            >
+              <TableCell class="text-muted-foreground tabular-nums">
+                {{ idx + 1 }}
+              </TableCell>
               <TableCell>
-                <select v-if="canWrite" v-model="row.componentId" :class="selectClass">
-                  <option value="" disabled>Выберите компонент</option>
-                  <option v-for="comp in availableComponentsFor(row)" :key="comp.id" :value="comp.id">
+                <select
+                  v-if="canWrite"
+                  v-model="row.componentId"
+                  :class="selectClass"
+                >
+                  <option
+                    value=""
+                    disabled
+                  >
+                    Выберите компонент
+                  </option>
+                  <option
+                    v-for="comp in availableComponentsFor(row)"
+                    :key="comp.id"
+                    :value="comp.id"
+                  >
                     {{ comp.name }}
                   </option>
                 </select>
-                <span v-else class="text-sm">{{ componentDisplay(row.componentId)?.name ?? 'Компонент недоступен' }}</span>
+                <span
+                  v-else
+                  class="text-sm"
+                >{{ componentDisplay(row.componentId)?.name ?? 'Компонент недоступен' }}</span>
               </TableCell>
               <TableCell>
                 <Badge
@@ -515,7 +589,10 @@ const selectClass = 'flex h-9 w-full rounded-md border border-input bg-backgroun
                 >
                   {{ COMPONENT_CATEGORY_LABELS[componentDisplay(row.componentId)!.category!] }}
                 </Badge>
-                <span v-else class="text-xs text-muted-foreground">—</span>
+                <span
+                  v-else
+                  class="text-xs text-muted-foreground"
+                >—</span>
               </TableCell>
               <TableCell class="text-right">
                 <Input
@@ -526,13 +603,25 @@ const selectClass = 'flex h-9 w-full rounded-md border border-input bg-backgroun
                   min="0"
                   class="text-right tabular-nums"
                 />
-                <span v-else class="text-sm tabular-nums">{{ row.quantity }}</span>
+                <span
+                  v-else
+                  class="text-sm tabular-nums"
+                >{{ row.quantity }}</span>
               </TableCell>
               <TableCell class="text-right text-sm text-muted-foreground">
                 {{ componentDisplay(row.componentId)?.unit ? unitLabels[componentDisplay(row.componentId)!.unit] : '—' }}
               </TableCell>
-              <TableCell v-if="canWrite" class="text-right">
-                <Button variant="ghost" size="icon" class="size-8" @click="removeRow(row.key)" aria-label="Удалить строку">
+              <TableCell
+                v-if="canWrite"
+                class="text-right"
+              >
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  class="size-8"
+                  aria-label="Удалить строку"
+                  @click="removeRow(row.key)"
+                >
                   <Trash2 class="size-4 text-destructive" />
                 </Button>
               </TableCell>
@@ -541,7 +630,10 @@ const selectClass = 'flex h-9 w-full rounded-md border border-input bg-backgroun
         </Table>
       </div>
 
-      <div v-if="canWrite" class="flex flex-wrap items-center gap-3">
+      <div
+        v-if="canWrite"
+        class="flex flex-wrap items-center gap-3"
+      >
         <Button
           variant="outline"
           size="sm"
@@ -553,7 +645,10 @@ const selectClass = 'flex h-9 w-full rounded-md border border-input bg-backgroun
           Добавить компонент
         </Button>
       </div>
-      <p v-if="canWrite && activeComponents.length === 0" class="text-xs text-muted-foreground">
+      <p
+        v-if="canWrite && activeComponents.length === 0"
+        class="text-xs text-muted-foreground"
+      >
         Сначала добавьте компоненты в справочник «Компоненты»
       </p>
     </div>
@@ -568,16 +663,41 @@ const selectClass = 'flex h-9 w-full rounded-md border border-input bg-backgroun
           Себестоимость на дату
         </h3>
         <div class="flex items-center gap-2">
-          <Label for="cost-as-of" class="text-sm text-muted-foreground">Дата расчёта</Label>
-          <Input id="cost-as-of" v-model="asOfDate" type="date" class="w-40" />
-          <Button variant="ghost" size="icon" class="size-9" :disabled="isLoadingCost" @click="loadCost" aria-label="Обновить">
-            <RefreshCw class="size-4" :class="{ 'animate-spin': isLoadingCost }" />
+          <Label
+            for="cost-as-of"
+            class="text-sm text-muted-foreground"
+          >Дата расчёта</Label>
+          <Input
+            id="cost-as-of"
+            v-model="asOfDate"
+            type="date"
+            class="w-40"
+          />
+          <Button
+            variant="ghost"
+            size="icon"
+            class="size-9"
+            :disabled="isLoadingCost"
+            aria-label="Обновить"
+            @click="loadCost"
+          >
+            <RefreshCw
+              class="size-4"
+              :class="{ 'animate-spin': isLoadingCost }"
+            />
           </Button>
         </div>
       </div>
 
-      <div v-if="isLoadingCost" class="grid grid-cols-2 md:grid-cols-5 gap-3">
-        <Skeleton v-for="n in 5" :key="n" class="h-20 w-full rounded-lg" />
+      <div
+        v-if="isLoadingCost"
+        class="grid grid-cols-2 md:grid-cols-5 gap-3"
+      >
+        <Skeleton
+          v-for="n in 5"
+          :key="n"
+          class="h-20 w-full rounded-lg"
+        />
       </div>
 
       <template v-else-if="cost">
@@ -592,14 +712,25 @@ const selectClass = 'flex h-9 w-full rounded-md border border-input bg-backgroun
               Расчёт себестоимости неполный — показана сумма по доступным данным
             </p>
             <ul class="list-disc pl-4 text-muted-foreground">
-              <li v-for="(warning, idx) in incompleteSource.warnings" :key="idx">{{ warning.message }}</li>
+              <li
+                v-for="(warning, idx) in incompleteSource.warnings"
+                :key="idx"
+              >
+                {{ warning.message }}
+              </li>
             </ul>
           </div>
         </div>
 
         <!-- Пояснение: без него значение «после» легко принять за уже сохранённое -->
-        <div v-if="hasUnsavedChanges" class="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-          <Badge variant="secondary" class="gap-1">
+        <div
+          v-if="hasUnsavedChanges"
+          class="flex flex-wrap items-center gap-2 text-xs text-muted-foreground"
+        >
+          <Badge
+            variant="secondary"
+            class="gap-1"
+          >
             <Pencil class="size-3" />
             Черновик
           </Badge>
@@ -607,65 +738,122 @@ const selectClass = 'flex h-9 w-full rounded-md border border-input bg-backgroun
         </div>
 
         <!-- Карточки по статьям затрат: «было» видно всегда, «стало» — только при несохранённом черновике -->
-        <div v-if="savedCost" class="grid grid-cols-2 md:grid-cols-5 gap-3">
+        <div
+          v-if="savedCost"
+          class="grid grid-cols-2 md:grid-cols-5 gap-3"
+        >
           <!-- Материалы -->
           <div class="rounded-lg border border-border bg-background p-3 flex flex-col gap-1">
             <span class="text-xs text-muted-foreground">Материалы</span>
             <span class="text-base font-semibold tabular-nums">{{ formatMoney(savedCost.materialCost) }}</span>
-            <div v-if="hasUnsavedChanges" class="mt-1 pt-2 border-t border-border/60">
-              <span v-if="isPreviewLoading" class="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+            <div
+              v-if="hasUnsavedChanges"
+              class="mt-1 pt-2 border-t border-border/60"
+            >
+              <span
+                v-if="isPreviewLoading"
+                class="inline-flex items-center gap-1.5 text-xs text-muted-foreground"
+              >
                 <Spinner class="size-3" />
                 Пересчёт…
               </span>
-              <div v-else-if="draftCost && draftDelta" class="flex flex-wrap items-center gap-1.5 text-xs">
+              <div
+                v-else-if="draftCost && draftDelta"
+                class="flex flex-wrap items-center gap-1.5 text-xs"
+              >
                 <ArrowRight class="size-3 text-muted-foreground" />
                 <span class="font-medium tabular-nums">{{ formatMoney(draftCost.materialCost) }}</span>
-                <Badge :variant="deltaPresentation(draftDelta.materialDelta).variant" class="gap-1">
-                  <component :is="deltaPresentation(draftDelta.materialDelta).icon" class="size-3" />
+                <Badge
+                  :variant="deltaPresentation(draftDelta.materialDelta).variant"
+                  class="gap-1"
+                >
+                  <component
+                    :is="deltaPresentation(draftDelta.materialDelta).icon"
+                    class="size-3"
+                  />
                   {{ deltaText(draftDelta.materialDelta) }}
                 </Badge>
               </div>
-              <span v-else class="text-xs text-muted-foreground">Расчёт недоступен — проверьте строки состава</span>
+              <span
+                v-else
+                class="text-xs text-muted-foreground"
+              >Расчёт недоступен — проверьте строки состава</span>
             </div>
           </div>
           <!-- Логистика -->
           <div class="rounded-lg border border-border bg-background p-3 flex flex-col gap-1">
             <span class="text-xs text-muted-foreground">Логистика</span>
             <span class="text-base font-semibold tabular-nums">{{ formatMoney(savedCost.logisticsCost) }}</span>
-            <div v-if="hasUnsavedChanges" class="mt-1 pt-2 border-t border-border/60">
-              <span v-if="isPreviewLoading" class="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+            <div
+              v-if="hasUnsavedChanges"
+              class="mt-1 pt-2 border-t border-border/60"
+            >
+              <span
+                v-if="isPreviewLoading"
+                class="inline-flex items-center gap-1.5 text-xs text-muted-foreground"
+              >
                 <Spinner class="size-3" />
                 Пересчёт…
               </span>
-              <div v-else-if="draftCost && draftDelta" class="flex flex-wrap items-center gap-1.5 text-xs">
+              <div
+                v-else-if="draftCost && draftDelta"
+                class="flex flex-wrap items-center gap-1.5 text-xs"
+              >
                 <ArrowRight class="size-3 text-muted-foreground" />
                 <span class="font-medium tabular-nums">{{ formatMoney(draftCost.logisticsCost) }}</span>
-                <Badge :variant="deltaPresentation(draftDelta.logisticsDelta).variant" class="gap-1">
-                  <component :is="deltaPresentation(draftDelta.logisticsDelta).icon" class="size-3" />
+                <Badge
+                  :variant="deltaPresentation(draftDelta.logisticsDelta).variant"
+                  class="gap-1"
+                >
+                  <component
+                    :is="deltaPresentation(draftDelta.logisticsDelta).icon"
+                    class="size-3"
+                  />
                   {{ deltaText(draftDelta.logisticsDelta) }}
                 </Badge>
               </div>
-              <span v-else class="text-xs text-muted-foreground">Расчёт недоступен — проверьте строки состава</span>
+              <span
+                v-else
+                class="text-xs text-muted-foreground"
+              >Расчёт недоступен — проверьте строки состава</span>
             </div>
           </div>
           <!-- Упаковка -->
           <div class="rounded-lg border border-border bg-background p-3 flex flex-col gap-1">
             <span class="text-xs text-muted-foreground">Упаковка</span>
             <span class="text-base font-semibold tabular-nums">{{ formatMoney(savedCost.packagingCost) }}</span>
-            <div v-if="hasUnsavedChanges" class="mt-1 pt-2 border-t border-border/60">
-              <span v-if="isPreviewLoading" class="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+            <div
+              v-if="hasUnsavedChanges"
+              class="mt-1 pt-2 border-t border-border/60"
+            >
+              <span
+                v-if="isPreviewLoading"
+                class="inline-flex items-center gap-1.5 text-xs text-muted-foreground"
+              >
                 <Spinner class="size-3" />
                 Пересчёт…
               </span>
-              <div v-else-if="draftCost && draftDelta" class="flex flex-wrap items-center gap-1.5 text-xs">
+              <div
+                v-else-if="draftCost && draftDelta"
+                class="flex flex-wrap items-center gap-1.5 text-xs"
+              >
                 <ArrowRight class="size-3 text-muted-foreground" />
                 <span class="font-medium tabular-nums">{{ formatMoney(draftCost.packagingCost) }}</span>
-                <Badge :variant="deltaPresentation(draftDelta.packagingDelta).variant" class="gap-1">
-                  <component :is="deltaPresentation(draftDelta.packagingDelta).icon" class="size-3" />
+                <Badge
+                  :variant="deltaPresentation(draftDelta.packagingDelta).variant"
+                  class="gap-1"
+                >
+                  <component
+                    :is="deltaPresentation(draftDelta.packagingDelta).icon"
+                    class="size-3"
+                  />
                   {{ deltaText(draftDelta.packagingDelta) }}
                 </Badge>
               </div>
-              <span v-else class="text-xs text-muted-foreground">Расчёт недоступен — проверьте строки состава</span>
+              <span
+                v-else
+                class="text-xs text-muted-foreground"
+              >Расчёт недоступен — проверьте строки состава</span>
             </div>
           </div>
           <!-- Работа: дельта не показываем, состав на неё не влияет -->
@@ -677,7 +865,8 @@ const selectClass = 'flex h-9 w-full rounded-md border border-input bg-backgroun
               <router-link
                 to="/catalogs/product-work-rates"
                 class="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
-              > нормы выработки
+              >
+                нормы выработки
                 <ArrowRight class="size-3" />
               </router-link>
             </div>
@@ -692,47 +881,86 @@ const selectClass = 'flex h-9 w-full rounded-md border border-input bg-backgroun
           >
             <span class="text-xs text-muted-foreground">Итого</span>
             <span class="text-base font-bold tabular-nums text-primary">{{ formatMoney(savedCost.totalCost) }}</span>
-            <div v-if="hasUnsavedChanges" class="mt-1 pt-2 border-t border-primary/20">
-              <span v-if="isPreviewLoading" class="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+            <div
+              v-if="hasUnsavedChanges"
+              class="mt-1 pt-2 border-t border-primary/20"
+            >
+              <span
+                v-if="isPreviewLoading"
+                class="inline-flex items-center gap-1.5 text-xs text-muted-foreground"
+              >
                 <Spinner class="size-3" />
                 Пересчёт…
               </span>
-              <div v-else-if="draftCost && draftDelta" class="flex flex-wrap items-center gap-1.5 text-xs">
+              <div
+                v-else-if="draftCost && draftDelta"
+                class="flex flex-wrap items-center gap-1.5 text-xs"
+              >
                 <ArrowRight class="size-3 text-muted-foreground" />
                 <span class="font-semibold tabular-nums">{{ formatMoney(draftCost.totalCost) }}</span>
-                <Badge :variant="deltaPresentation(draftDelta.totalDelta).variant" class="gap-1">
-                  <component :is="deltaPresentation(draftDelta.totalDelta).icon" class="size-3" />
+                <Badge
+                  :variant="deltaPresentation(draftDelta.totalDelta).variant"
+                  class="gap-1"
+                >
+                  <component
+                    :is="deltaPresentation(draftDelta.totalDelta).icon"
+                    class="size-3"
+                  />
                   {{ deltaText(draftDelta.totalDelta) }}
                 </Badge>
               </div>
-              <span v-else class="text-xs text-muted-foreground">Расчёт недоступен — проверьте строки состава</span>
+              <span
+                v-else
+                class="text-xs text-muted-foreground"
+              >Расчёт недоступен — проверьте строки состава</span>
             </div>
           </div>
         </div>
 
         <!-- Детализация по строкам состава -->
-        <div v-if="cost.lines.length > 0" class="rounded-lg border border-border overflow-hidden">
+        <div
+          v-if="cost.lines.length > 0"
+          class="rounded-lg border border-border overflow-hidden"
+        >
           <Table>
             <TableHeader>
               <TableRow class="border-b border-border">
                 <TableHead>Компонент</TableHead>
                 <TableHead>Категория</TableHead>
-                <TableHead class="text-right">Количество</TableHead>
-                <TableHead class="text-right">Цена</TableHead>
-                <TableHead class="text-right">Сумма</TableHead>
+                <TableHead class="text-right">
+                  Количество
+                </TableHead>
+                <TableHead class="text-right">
+                  Цена
+                </TableHead>
+                <TableHead class="text-right">
+                  Сумма
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              <TableRow v-for="line in cost.lines" :key="line.componentId" class="hover:bg-muted/40 transition-colors">
-                <TableCell class="font-medium">{{ line.componentName }}</TableCell>
+              <TableRow
+                v-for="line in cost.lines"
+                :key="line.componentId"
+                class="hover:bg-muted/40 transition-colors"
+              >
+                <TableCell class="font-medium">
+                  {{ line.componentName }}
+                </TableCell>
                 <TableCell>
                   <Badge :variant="categoryBadgeVariant[line.category]">
                     {{ COMPONENT_CATEGORY_LABELS[line.category] }}
                   </Badge>
                 </TableCell>
-                <TableCell class="text-right tabular-nums">{{ line.quantity }}</TableCell>
-                <TableCell class="text-right tabular-nums">{{ formatMoney(line.pricePerUnit) }}</TableCell>
-                <TableCell class="text-right tabular-nums font-medium">{{ formatMoney(line.lineTotal) }}</TableCell>
+                <TableCell class="text-right tabular-nums">
+                  {{ line.quantity }}
+                </TableCell>
+                <TableCell class="text-right tabular-nums">
+                  {{ formatMoney(line.pricePerUnit) }}
+                </TableCell>
+                <TableCell class="text-right tabular-nums font-medium">
+                  {{ formatMoney(line.lineTotal) }}
+                </TableCell>
               </TableRow>
             </TableBody>
           </Table>
@@ -740,6 +968,9 @@ const selectClass = 'flex h-9 w-full rounded-md border border-input bg-backgroun
       </template>
     </div>
 
-    <ProductCostHistoryDialog v-model:open="historyDialogOpen" :product-id="productId" />
+    <ProductCostHistoryDialog
+      v-model:open="historyDialogOpen"
+      :product-id="productId"
+    />
   </div>
 </template>

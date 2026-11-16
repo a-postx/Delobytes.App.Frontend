@@ -94,7 +94,10 @@ const handleSubmit = async (): Promise<void> => {
 </script>
 
 <template>
-  <DialogRoot :open="props.modelValue" @update:open="handleOpenChange">
+  <DialogRoot
+    :open="props.modelValue"
+    @update:open="handleOpenChange"
+  >
     <DialogPortal>
       <DialogOverlay class="data-[state=open]:animate-overlayShow fixed inset-0 z-30 bg-black/80" />
       <DialogContent
@@ -117,7 +120,13 @@ const handleSubmit = async (): Promise<void> => {
                 :disabled="isSubmitting"
                 class="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-ring/[var(--focus-ring-alpha)] focus-visible:ring-3"
               >
-                <option v-for="t in props.templates" :key="t.id" :value="t.id">{{ t.displayName }}</option>
+                <option
+                  v-for="t in props.templates"
+                  :key="t.id"
+                  :value="t.id"
+                >
+                  {{ t.displayName }}
+                </option>
               </select>
             </div>
 
@@ -135,12 +144,23 @@ const handleSubmit = async (): Promise<void> => {
 
             <div class="flex justify-end gap-3 mt-6">
               <DialogClose as-child>
-                <Button type="button" variant="outline" :disabled="isSubmitting">
+                <Button
+                  type="button"
+                  variant="outline"
+                  :disabled="isSubmitting"
+                >
                   Отмена
                 </Button>
               </DialogClose>
-              <Button type="submit" :disabled="isSubmitting">
-                <Spinner v-if="isSubmitting" size="sm" class="mr-2" />
+              <Button
+                type="submit"
+                :disabled="isSubmitting"
+              >
+                <Spinner
+                  v-if="isSubmitting"
+                  size="sm"
+                  class="mr-2"
+                />
                 {{ isSubmitting ? 'Создаём...' : 'Создать канал' }}
               </Button>
             </div>

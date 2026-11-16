@@ -132,19 +132,27 @@ const handleRenamed = async (): Promise<void> => {
   <div class="flex flex-col gap-6 p-6">
     <div class="flex items-center justify-between">
       <div class="flex flex-col gap-2">
-        <h1 class="text-xl font-bold">Каналы продаж</h1>
+        <h1 class="text-xl font-bold">
+          Каналы продаж
+        </h1>
         <p class="text-muted-foreground">
           Каналы продаж и интеграции с ними.
         </p>
       </div>
-      <Button class="gap-2" @click="isCreateChannelDialogOpen = true">
+      <Button
+        class="gap-2"
+        @click="isCreateChannelDialogOpen = true"
+      >
         <Plus class="size-4" />
         Добавить канал
       </Button>
     </div>
 
     <!-- Skeleton grid while loading -->
-    <div v-if="isLoading" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+    <div
+      v-if="isLoading"
+      class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
+    >
       <div
         v-for="n in 6"
         :key="n"
@@ -169,12 +177,18 @@ const handleRenamed = async (): Promise<void> => {
       @retry="loadAll"
     />
 
-    <div v-else-if="channelCards.length === 0" class="rounded-lg border border-dashed p-10 text-center text-muted-foreground">
+    <div
+      v-else-if="channelCards.length === 0"
+      class="rounded-lg border border-dashed p-10 text-center text-muted-foreground"
+    >
       Каналов продаж пока нет. Нажмите «Добавить», чтобы создать первый.
     </div>
 
     <!-- Channel grid -->
-    <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+    <div
+      v-else
+      class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
+    >
       <ChannelCard
         v-for="channel in channelCards"
         :key="channel.id"
@@ -196,11 +210,11 @@ const handleRenamed = async (): Promise<void> => {
   <!-- Диалог привязки подключения к каналу -->
   <CreateConnectionDialog
     v-if="connectTarget && templateCodeForChannel(connectTarget.id)"
+    v-model="isConnectDialogOpen"
     :channel-id="connectTarget.id"
     :channel-name="connectTarget.name"
     :template-code="templateCodeForChannel(connectTarget.id)!.code"
     :template-display-name="templateCodeForChannel(connectTarget.id)!.displayName"
-    v-model="isConnectDialogOpen"
     @connected="handleConnected"
   />
 </template>

@@ -96,11 +96,16 @@ const handleSave = async (): Promise<void> => {
 <template>
   <Card>
     <CardHeader>
-      <CardTitle class="text-lg">Юрлицо</CardTitle>
+      <CardTitle class="text-lg">
+        Юрлицо
+      </CardTitle>
       <CardDescription>Реквизиты организации.</CardDescription>
     </CardHeader>
     <CardContent class="space-y-4">
-      <div v-if="isLoading" class="flex justify-center py-6">
+      <div
+        v-if="isLoading"
+        class="flex justify-center py-6"
+      >
         <Spinner size="md" />
       </div>
 
@@ -145,20 +150,36 @@ const handleSave = async (): Promise<void> => {
           <!-- Валюта задаётся на уровне тенанта и здесь только отображается -->
           <div class="space-y-1.5">
             <Label for="currency">Валюта учёта:</Label>
-            <p id="currency" class="text-sm text-muted-foreground">
+            <p
+              id="currency"
+              class="text-sm text-muted-foreground"
+            >
               {{ currency }} ({{ currencySymbol }})
             </p>
           </div>
 
-          <p v-if="!canEditTenantSettings" class="text-xs text-muted-foreground">
+          <p
+            v-if="!canEditTenantSettings"
+            class="text-xs text-muted-foreground"
+          >
             Только администраторы могут изменять настройки юридического лица.
           </p>
         </div>
       </template>
     </CardContent>
-    <CardFooter v-if="!isLoading && canEditTenantSettings" class="flex justify-end">
-      <Button :disabled="isSaving" @click="handleSave">
-        <Spinner v-if="isSaving" size="sm" class="mr-2" />
+    <CardFooter
+      v-if="!isLoading && canEditTenantSettings"
+      class="flex justify-end"
+    >
+      <Button
+        :disabled="isSaving"
+        @click="handleSave"
+      >
+        <Spinner
+          v-if="isSaving"
+          size="sm"
+          class="mr-2"
+        />
         Сохранить
       </Button>
     </CardFooter>

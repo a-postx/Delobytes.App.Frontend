@@ -353,27 +353,37 @@ onMounted(async () => {
     <!-- Шапка -->
     <div class="flex items-center justify-between">
       <div class="flex flex-col gap-1">
-        <h1 class="text-xl font-bold">Импорт товаров</h1>
-        <p class="text-sm text-muted-foreground">История задач импорта карточек из Wildberries и Ozon.</p>
+        <h1 class="text-xl font-bold">
+          Импорт товаров
+        </h1>
+        <p class="text-sm text-muted-foreground">
+          История задач импорта карточек из Wildberries и Ozon.
+        </p>
       </div>
       <div class="flex items-center gap-2">
-        <span v-if="lastUpdatedLabel" class="text-xs text-muted-foreground tabular-nums">
+        <span
+          v-if="lastUpdatedLabel"
+          class="text-xs text-muted-foreground tabular-nums"
+        >
           Обновлено в {{ lastUpdatedLabel }}
         </span>
         <Button
           variant="outline"
           size="icon"
           :disabled="isInitialLoading || isManualRefreshing"
-          @click="refreshJobs"
           aria-label="Обновить"
+          @click="refreshJobs"
         >
-          <RefreshCw class="size-4" :class="{ 'animate-spin': isManualRefreshing }" />
+          <RefreshCw
+            class="size-4"
+            :class="{ 'animate-spin': isManualRefreshing }"
+          />
         </Button>
         <Button
           v-if="isAdministrator"
           :disabled="isInitialLoading || activeEligibleConnections.length === 0"
-          @click="openLaunchDialog"
           class="gap-2"
+          @click="openLaunchDialog"
         >
           <Plus class="size-4" />
           Запустить импорт
@@ -387,10 +397,19 @@ onMounted(async () => {
       class="rounded-xl border border-destructive/40 bg-destructive/5 p-4 flex items-center justify-between gap-4"
     >
       <div class="flex flex-col gap-1">
-        <p class="text-sm font-medium">{{ connectionsFailureCopy.title }}</p>
-        <p class="text-sm text-muted-foreground">{{ connectionsFailureCopy.description }}</p>
+        <p class="text-sm font-medium">
+          {{ connectionsFailureCopy.title }}
+        </p>
+        <p class="text-sm text-muted-foreground">
+          {{ connectionsFailureCopy.description }}
+        </p>
       </div>
-      <Button variant="outline" size="sm" class="shrink-0" @click="loadConnections">
+      <Button
+        variant="outline"
+        size="sm"
+        class="shrink-0"
+        @click="loadConnections"
+      >
         Повторить
       </Button>
     </div>
@@ -403,15 +422,27 @@ onMounted(async () => {
       <p class="text-sm text-muted-foreground">
         Для запуска импорта необходимо активное подключение Wildberries или Ozon.
       </p>
-      <Button variant="outline" size="sm" class="shrink-0 gap-2" @click="router.push({ name: 'sales-channels' })">
+      <Button
+        variant="outline"
+        size="sm"
+        class="shrink-0 gap-2"
+        @click="router.push({ name: 'sales-channels' })"
+      >
         <ArrowRightLeft class="size-4" />
         Настроить интеграцию
       </Button>
     </div>
 
     <!-- Skeleton при первой загрузке: только пока данных ещё нет -->
-    <div v-if="isInitialLoading" class="flex flex-col gap-2">
-      <Skeleton v-for="n in 4" :key="n" class="h-10 w-full rounded-lg" />
+    <div
+      v-if="isInitialLoading"
+      class="flex flex-col gap-2"
+    >
+      <Skeleton
+        v-for="n in 4"
+        :key="n"
+        class="h-10 w-full rounded-lg"
+      />
     </div>
 
     <!-- Ошибка загрузки: важнее пустого состояния, иначе недоступный бэкенд выглядит как «задач ещё нет» -->
@@ -434,7 +465,9 @@ onMounted(async () => {
           <Download class="size-6 text-muted-foreground" />
         </div>
         <div>
-          <h3 class="font-semibold">Задач импорта ещё нет</h3>
+          <h3 class="font-semibold">
+            Задач импорта ещё нет
+          </h3>
           <p class="text-sm text-muted-foreground">
             Запустите первый импорт карточек из Wildberries или Ozon.
           </p>
@@ -442,9 +475,9 @@ onMounted(async () => {
         <Button
           v-if="isAdministrator && activeEligibleConnections.length > 0"
           :disabled="isInitialLoading"
-          @click="openLaunchDialog"
           variant="outline"
           class="gap-2 mt-2"
+          @click="openLaunchDialog"
         >
           <Plus class="size-4" />
           Запустить импорт
@@ -462,7 +495,10 @@ onMounted(async () => {
     </div>
 
     <!-- Таблица задач -->
-    <div v-else class="rounded-xl border border-border bg-card overflow-hidden">
+    <div
+      v-else
+      class="rounded-xl border border-border bg-card overflow-hidden"
+    >
       <Table>
         <TableHeader>
           <TableRow>
@@ -470,15 +506,29 @@ onMounted(async () => {
             <TableHead>Маркетплейс</TableHead>
             <TableHead>Статус</TableHead>
             <TableHead>Завершена</TableHead>
-            <TableHead class="text-right tabular-nums">Обработано</TableHead>
-            <TableHead class="text-right tabular-nums">Создано</TableHead>
-            <TableHead class="text-right tabular-nums">Обновлено</TableHead>
-            <TableHead class="text-right tabular-nums">Пропущено</TableHead>
-            <TableHead class="text-right tabular-nums">Ошибок</TableHead>
+            <TableHead class="text-right tabular-nums">
+              Обработано
+            </TableHead>
+            <TableHead class="text-right tabular-nums">
+              Создано
+            </TableHead>
+            <TableHead class="text-right tabular-nums">
+              Обновлено
+            </TableHead>
+            <TableHead class="text-right tabular-nums">
+              Пропущено
+            </TableHead>
+            <TableHead class="text-right tabular-nums">
+              Ошибок
+            </TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          <TableRow v-for="job in jobs" :key="job.id" class="hover:bg-muted/50 transition-colors">
+          <TableRow
+            v-for="job in jobs"
+            :key="job.id"
+            class="hover:bg-muted/50 transition-colors"
+          >
             <TableCell class="font-medium whitespace-nowrap">
               {{ formatDate(job.createdAt) }}
             </TableCell>
@@ -524,7 +574,10 @@ onMounted(async () => {
     </div>
 
     <!-- Диалог запуска импорта -->
-    <DialogRoot :open="isLaunchDialogOpen" @update:open="handleLaunchDialogOpenChange">
+    <DialogRoot
+      :open="isLaunchDialogOpen"
+      @update:open="handleLaunchDialogOpenChange"
+    >
       <DialogPortal>
         <DialogOverlay class="data-[state=open]:animate-overlayShow fixed inset-0 z-30 bg-black/80" />
         <DialogContent
@@ -542,7 +595,10 @@ onMounted(async () => {
           <div class="flex flex-col gap-1">
             <Label for="import-connection">Подключение</Label>
             <Select v-model="selectedConnectionId">
-              <SelectTrigger id="import-connection" class="mt-1 w-full">
+              <SelectTrigger
+                id="import-connection"
+                class="mt-1 w-full"
+              >
                 <SelectValue placeholder="Выберите подключение" />
               </SelectTrigger>
               <SelectContent :class="selectContentClass">
@@ -554,7 +610,10 @@ onMounted(async () => {
                 >
                   <span class="flex flex-col">
                     <span>{{ connectionOptionLabel(connection) }}</span>
-                    <span v-if="hasRunningJobFor(connection)" class="text-xs text-muted-foreground">
+                    <span
+                      v-if="hasRunningJobFor(connection)"
+                      class="text-xs text-muted-foreground"
+                    >
                       Импорт уже выполняется
                     </span>
                   </span>
@@ -577,12 +636,22 @@ onMounted(async () => {
 
           <div class="mt-6 flex justify-end gap-2">
             <DialogClose as-child>
-              <Button variant="outline" :disabled="isStarting">
+              <Button
+                variant="outline"
+                :disabled="isStarting"
+              >
                 Отмена
               </Button>
             </DialogClose>
-            <Button :disabled="!canSubmitLaunch" @click="startImport" class="gap-2">
-              <Spinner v-if="isStarting" class="size-4" />
+            <Button
+              :disabled="!canSubmitLaunch"
+              class="gap-2"
+              @click="startImport"
+            >
+              <Spinner
+                v-if="isStarting"
+                class="size-4"
+              />
               Запустить импорт
             </Button>
           </div>

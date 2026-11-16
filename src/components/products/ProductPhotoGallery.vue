@@ -126,8 +126,10 @@ const handleImageError = (photoId: string): void => {
 </script>
 
 <template>
-  <div v-if="largePhotos.length > 0" class="photo-gallery">
-
+  <div
+    v-if="largePhotos.length > 0"
+    class="photo-gallery"
+  >
     <button
       v-if="mainPhoto"
       class="photo-main"
@@ -135,7 +137,10 @@ const handleImageError = (photoId: string): void => {
       aria-label="Просмотр главного фото"
       @click.stop="openLightbox(0)"
     >
-      <div v-if="loadErrors.has(mainPhoto.id)" class="photo-error">
+      <div
+        v-if="loadErrors.has(mainPhoto.id)"
+        class="photo-error"
+      >
         <ImageOff class="size-6 text-muted-foreground" />
       </div>
       <template v-else>
@@ -145,14 +150,20 @@ const handleImageError = (photoId: string): void => {
           class="photo-img"
           loading="eager"
           @error="handleImageError(mainPhoto.id)"
-        />
-        <div class="photo-overlay" aria-hidden="true">
+        >
+        <div
+          class="photo-overlay"
+          aria-hidden="true"
+        >
           <ZoomIn class="size-5" />
         </div>
       </template>
     </button>
 
-    <div v-if="visibleRestPhotos.length > 0 || remainingCount > 0" class="photo-grid">
+    <div
+      v-if="visibleRestPhotos.length > 0 || remainingCount > 0"
+      class="photo-grid"
+    >
       <button
         v-for="(photo, idx) in visibleRestPhotos"
         :key="photo.id"
@@ -161,7 +172,10 @@ const handleImageError = (photoId: string): void => {
         :aria-label="`Просмотр фото ${photo.displayOrder}`"
         @click.stop="openLightbox(idx + 1)"
       >
-        <div v-if="loadErrors.has(photo.id)" class="photo-error">
+        <div
+          v-if="loadErrors.has(photo.id)"
+          class="photo-error"
+        >
           <ImageOff class="size-4 text-muted-foreground" />
         </div>
         <template v-else>
@@ -171,8 +185,11 @@ const handleImageError = (photoId: string): void => {
             class="photo-img"
             loading="lazy"
             @error="handleImageError(photo.id)"
-          />
-          <div class="photo-overlay" aria-hidden="true">
+          >
+          <div
+            class="photo-overlay"
+            aria-hidden="true"
+          >
             <ZoomIn class="size-3" />
           </div>
         </template>
@@ -224,15 +241,22 @@ const handleImageError = (photoId: string): void => {
         </button>
 
         <div class="lightbox-content">
-          <div class="lightbox-img-wrap" @click.stop>
+          <div
+            class="lightbox-img-wrap"
+            @click.stop
+          >
             <img
               :src="largePhotos[activeIndex]?.url"
               :alt="`Фото ${largePhotos[activeIndex]?.displayOrder}`"
               class="lightbox-img"
-            />
+            >
           </div>
 
-          <div v-if="largePhotos.length > 1" class="lightbox-thumbnails" ref="thumbnailStripEl">
+          <div
+            v-if="largePhotos.length > 1"
+            ref="thumbnailStripEl"
+            class="lightbox-thumbnails"
+          >
             <button
               v-for="(photo, idx) in largePhotos"
               :key="photo.id"
@@ -248,7 +272,7 @@ const handleImageError = (photoId: string): void => {
                 :src="photo.url"
                 :alt="`Миниатюра ${photo.displayOrder}`"
                 class="lightbox-thumb-img"
-              />
+              >
             </button>
           </div>
         </div>
@@ -263,14 +287,21 @@ const handleImageError = (photoId: string): void => {
           <ChevronRight class="size-6" />
         </button>
 
-        <div v-if="largePhotos.length > 1" class="lightbox-counter" aria-live="polite">
+        <div
+          v-if="largePhotos.length > 1"
+          class="lightbox-counter"
+          aria-live="polite"
+        >
           {{ activeIndex + 1 }} / {{ largePhotos.length }}
         </div>
       </div>
     </Teleport>
   </div>
 
-  <div v-else class="photo-empty">
+  <div
+    v-else
+    class="photo-empty"
+  >
     <ImageOff class="size-5 text-muted-foreground" />
     <span class="text-sm text-muted-foreground">Фотографии не загружены</span>
   </div>

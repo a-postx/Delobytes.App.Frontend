@@ -686,9 +686,15 @@ const inputClass = 'mt-1'
           <Package class="size-5 text-primary" />
           Товары
         </h1>
-        <p class="text-sm text-muted-foreground">Справочник товаров и SKU</p>
+        <p class="text-sm text-muted-foreground">
+          Справочник товаров и SKU
+        </p>
       </div>
-      <Button v-if="canWrite" @click="openCreate" class="gap-2">
+      <Button
+        v-if="canWrite"
+        class="gap-2"
+        @click="openCreate"
+      >
         <Plus class="size-4" />
         Добавить
       </Button>
@@ -700,8 +706,14 @@ const inputClass = 'mt-1'
         placeholder="Поиск по номеру, названию или SKU"
         class="w-full sm:w-80"
       />
-      <StatusFilter v-model="statusFilter" :options="filterOptions" />
-      <span v-if="isRefetching" class="text-xs text-muted-foreground">Обновление…</span>
+      <StatusFilter
+        v-model="statusFilter"
+        :options="filterOptions"
+      />
+      <span
+        v-if="isRefetching"
+        class="text-xs text-muted-foreground"
+      >Обновление…</span>
     </div>
 
     <!-- Ошибка загрузки перед гридом: иначе недоступный бэкенд читается как «товаров ещё нет» -->
@@ -748,24 +760,28 @@ const inputClass = 'mt-1'
             v-if="canWrite && statusFilter === 'active' && !searchQuery.trim()"
             class="flex flex-col sm:flex-row gap-2 mt-2"
           >
-            <Button @click="openCreate" variant="outline" class="gap-2">
+            <Button
+              variant="outline"
+              class="gap-2"
+              @click="openCreate"
+            >
               <Plus class="size-4" />
               Добавить товар
             </Button>
             <Button
               v-if="!isLoadingConnections && hasEligibleImportConnection"
-              @click="router.push('/catalogs/products/imports')"
               variant="default"
               class="gap-2"
+              @click="router.push('/catalogs/products/imports')"
             >
               <Download class="size-4" />
               Импортировать карточки
             </Button>
             <Button
               v-else-if="!isLoadingConnections && !hasEligibleImportConnection"
-              @click="router.push('/catalogs/sales-channels')"
               variant="outline"
               class="gap-2"
+              @click="router.push('/catalogs/sales-channels')"
             >
               Настроить интеграцию
             </Button>
@@ -787,13 +803,19 @@ const inputClass = 'mt-1'
         <DialogContent :class="dialogContentClass">
           <div class="flex items-start justify-between mb-4">
             <div>
-              <DialogTitle class="text-lg font-semibold">Добавить товар</DialogTitle>
+              <DialogTitle class="text-lg font-semibold">
+                Добавить товар
+              </DialogTitle>
               <DialogDescription class="text-sm text-muted-foreground mt-1">
                 Создайте новый товар в каталоге
               </DialogDescription>
             </div>
             <DialogClose as-child>
-              <Button variant="ghost" size="sm" class="size-8 p-0">
+              <Button
+                variant="ghost"
+                size="sm"
+                class="size-8 p-0"
+              >
                 <X class="size-4" />
               </Button>
             </DialogClose>
@@ -834,16 +856,25 @@ const inputClass = 'mt-1'
             <div :class="fieldClass">
               <Label>Баркоды товара</Label>
               <div class="flex flex-col gap-2 mt-1">
-                <div v-if="form.barcodes.length > 0" class="flex flex-col gap-2 mb-2">
+                <div
+                  v-if="form.barcodes.length > 0"
+                  class="flex flex-col gap-2 mb-2"
+                >
                   <div 
                     v-for="(barcode, idx) in form.barcodes" 
                     :key="idx"
                     class="flex items-center gap-2 p-2 bg-muted rounded-md"
                   >
-                    <Badge variant="secondary" class="flex-shrink-0">
+                    <Badge
+                      variant="secondary"
+                      class="flex-shrink-0"
+                    >
                       {{ barcode.value }}
                     </Badge>
-                    <span v-if="barcode.type" class="text-xs text-muted-foreground">{{ barcode.type }}</span>
+                    <span
+                      v-if="barcode.type"
+                      class="text-xs text-muted-foreground"
+                    >{{ barcode.type }}</span>
                     <Button 
                       variant="ghost" 
                       size="icon" 
@@ -865,7 +896,11 @@ const inputClass = 'mt-1'
                     placeholder="Тип (опц.)" 
                     class="w-32"
                   />
-                  <Button variant="outline" size="sm" @click="addBarcode">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    @click="addBarcode"
+                  >
                     <Plus class="size-4" />
                   </Button>
                 </div>
@@ -907,10 +942,18 @@ const inputClass = 'mt-1'
 
           <div class="flex justify-end gap-3 mt-6">
             <DialogClose as-child>
-              <Button variant="outline">Отмена</Button>
+              <Button variant="outline">
+                Отмена
+              </Button>
             </DialogClose>
-            <Button @click="handleCreate" :disabled="isSaving">
-              <Spinner v-if="isSaving" class="mr-2" />
+            <Button
+              :disabled="isSaving"
+              @click="handleCreate"
+            >
+              <Spinner
+                v-if="isSaving"
+                class="mr-2"
+              />
               {{ isSaving ? 'Сохранение...' : 'Создать' }}
             </Button>
           </div>
@@ -929,21 +972,35 @@ const inputClass = 'mt-1'
                 <AlertTriangle class="size-5 text-destructive" />
               </div>
               <div class="flex-1">
-                <AlertDialogTitle class="text-lg font-semibold">Удалить товар?</AlertDialogTitle>
+                <AlertDialogTitle class="text-lg font-semibold">
+                  Удалить товар?
+                </AlertDialogTitle>
                 <AlertDialogDescription class="text-sm text-muted-foreground mt-2">
                   Вы действительно хотите удалить товар <strong>{{ deleteTarget?.name }}</strong>?
-                  <br />
+                  <br>
                   Система проверит историю продаж. Если товар продавался, удаление будет отклонено.
                 </AlertDialogDescription>
               </div>
             </div>
             <div class="flex justify-end gap-3 mt-2">
               <AlertDialogCancel as-child>
-                <Button variant="outline" :disabled="isDeleting">Отмена</Button>
+                <Button
+                  variant="outline"
+                  :disabled="isDeleting"
+                >
+                  Отмена
+                </Button>
               </AlertDialogCancel>
               <AlertDialogAction as-child>
-                <Button variant="destructive" @click="handleDelete" :disabled="isDeleting">
-                  <Spinner v-if="isDeleting" class="mr-2" />
+                <Button
+                  variant="destructive"
+                  :disabled="isDeleting"
+                  @click="handleDelete"
+                >
+                  <Spinner
+                    v-if="isDeleting"
+                    class="mr-2"
+                  />
                   {{ isDeleting ? 'Удаление...' : 'Удалить' }}
                 </Button>
               </AlertDialogAction>
@@ -964,7 +1021,9 @@ const inputClass = 'mt-1'
                 <Archive class="size-5 text-muted-foreground" />
               </div>
               <div class="flex-1">
-                <AlertDialogTitle class="text-lg font-semibold">Архивировать товар?</AlertDialogTitle>
+                <AlertDialogTitle class="text-lg font-semibold">
+                  Архивировать товар?
+                </AlertDialogTitle>
                 <AlertDialogDescription class="text-sm text-muted-foreground mt-2">
                   Товар <strong>{{ archiveTarget?.name }}</strong> будет перемещён в архив.
                 </AlertDialogDescription>
@@ -972,11 +1031,22 @@ const inputClass = 'mt-1'
             </div>
             <div class="flex justify-end gap-3 mt-2">
               <AlertDialogCancel as-child>
-                <Button variant="outline" :disabled="isSaving">Отмена</Button>
+                <Button
+                  variant="outline"
+                  :disabled="isSaving"
+                >
+                  Отмена
+                </Button>
               </AlertDialogCancel>
               <AlertDialogAction as-child>
-                <Button @click="handleArchive" :disabled="isSaving">
-                  <Spinner v-if="isSaving" class="mr-2" />
+                <Button
+                  :disabled="isSaving"
+                  @click="handleArchive"
+                >
+                  <Spinner
+                    v-if="isSaving"
+                    class="mr-2"
+                  />
                   {{ isSaving ? 'Архивирование...' : 'Архивировать' }}
                 </Button>
               </AlertDialogAction>
@@ -997,7 +1067,9 @@ const inputClass = 'mt-1'
                 <Undo2 class="size-5 text-muted-foreground" />
               </div>
               <div class="flex-1">
-                <AlertDialogTitle class="text-lg font-semibold">Восстановить товар?</AlertDialogTitle>
+                <AlertDialogTitle class="text-lg font-semibold">
+                  Восстановить товар?
+                </AlertDialogTitle>
                 <AlertDialogDescription class="text-sm text-muted-foreground mt-2">
                   Товар <strong>{{ restoreTarget?.name }}</strong> будет возвращён в активные.
                 </AlertDialogDescription>
@@ -1005,11 +1077,22 @@ const inputClass = 'mt-1'
             </div>
             <div class="flex justify-end gap-3 mt-2">
               <AlertDialogCancel as-child>
-                <Button variant="outline" :disabled="isSaving">Отмена</Button>
+                <Button
+                  variant="outline"
+                  :disabled="isSaving"
+                >
+                  Отмена
+                </Button>
               </AlertDialogCancel>
               <AlertDialogAction as-child>
-                <Button @click="handleRestore" :disabled="isSaving">
-                  <Spinner v-if="isSaving" class="mr-2" />
+                <Button
+                  :disabled="isSaving"
+                  @click="handleRestore"
+                >
+                  <Spinner
+                    v-if="isSaving"
+                    class="mr-2"
+                  />
                   {{ isSaving ? 'Восстановление...' : 'Восстановить' }}
                 </Button>
               </AlertDialogAction>

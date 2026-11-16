@@ -1,17 +1,14 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
-import type { ComputedRef, Ref } from 'vue'
+import { computed } from 'vue'
+import type { ComputedRef } from 'vue'
 import { Minus, TrendingDown, TrendingUp } from 'lucide-vue-next'
 import DashboardWidget from '@/components/dashboard/DashboardWidget.vue'
 import { Badge } from '@/components/ui/badge'
+import { Skeleton } from '@/components/ui/skeleton'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
-import { useCurrentUser } from '@/composables/useCurrentUser'
 import { useTenantMoney } from '@/composables/useTenantMoney'
-import { fetchOrdersChart } from '@/composables/useOrdersChartQuery'
-import { formatFullDate, getTenantToday, toIsoDate } from '@/utils/dateRange'
-import type { CalendarDate } from '@internationalized/date'
-import type { GetOrdersChartResponse } from '@/types/sales'
-import type { ApiError } from '@/types/errors'
+import { useOrdersKpiPeriod } from '@/composables/useOrdersKpiPeriod'
+import type { OrdersChartTotals } from '@/types/sales'
 
 type KpiMetric = 'quantity' | 'amount' | 'avgCheck'
 
@@ -22,8 +19,16 @@ interface Props {
 
 const props = defineProps<Props>()
 
-const { currentUser } = useCurrentUser()
 const { formatMoney } = useTenantMoney()
+
+const {
+  totals,
+  previousTotals,
+  previousRangeLabel,
+  isInitialLoading,
+  blockingError,
+  reload,
+} = useOrdersKpiPeriod(props.days)
 
 const TITLES: Record<KpiMetric, string> = {
   quantity: 'Заказано товаров',
@@ -31,65 +36,23 @@ const TITLES: Record<KpiMetric, string> = {
   avgCheck: 'Средний чек',
 }
 
-const loading: Ref<boolean> = ref(false)
-const errorMessage: Ref<string | null> = ref(null)
-const currentValue: Ref<number | null> = ref(null)
-const previousValue: Ref<number | null> = ref(null)
-const previousRangeLabel: Ref<string> = ref('')
-
-function resolveTenantTimeZone(): string {
-  return currentUser.value?.timeZone ?? Intl.DateTimeFormat().resolvedOptions().timeZone
-}
-
-function metricFromTotals(response: GetOrdersChartResponse): number | null {
+function metricFromTotals(totalsValue: OrdersChartTotals | null): number | null {
+  if (totalsValue === null) {
+    return null
+  }
   if (props.metric === 'quantity') {
-    return response.totals.quantity
+    return totalsValue.quantity
   }
   if (props.metric === 'amount') {
-    return response.totals.amount
+    return totalsValue.amount
   }
-  return response.totals.orderCount > 0 ? response.totals.amount / response.totals.orderCount : null
+  return totalsValue.orderCount > 0 ? totalsValue.amount / totalsValue.orderCount : null
 }
 
-async function load(): Promise<void> {
-  loading.value = true
-  errorMessage.value = null
-
-  try {
-    const timeZone: string = resolveTenantTimeZone()
-    const today: CalendarDate = getTenantToday(timeZone)
-
-    const currentFrom: CalendarDate = today.subtract({ days: props.days - 1 })
-    const currentTo: CalendarDate = today
-    const previousFrom: CalendarDate = today.subtract({ days: 2 * props.days - 1 })
-    const previousTo: CalendarDate = today.subtract({ days: props.days })
-
-    previousRangeLabel.value = `${formatFullDate(previousFrom)} – ${formatFullDate(previousTo)}`
-
-    const [currentResponse, previousResponse] = await Promise.all([
-      fetchOrdersChart({
-        from: toIsoDate(currentFrom),
-        to: toIsoDate(currentTo),
-        granularity: 'Month',
-      }),
-      fetchOrdersChart({
-        from: toIsoDate(previousFrom),
-        to: toIsoDate(previousTo),
-        granularity: 'Month',
-      }),
-    ])
-
-    currentValue.value = metricFromTotals(currentResponse)
-    previousValue.value = metricFromTotals(previousResponse)
-  } catch (err: unknown) {
-    const apiError = err as ApiError
-    errorMessage.value = apiError?.message ?? 'Произошла ошибка. Попробуйте ещё раз.'
-  } finally {
-    loading.value = false
-  }
-}
-
-onMounted(load)
+const currentValue: ComputedRef<number | null> = computed<number | null>(() => metricFromTotals(totals.value))
+const previousValue: ComputedRef<number | null> = computed<number | null>(() =>
+  metricFromTotals(previousTotals.value),
+)
 
 const title: ComputedRef<string> = computed<string>(() => TITLES[props.metric])
 const periodCaption: ComputedRef<string> = computed<string>(() => `за ${props.days} дней`)
@@ -124,6 +87,11 @@ interface DeltaInfo {
   text: string
 }
 
+/**
+ * Текст дельты держим коротким и постоянной длины: его ширина решает,
+ * поместится ли бейдж рядом с заголовком, а следовательно и высоту карточки.
+ * Длинные формулировки живут в подсказке.
+ */
 const delta: ComputedRef<DeltaInfo> = computed<DeltaInfo>(() => {
   const current: number | null = currentValue.value
   const previous: number | null = previousValue.value
@@ -134,7 +102,7 @@ const delta: ComputedRef<DeltaInfo> = computed<DeltaInfo>(() => {
 
   if (previous === 0) {
     if (current > 0) {
-      return { kind: 'new', text: 'новые заказы' }
+      return { kind: 'new', text: 'новые' }
     }
     return { kind: 'none', text: '—' }
   }
@@ -165,23 +133,41 @@ const deltaBadgeVariant: ComputedRef<'success' | 'destructive' | 'secondary'> = 
       return 'secondary'
   }
 })
+
+const previousPeriodHint: ComputedRef<string> = computed<string>(() => {
+  const range: string = previousRangeLabel.value
+  const value: string = formattedPreviousValue.value
+
+  if (delta.value.kind === 'new') {
+    return `Пред. период ${range}: заказов не было`
+  }
+  if (range === '') {
+    return `Пред. период: ${value}`
+  }
+  return `Пред. период ${range}: ${value}`
+})
 </script>
 
 <template>
   <DashboardWidget
     :title="title"
     compact
-    :loading="loading && currentValue === null && !errorMessage"
-    :error="errorMessage"
-    @retry="load"
+    :loading="isInitialLoading"
+    :error="blockingError"
+    @retry="reload"
   >
+    <!-- Плейсхолдер той же высоты, что и бейдж: шапка не меняет геометрию при загрузке. -->
     <template #actions>
-      <TooltipProvider>
+      <Skeleton
+        v-if="isInitialLoading"
+        class="h-5 w-[4.75rem] rounded-full"
+      />
+      <TooltipProvider v-else>
         <Tooltip>
           <TooltipTrigger as-child>
             <Badge
               :variant="deltaBadgeVariant"
-              class="flex items-center gap-1"
+              class="flex min-w-[4.75rem] shrink-0 items-center justify-center gap-1 whitespace-nowrap tabular-nums"
             >
               <TrendingUp
                 v-if="delta.kind === 'positive' || delta.kind === 'new'"
@@ -199,17 +185,28 @@ const deltaBadgeVariant: ComputedRef<'success' | 'destructive' | 'secondary'> = 
             </Badge>
           </TooltipTrigger>
           <TooltipContent>
-            Пред. период {{ previousRangeLabel }}: {{ formattedPreviousValue }}
+            {{ previousPeriodHint }}
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
     </template>
 
+    <!-- Скелетон повторяет метрики контента: text-2xl (32px) и text-sm (20px) с gap-1. -->
+    <template #skeleton>
+      <div class="flex flex-col gap-1">
+        <Skeleton class="h-8 w-2/3" />
+        <Skeleton class="h-5 w-1/3" />
+      </div>
+    </template>
+
     <div class="flex flex-col gap-1">
-      <p class="text-2xl font-semibold tabular-nums">
+      <p
+        class="truncate text-2xl font-semibold leading-8 tabular-nums whitespace-nowrap"
+        :title="formattedValue"
+      >
         {{ formattedValue }}
       </p>
-      <p class="text-sm text-muted-foreground">
+      <p class="truncate text-sm leading-5 text-muted-foreground">
         {{ periodCaption }}
       </p>
     </div>
