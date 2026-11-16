@@ -13,6 +13,7 @@ const props = withDefaults(defineProps<Props>(), {})
 
 <template>
   <TabsList
+    v-bind="$attrs"
     data-slot="tabs-list"
     :class="cn(
       'inline-flex items-center justify-center gap-0 rounded-lg border border-border bg-muted p-1 text-muted-foreground dark:bg-muted/50 dark:border-border',

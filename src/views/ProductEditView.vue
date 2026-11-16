@@ -1,29 +1,46 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Plus, Package, X as XIcon, ArrowLeft } from 'lucide-vue-next'
+import { ArrowLeft, Package } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
-import { Label } from '@/components/ui/label'
-import { Badge } from '@/components/ui/badge'
-import { Spinner } from '@/components/ui/spinner'
 import { Skeleton } from '@/components/ui/skeleton'
-import { CopyButton } from '@/components/ui/copy-button'
-import ProductPhotoGallery from '@/components/products/ProductPhotoGallery.vue'
-import ProductChannelBadges from '@/components/products/ProductChannelBadges.vue'
-import ProductChannelSummaryRow from '@/components/products/ProductChannelSummaryRow.vue'
-import ProductBomEditor from '@/components/products/ProductBomEditor.vue'
+import {
+  TabsRoot,
+  TabsList,
+  TabsTrigger,
+  TabsContent,
+} from '@/components/ui/tabs'
+import {
+  AlertDialogRoot,
+  AlertDialogPortal,
+  AlertDialogOverlay,
+  AlertDialogContent,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogCancel,
+} from '@/components/ui/alert-dialog'
+import ProductPageHeader from '@/components/products/ProductPageHeader.vue'
+import ProductOverviewTab from '@/components/products/ProductOverviewTab.vue'
+import ProductChannelsTab from '@/components/products/ProductChannelsTab.vue'
+import ProductCostTab from '@/components/products/ProductCostTab.vue'
+import StickySaveBar from '@/components/products/StickySaveBar.vue'
+import ErrorState from '@/components/feedback/ErrorState.vue'
 import { toast } from 'vue-sonner'
 import { catalogProductsApi } from '@/services/api'
 import { extractErrorCode, extractErrorMessage } from '@/composables/useApi'
 import { describeFailure } from '@/composables/useApiFailureCopy'
 import type { FailureCopy } from '@/composables/useApiFailureCopy'
-import ErrorState from '@/components/feedback/ErrorState.vue'
-import type { GetProductResponse, UpdateProductRequest, ProductBarcode, PackingUnit, ProductPhoto } from '@/types/products'
+import type { GetProductResponse } from '@/types/products'
 import type { ApiError } from '@/types/errors'
 import { useCurrentUser } from '@/composables/useCurrentUser'
-import { markUnsavedChanges, useUnsavedChangesGuard } from '@/composables/useUnsavedChangesGuard'
+import { useUnsavedChangesGuard } from '@/composables/useUnsavedChangesGuard'
+
+type ProductTab = 'overview' | 'channels' | 'cost'
+
+type SavedPatch = Pick<GetProductResponse, 'sku' | 'name' | 'description' | 'barcodes' | 'packingUnit'>
+
+const PRODUCT_TABS: readonly ProductTab[] = ['overview', 'channels', 'cost']
+const DEFAULT_TAB: ProductTab = 'overview'
 
 const route = useRoute()
 const router = useRouter()
@@ -34,83 +51,44 @@ const productId = computed<string>(() => route.params.id as string)
 const FALLBACK_LOAD_MESSAGE = 'Не удалось загрузить товар'
 
 const isLoading = ref<boolean>(true)
-const isSaving = ref<boolean>(false)
 const notFound = ref<boolean>(false)
 const loadError = ref<FailureCopy | null>(null)
-const photos = ref<ProductPhoto[]>([])
 const product = ref<GetProductResponse | null>(null)
 
-// Поля формы — числовые значения хранятся как строка до отправки
-type PackingUnitForm = {
-  [K in keyof Required<PackingUnit>]: string | number
-}
+const overviewTab = ref<InstanceType<typeof ProductOverviewTab> | null>(null)
 
-interface FormData {
-  sku: string
-  name: string
-  description: string
-  barcodes: ProductBarcode[]
-  packingUnit: PackingUnitForm
-}
+const isProductTab = (value: unknown): value is ProductTab =>
+  typeof value === 'string' && (PRODUCT_TABS as readonly string[]).includes(value)
 
-const form = ref<FormData>({
-  sku: '',
-  name: '',
-  description: '',
-  barcodes: [],
-  packingUnit: { lengthCm: '', widthCm: '', heightCm: '', weightKg: '' },
-})
+const activeTab = ref<ProductTab>(DEFAULT_TAB)
 
-const BARCODE_SYMBOLOGY_EAN13 = 'EAN13'
+const pendingTab = ref<ProductTab | null>(null)
+const unsavedDialogOpen = ref<boolean>(false)
 
-const newBarcode = ref({ value: '', type: BARCODE_SYMBOLOGY_EAN13, isDefault: false })
+/** Раз true — остаётся true: правки состава не должны теряться при переключении вкладок. */
+const costTabVisited = ref<boolean>(false)
+
+const channelCount = computed<number>(() => product.value?.channelLinks?.length ?? 0)
 
 /**
- * Снимок загруженных с сервера значений. Любое расхождение с ним — несохранённая правка:
- * сравнение по снимку надёжнее флага «поле тронули», потому что отмена правки вручную
- * возвращает форму в исходное состояние и предупреждение при уходе исчезает.
+ * Бар сохранения живёт вне панелей вкладок: у неактивной панели reka-ui ставит hidden,
+ * а position: fixed внутри hidden-элемента не отображается вовсе — бар исчезал бы
+ * при переходе на другую вкладку с несохранёнными правками формы.
  */
-const formBaseline = ref<string>('')
+const overviewDirty = computed<boolean>(() => overviewTab.value?.hasUnsavedChanges === true)
+const overviewSaving = computed<boolean>(() => overviewTab.value?.isSaving === true)
 
-const formSnapshot = (): string =>
-  JSON.stringify({
-    sku: form.value.sku.trim(),
-    name: form.value.name.trim(),
-    description: form.value.description.trim(),
-    barcodes: form.value.barcodes.map(b => ({ value: b.value.trim(), type: b.type?.trim() ?? '', isDefault: b.isDefault })),
-    packingUnit: {
-      lengthCm: packingValue(form.value.packingUnit.lengthCm),
-      widthCm: packingValue(form.value.packingUnit.widthCm),
-      heightCm: packingValue(form.value.packingUnit.heightCm),
-      weightKg: packingValue(form.value.packingUnit.weightKg),
-    },
-  })
-
-const hasUnsavedFormChanges = computed<boolean>(() => {
-  // До загрузки товара снимок пуст: считать незаполненную форму изменённой нельзя.
-  if (!formBaseline.value) {
-    return false
+watch(activeTab, (tab: ProductTab) => {
+  if (tab === 'cost') {
+    costTabVisited.value = true
   }
+}, { immediate: true })
 
-  return formSnapshot() !== formBaseline.value
-})
-
-// Владелец страницы регистрирует хук ухода; секции только помечают свои правки,
-// поэтому на один уход приходится один вопрос, а не по одному от каждого блока.
-markUnsavedChanges('product-form', hasUnsavedFormChanges, 'Есть несохранённые изменения в данных товара. Покинуть страницу без сохранения?')
 useUnsavedChangesGuard('Есть несохранённые изменения. Покинуть страницу без сохранения?')
 
-const addBarcode = (): void => {
-  if (!newBarcode.value.value.trim()) {
-    toast.error('Введите значение баркода')
-    return
-  }
-  form.value.barcodes.push({ ...newBarcode.value })
-  newBarcode.value = { value: '', type: BARCODE_SYMBOLOGY_EAN13, isDefault: false }
-}
-
-const removeBarcode = (index: number): void => {
-  form.value.barcodes.splice(index, 1)
+const resetActiveTabFromQuery = (): void => {
+  const requested = route.query.tab
+  activeTab.value = isProductTab(requested) ? requested : DEFAULT_TAB
 }
 
 const loadProduct = async (): Promise<void> => {
@@ -133,21 +111,6 @@ const loadProduct = async (): Promise<void> => {
     }
 
     product.value = response
-    form.value = {
-      sku: response.sku ?? '',
-      name: response.name ?? '',
-      description: response.description ?? '',
-      barcodes: response.barcodes ?? [],
-      packingUnit: {
-        lengthCm: response.packingUnit?.lengthCm?.toString() ?? '',
-        widthCm: response.packingUnit?.widthCm?.toString() ?? '',
-        heightCm: response.packingUnit?.heightCm?.toString() ?? '',
-        weightKg: response.packingUnit?.weightKg?.toString() ?? '',
-      },
-    }
-
-    photos.value = response.photos ?? []
-    formBaseline.value = formSnapshot()
   } catch (error: unknown) {
     const apiError: ApiError = {
       code: extractErrorCode(error) ?? 'common.unexpected_error',
@@ -161,98 +124,118 @@ const loadProduct = async (): Promise<void> => {
   }
 }
 
-/**
- * Поля ввода с `type="number"` отдают число, а не строку, поэтому форму нельзя считать
- * строго строковой: любое чтение значения нормализуем. Ключевое здесь — пустое значение
- * означает «не задано», и ноль вместо него записывать нельзя (решение 18).
- */
-const packingValue = (value: string | number | null | undefined): string =>
-  value === null || value === undefined ? '' : String(value).trim()
-
-const buildPackingUnitPayload = (): PackingUnit | undefined => {
-  const { lengthCm, widthCm, heightCm, weightKg } = form.value.packingUnit
-  const dimensions = [lengthCm, widthCm, heightCm].map(packingValue)
-
-  const dimensionsEmpty = dimensions.every(value => value === '')
-  if (dimensionsEmpty) {
-    return undefined
-  }
-
-  // Неполный набор уходит как есть (NaN на незаполненном поле): сервер отклоняет его,
-  // а подстановка нуля записала бы «неизвестный размер» как настоящий.
-  const unit: PackingUnit = {
-    lengthCm: Number.parseFloat(dimensions[0]),
-    widthCm: Number.parseFloat(dimensions[1]),
-    heightCm: Number.parseFloat(dimensions[2]),
-  }
-
-  const weight = packingValue(weightKg)
-  if (weight !== '') {
-    unit.weightKg = Number.parseFloat(weight)
-  }
-
-  return unit
-}
-
-const handleSave = async (): Promise<void> => {
-  if (!form.value.sku.trim()) {
-    toast.error('SKU обязателен')
+const syncTabQuery = (tab: ProductTab): void => {
+  if (route.query.tab === tab) {
     return
   }
 
-  isSaving.value = true
-  try {
-    const payload: UpdateProductRequest = {
-      name: form.value.name.trim(),
-      description: form.value.description.trim(),
-      barcodes: form.value.barcodes,
-    }
+  void router.replace({ query: { ...route.query, tab } })
+}
 
-    const packingUnit = buildPackingUnitPayload()
-    if (packingUnit) {
-      payload.packingUnit = packingUnit
-    }
+const applyTab = (tab: ProductTab): void => {
+  activeTab.value = tab
+  syncTabQuery(tab)
+}
 
-    const baselineSku = JSON.parse(formBaseline.value).sku
-    if (form.value.sku.trim() !== baselineSku) {
-      payload.sku = form.value.sku.trim()
-    }
-
-    await catalogProductsApi.update(productId.value, payload)
-    toast.success('Товар обновлён')
-    formBaseline.value = formSnapshot()
-  } catch (error: unknown) {
-    toast.error(extractErrorMessage(error, 'Не удалось сохранить товар'))
-  } finally {
-    isSaving.value = false
+/**
+ * Переключение вкладки идёт не напрямую в модель: уход из «Основных данных» с
+ * несохранёнными правками сначала требует подтверждения.
+ */
+const requestTabChange = (value: string | number): void => {
+  if (!isProductTab(value) || value === activeTab.value) {
+    return
   }
+
+  const leavingOverviewWithChanges = activeTab.value === 'overview' && overviewDirty.value
+
+  if (leavingOverviewWithChanges) {
+    pendingTab.value = value
+    unsavedDialogOpen.value = true
+    return
+  }
+
+  applyTab(value)
+}
+
+const confirmTabChange = (): void => {
+  const target = pendingTab.value
+  pendingTab.value = null
+  unsavedDialogOpen.value = false
+
+  if (target) {
+    applyTab(target)
+  }
+}
+
+const cancelTabChange = (): void => {
+  pendingTab.value = null
+}
+
+const handleSave = (): void => {
+  void overviewTab.value?.handleSave()
+}
+
+const handleDiscard = (): void => {
+  overviewTab.value?.handleDiscard()
+}
+
+const handleProductSaved = (patch: SavedPatch): void => {
+  if (!product.value) {
+    return
+  }
+
+  product.value = { ...product.value, ...patch }
 }
 
 const handleCancel = (): void => {
   void router.push({ name: 'products' })
 }
 
+watch(() => route.query.tab, (tab) => {
+  if (isProductTab(tab) && tab !== activeTab.value) {
+    activeTab.value = tab
+  }
+})
+
+watch(() => route.params.id, () => {
+  resetActiveTabFromQuery()
+  costTabVisited.value = false
+  void loadProduct()
+})
+
 onMounted(() => {
+  resetActiveTabFromQuery()
   void loadProduct()
 })
 </script>
 
 <template>
-  <div class="container mx-auto py-6 px-4 max-w-7xl">
-
-    <div class="mb-6">
-      <Button variant="ghost" size="sm" class="gap-2 -ml-2" @click="handleCancel">
+  <div class="container mx-auto max-w-7xl px-4 py-6">
+    <div class="mb-4">
+      <Button
+        variant="ghost"
+        size="sm"
+        class="-ml-2 gap-2"
+        @click="handleCancel"
+      >
         <ArrowLeft class="size-4" />
         Назад к каталогу
       </Button>
     </div>
 
-    <div v-if="isLoading" class="flex items-center gap-3 mb-6">
-      <Skeleton class="size-12 rounded-lg" />
-      <div class="flex flex-col gap-2 flex-1">
-        <Skeleton class="h-8 w-64 rounded-md" />
-        <Skeleton class="h-5 w-48 rounded-md" />
+    <div
+      v-if="isLoading"
+      class="flex flex-col gap-6"
+    >
+      <div class="flex items-center gap-3">
+        <Skeleton class="size-12 rounded-lg" />
+        <div class="flex flex-1 flex-col gap-2">
+          <Skeleton class="h-8 w-64 rounded-md" />
+          <Skeleton class="h-5 w-48 rounded-md" />
+        </div>
       </div>
+      <Skeleton class="h-10 w-80 rounded-lg" />
+      <Skeleton class="h-96 w-full rounded-xl" />
     </div>
 
     <!-- Ошибка загрузки: отличается от "товар не найден" текстом и не стирает форму молча -->
@@ -265,227 +248,134 @@ onMounted(() => {
       @retry="loadProduct"
     />
 
-    <div v-else-if="notFound" class="flex flex-col items-center justify-center gap-4 py-12">
+    <div
+      v-else-if="notFound"
+      class="flex flex-col items-center justify-center gap-4 py-12"
+    >
       <Package class="size-16 text-muted-foreground/40" />
       <div class="text-center">
-        <h2 class="text-xl font-semibold mb-2">Товар не найден</h2>
-        <p class="text-sm text-muted-foreground mb-4">
+        <h2 class="mb-2 text-xl font-semibold">
+          Товар не найден
+        </h2>
+        <p class="mb-4 text-sm text-muted-foreground">
           Товар с таким идентификатором не существует или был удалён.
         </p>
-        <Button variant="outline" @click="handleCancel">Вернуться к каталогу</Button>
+        <Button
+          variant="outline"
+          @click="handleCancel"
+        >
+          Вернуться к каталогу
+        </Button>
       </div>
     </div>
 
-    <div v-else class="flex flex-col gap-6">
-      <div class="flex items-start gap-3">
-        <div class="flex items-center justify-center size-12 rounded-lg bg-primary/10">
-          <Package class="size-6 text-primary" />
-        </div>
-        <div class="flex-1">
-          <h1 class="text-2xl font-bold">{{ product?.name || 'Редактирование товара' }}</h1>
-          <div class="flex items-center gap-2 mt-1">
-            <span class="font-mono text-sm text-muted-foreground">Код: {{ product?.code || '—' }}</span>
-            <CopyButton
-              v-if="product?.code"
-              :value="product.code"
-              size="icon-sm"
-              tooltip-text="Копировать код"
-            />
-            <ProductChannelBadges v-if="product?.channelLinks && product.channelLinks.length > 0" :links="product.channelLinks" />
-          </div>
-        </div>
-      </div>
+    <div
+      v-else-if="product"
+      class="flex flex-col gap-6"
+    >
+      <ProductPageHeader :product="product" />
 
-      <div class="product-layout">
-        <div class="product-photos">
-          <ProductPhotoGallery :photos="photos" :product-id="productId" />
-        </div>
+      <TabsRoot
+        :model-value="activeTab"
+        class="flex flex-col gap-4"
+        @update:model-value="requestTabChange"
+      >
+        <TabsList
+          class="w-full justify-start overflow-x-auto sm:w-auto sm:justify-center"
+          aria-label="Разделы товара"
+        >
+          <TabsTrigger value="overview">
+            Основные данные
+          </TabsTrigger>
+          <TabsTrigger value="channels">
+            Каналы продаж
+            <span
+              v-if="channelCount > 0"
+              class="rounded-full bg-muted-foreground/15 px-1.5 text-xs tabular-nums"
+            >
+              {{ channelCount }}
+            </span>
+          </TabsTrigger>
+          <TabsTrigger value="cost">
+            Себестоимость
+          </TabsTrigger>
+        </TabsList>
 
-        <div class="flex flex-col gap-6">
-          <div class="rounded-xl border border-border bg-card p-6 flex flex-col gap-4">
-            <h2 class="text-lg font-bold">Основные данные</h2>
-
-            <div class="flex flex-col gap-1">
-              <Label for="code">Код</Label>
-              <Input id="code" :model-value="product?.code ?? ''" class="mt-1 font-mono" disabled />
-            </div>
-
-            <div class="flex flex-col gap-1">
-              <Label for="name">Название</Label>
-              <Input
-                id="name"
-                v-model="form.name"
-                placeholder=""
-                class="mt-1"
-                :disabled="!canWrite"
-              />
-            </div>
-
-            <div class="flex flex-col gap-1">
-              <Label for="sku">SKU *</Label>
-              <Input
-                id="sku"
-                v-model="form.sku"
-                placeholder=""
-                class="mt-1"
-                :disabled="!canWrite"
-              />
-            </div>
-
-            <div class="flex flex-col gap-1">
-              <Label for="description">Описание</Label>
-              <Textarea
-                id="description"
-                v-model="form.description"
-                placeholder=""
-                :rows="4"
-                class="mt-1"
-                :disabled="!canWrite"
-              />
-            </div>
-
-            <div class="flex flex-col gap-1">
-              <Label>Баркоды товара</Label>
-              <div class="flex flex-col gap-2 mt-1">
-                <div v-if="form.barcodes.length > 0" class="flex flex-col gap-2 mb-2">
-                  <div
-                    v-for="(barcode, idx) in form.barcodes"
-                    :key="idx"
-                    class="flex items-center gap-2 p-2 bg-muted rounded-md"
-                  >
-                    <Badge variant="secondary" class="flex-shrink-0">
-                      {{ barcode.value }}
-                    </Badge>
-                    <span
-                      v-if="barcode.type && barcode.type !== BARCODE_SYMBOLOGY_EAN13"
-                      class="text-xs text-muted-foreground"
-                    >
-                      {{ barcode.type }}
-                    </span>
-                    <Button
-                      v-if="canWrite"
-                      variant="ghost"
-                      size="icon"
-                      class="size-6 ml-auto"
-                      @click="removeBarcode(idx)"
-                    >
-                      <XIcon class="size-3" />
-                    </Button>
-                  </div>
-                </div>
-                <div v-if="canWrite" class="flex gap-2">
-                  <Input
-                    v-model="newBarcode.value"
-                    placeholder=""
-                    class="flex-1"
-                    aria-label="Значение баркода"
-                  />
-                  <select
-                    v-model="newBarcode.type"
-                    class="w-32 rounded-md border border-input bg-background px-3 py-2 text-sm"
-                    aria-label="Символика баркода"
-                  >
-                    <option value="EAN13">EAN13</option>
-                  </select>
-                  <Button variant="outline" size="sm" @click="addBarcode">
-                    <Plus class="size-4" />
-                  </Button>
-                </div>
-              </div>
-            </div>
-
-            <div class="flex flex-col gap-1">
-              <Label>Габариты упаковки (см, кг)</Label>
-              <div class="flex gap-2 mt-1">
-                <Input
-                  v-model="form.packingUnit.lengthCm"
-                  placeholder="Длина"
-                  type="number"
-                  step="0.01"
-                  :disabled="!canWrite"
-                />
-                <Input
-                  v-model="form.packingUnit.widthCm"
-                  placeholder="Ширина"
-                  type="number"
-                  step="0.01"
-                  :disabled="!canWrite"
-                />
-                <Input
-                  v-model="form.packingUnit.heightCm"
-                  placeholder="Высота"
-                  type="number"
-                  step="0.01"
-                  :disabled="!canWrite"
-                />
-              </div>
-              <div class="flex gap-2 mt-2">
-                <Input
-                  v-model="form.packingUnit.weightKg"
-                  placeholder="Вес"
-                  type="number"
-                  step="0.01"
-                  class="w-full"
-                  :disabled="!canWrite"
-                />
-              </div>
-            </div>
-
-            <div v-if="canWrite" class="flex gap-3 pt-2">
-              <Button @click="handleSave" :disabled="isSaving" class="flex-1">
-                <Spinner v-if="isSaving" class="mr-2" />
-                {{ isSaving ? 'Сохранение...' : 'Сохранить' }}
-              </Button>
-              <Button variant="outline" :disabled="isSaving" @click="handleCancel">
-                Отмена
-              </Button>
-            </div>
-
-            <div v-else class="pt-2">
-              <Button variant="outline" @click="handleCancel">
-                Назад к списку
-              </Button>
-            </div>
-
-          </div>
-        </div>
-      </div>
-
-      <div v-if="product?.channelLinks && product.channelLinks.length > 0" class="flex flex-col gap-4">
-        <h2 class="text-lg font-bold">Каналы продаж</h2>
-        <div class="flex flex-col gap-2">
-          <ProductChannelSummaryRow
-            v-for="link in product.channelLinks"
-            :key="link.channelId"
-            :link="link"
+        <TabsContent
+          value="overview"
+          class="mt-0 border-0 bg-transparent p-0"
+        >
+          <ProductOverviewTab
+            ref="overviewTab"
+            :product-id="productId"
+            :product="product"
+            @saved="handleProductSaved"
           />
-        </div>
-      </div>
-	  <ProductBomEditor :product-id="productId" />
-	</div>
+        </TabsContent>
+
+        <TabsContent
+          value="channels"
+          class="mt-0 border-0 bg-transparent p-0"
+        >
+          <ProductChannelsTab :links="product.channelLinks ?? []" />
+        </TabsContent>
+
+        <TabsContent
+          value="cost"
+          class="mt-0 border-0 bg-transparent p-0"
+        >
+          <ProductCostTab
+            v-if="costTabVisited"
+            :product-id="productId"
+          />
+        </TabsContent>
+      </TabsRoot>
+    </div>
+
+    <StickySaveBar
+      :visible="canWrite && overviewDirty"
+      :saving="overviewSaving"
+      message="Есть несохранённые изменения в данных товара"
+      @save="handleSave"
+      @discard="handleDiscard"
+    />
+
+    <AlertDialogRoot v-model:open="unsavedDialogOpen">
+      <AlertDialogPortal>
+        <AlertDialogOverlay class="fixed inset-0 z-50 bg-black/50" />
+        <AlertDialogContent
+          class="fixed left-[50%] top-[50%] z-[100] max-h-[85vh] w-[90vw] max-w-[480px] translate-x-[-50%] translate-y-[-50%] rounded-lg border bg-popover p-6 text-popover-foreground shadow-lg focus:outline-none"
+        >
+          <div class="flex flex-col gap-4">
+            <div>
+              <AlertDialogTitle class="text-lg font-semibold">
+                Перейти без сохранения?
+              </AlertDialogTitle>
+              <AlertDialogDescription class="mt-2 text-sm text-muted-foreground">
+                В основных данных есть несохранённые изменения. При переходе на другую вкладку они будут потеряны.
+              </AlertDialogDescription>
+            </div>
+            <div class="mt-2 flex justify-end gap-3">
+              <AlertDialogCancel as-child>
+                <Button
+                  variant="outline"
+                  @click="cancelTabChange"
+                >
+                  Остаться
+                </Button>
+              </AlertDialogCancel>
+              <!-- Не AlertDialogAction: он закрывает диалог своим обработчиком и обнуляет
+                   pendingTab через update:open раньше, чем вкладка успевает переключиться. -->
+              <Button
+                variant="destructive"
+                @click="confirmTabChange"
+              >
+                Перейти
+              </Button>
+            </div>
+          </div>
+        </AlertDialogContent>
+      </AlertDialogPortal>
+    </AlertDialogRoot>
   </div>
 </template>
-
-<style scoped>
-.product-layout {
-  display: grid;
-  grid-template-columns: 280px 1fr;
-  gap: 32px;
-  align-items: start;
-}
-
-.product-photos {
-  position: sticky;
-  top: 16px;
-}
-
-@media (max-width: 768px) {
-  .product-layout {
-    grid-template-columns: 1fr;
-  }
-
-  .product-photos {
-    position: static;
-  }
-}
-</style>
