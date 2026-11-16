@@ -28,8 +28,10 @@ export interface BomComponentDto {
 }
 
 /**
- * Строка состава товара (BomLineDto с бэкенда). Версионируется через
- * validFrom/isActive по тому же паттерну, что ComponentPrice и ProductWorkRate.
+ * Строка состава товара (BomLineDto с бэкенда). Версионируется интервалом
+ * [validFrom, validTo): validTo — первый день, когда версия уже не действует,
+ * null — версия действует. Прежний булев isActive не отвечал на вопрос «с какого
+ * числа», поэтому удалённый компонент продолжал попадать в расчёт себестоимости.
  */
 export interface BomLineItem {
   id: string
@@ -37,7 +39,7 @@ export interface BomLineItem {
   componentId: string
   quantity: number
   validFrom: string
-  isActive: boolean
+  validTo: string | null
   createdAt: string
   updatedAt?: string
   component?: BomComponentDto

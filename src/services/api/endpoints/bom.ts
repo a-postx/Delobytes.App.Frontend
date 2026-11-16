@@ -13,8 +13,9 @@ import type {
 } from '@/types/bom'
 
 /**
- * Состав товара (BOM). Строки версионируются по ValidFrom/IsActive —
- * PUT переписывает активный состав целиком, создавая новые версии строк.
+ * Состав товара (BOM). Строки версионируются интервалом [validFrom, validTo) —
+ * PUT переписывает действующий состав целиком, закрывая прежние версии датой, а
+ * POST .../lines добавляет версию с указанной даты и закрывает предыдущую на ней же.
  */
 export const bomApi = {
   getByProduct: async (productId: string): Promise<GetProductBomResponse> => {

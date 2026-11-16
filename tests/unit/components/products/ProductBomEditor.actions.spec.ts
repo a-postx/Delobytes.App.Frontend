@@ -45,9 +45,9 @@ const costGet = vi.mocked(productCostApi.getCost)
 const toastFn = vi.mocked(toast)
 
 const SERVER_LINES = [
-  { id: 'l1', productId: 'p1', componentId: 'c1', quantity: 2, validFrom: '2024-01-01', isActive: true, createdAt: '2024-01-01' },
-  { id: 'l2', productId: 'p1', componentId: 'c2', quantity: 5, validFrom: '2024-01-01', isActive: true, createdAt: '2024-01-01' },
-  { id: 'l3', productId: 'p1', componentId: 'c3', quantity: 1, validFrom: '2024-01-01', isActive: true, createdAt: '2024-01-01' },
+  { id: 'l1', productId: 'p1', componentId: 'c1', quantity: 2, validFrom: '2024-01-01', validTo: null, createdAt: '2024-01-01' },
+  { id: 'l2', productId: 'p1', componentId: 'c2', quantity: 5, validFrom: '2024-01-01', validTo: null, createdAt: '2024-01-01' },
+  { id: 'l3', productId: 'p1', componentId: 'c3', quantity: 1, validFrom: '2024-01-01', validTo: null, createdAt: '2024-01-01' },
 ]
 
 const COMPONENTS = [

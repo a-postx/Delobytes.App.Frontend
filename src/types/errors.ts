@@ -19,6 +19,7 @@ export const ErrorCodes = {
     WorkRateNotFound: 'catalog.work_rate.not_found',
     ProductWorkRateValidFromConflict: 'catalog.product_work_rate.valid_from_conflict',
     ProductWorkRateValidFromNotLatest: 'catalog.product_work_rate.valid_from_not_latest',
+    BomLineValidFromConflict: 'catalog.bom_line.valid_from_conflict',
   },
 } as const
 
