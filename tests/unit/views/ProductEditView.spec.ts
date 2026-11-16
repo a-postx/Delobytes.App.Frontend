@@ -122,6 +122,10 @@ describe('ProductEditView: канонические поля связанног�
     expect((wrapper.find('#name').element as HTMLInputElement).disabled).toBe(false)
     expect((wrapper.find('#description').element as HTMLTextAreaElement).disabled).toBe(false)
     expect((wrapper.find('input[placeholder="Длина"]').element as HTMLInputElement).disabled).toBe(false)
+
+    // Бар сохранения появляется вместе с несохранённой правкой, а не до неё.
+    expect(saveButton(wrapper)).toBeFalsy()
+    await wrapper.find('#name').setValue('Товар после правки')
     expect(saveButton(wrapper)).toBeTruthy()
   })
 
@@ -158,6 +162,7 @@ describe('ProductEditView: канонические поля связанног�
     const wrapper = await mountWith(linkedProduct)
     update.mockResolvedValue(undefined)
 
+    await wrapper.find('#description').setValue('Описание с правкой')
     await saveButton(wrapper)!.trigger('click')
     await flushPromises()
 
@@ -214,6 +219,7 @@ describe('ProductEditView: габариты упаковки', () => {
     })
     update.mockResolvedValue(undefined)
 
+    await wrapper.find('#name').setValue('Товар без габаритов')
     await saveButton(wrapper)!.trigger('click')
     await flushPromises()
 
