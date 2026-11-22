@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import ErrorState from '@/components/feedback/ErrorState.vue'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -10,6 +10,8 @@ interface Props {
   loading?: boolean
   error?: string | null
   compact?: boolean
+  /** Размер заголовка задаёт страница: у финансовых карточек он мельче, чем у виджетов дашборда. */
+  titleClass?: string
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -17,6 +19,7 @@ const props = withDefaults(defineProps<Props>(), {
   loading: false,
   error: null,
   compact: false,
+  titleClass: undefined,
 })
 
 const emit = defineEmits<{
@@ -40,7 +43,7 @@ const emit = defineEmits<{
     >
       <div class="flex min-w-0 flex-col gap-1">
         <CardTitle
-          :class="cn(props.compact ? 'truncate text-base' : undefined)"
+          :class="cn(props.compact ? 'truncate text-base' : undefined, props.titleClass)"
           :title="props.compact ? props.title : undefined"
         >
           {{ props.title }}

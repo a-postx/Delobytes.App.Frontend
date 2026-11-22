@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { RouterLink } from 'vue-router'
 import { ArrowRight } from 'lucide-vue-next'
 import DashboardWidget from '@/components/dashboard/DashboardWidget.vue'
@@ -23,6 +23,7 @@ const emit = defineEmits<{
 
 <template>
   <DashboardWidget
+    title-class="text-lg"
     title="Экономика SKU"
     :loading="props.loading"
     :error="props.error"

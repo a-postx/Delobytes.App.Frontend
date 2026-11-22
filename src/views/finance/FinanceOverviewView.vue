@@ -62,7 +62,6 @@ const {
   channelId,
   step,
   rangeLabel,
-  comparisonLabel,
   setPreset,
   setCustomRange,
   setChannel,
@@ -314,7 +313,7 @@ function handleStep(value: Parameters<typeof setStep>[0]): void {
 </script>
 
 <template>
-  <div class="flex flex-col gap-4 p-6">
+  <div class="flex flex-col gap-6 p-6">
     <FinanceOverviewHeader
       :provisional-share="provisional"
       :freshness="freshnessView"
@@ -367,7 +366,6 @@ function handleStep(value: Parameters<typeof setStep>[0]): void {
         :range-label="rangeLabel"
         :channel-id="channelId"
         :channels="channelItems"
-        :comparison-label="comparisonLabel"
         :time-zone="timeZone"
         @update:preset="setPreset"
         @update:range="setCustomRange"

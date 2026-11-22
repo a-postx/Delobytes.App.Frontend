@@ -18,7 +18,6 @@ interface Props {
   rangeLabel: string
   channelId: string | null
   channels: ChannelItem[]
-  comparisonLabel: string
   timeZone: string
 }
 
@@ -114,9 +113,5 @@ function handleChannel(value: unknown): void {
         </SelectItem>
       </SelectContent>
     </Select>
-
-    <p class="ml-auto hidden text-xs text-muted-foreground sm:block">
-      Сравнение с <span class="font-medium text-foreground/80">{{ props.comparisonLabel }}</span>
-    </p>
   </div>
 </template>

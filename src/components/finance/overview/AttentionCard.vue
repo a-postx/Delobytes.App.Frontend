@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { RouterLink } from 'vue-router'
 import { AlertTriangle, CheckCircle2, ChevronRight, Globe } from 'lucide-vue-next'
 import DashboardWidget from '@/components/dashboard/DashboardWidget.vue'
@@ -26,6 +26,7 @@ const toneClasses: Record<AttentionItem['tone'], string> = {
 
 <template>
   <DashboardWidget
+    title-class="text-lg"
     title="Требуют внимания"
     :loading="props.loading"
     :error="props.error"

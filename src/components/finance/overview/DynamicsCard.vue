@@ -129,6 +129,7 @@ function tooltipTemplate(point: unknown): string {
 
 <template>
   <DashboardWidget
+    title-class="text-lg"
     :title="`Динамика по ${props.step === 'Day' ? 'дням' : props.step === 'Week' ? 'неделям' : 'месяцам'}`"
     :loading="props.loading"
     :error="props.error"
@@ -155,22 +156,20 @@ function tooltipTemplate(point: unknown): string {
 
     <div class="flex flex-col gap-4">
       <div
-        class="-mx-6 overflow-x-auto"
+        class="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-muted-foreground"
         aria-hidden="true"
       >
-        <div class="flex min-w-[260px] items-center gap-4 px-6 text-xs text-muted-foreground">
+        <span
+          v-for="(entry, key) in chartConfig"
+          :key="key"
+          class="inline-flex items-center gap-1.5 whitespace-nowrap"
+        >
           <span
-            v-for="(entry, key) in chartConfig"
-            :key="key"
-            class="inline-flex items-center gap-1.5 whitespace-nowrap"
-          >
-            <span
-              class="size-2 rounded-sm"
-              :style="{ backgroundColor: entry.color }"
-            />
-            {{ entry.label }}
-          </span>
-        </div>
+            class="size-2 rounded-sm"
+            :style="{ backgroundColor: entry.color }"
+          />
+          {{ entry.label }}
+        </span>
       </div>
 
       <div

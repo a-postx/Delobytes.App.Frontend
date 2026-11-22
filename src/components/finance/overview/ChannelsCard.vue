@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { computed } from 'vue'
 import type { ComputedRef } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
@@ -43,6 +43,7 @@ function openOperations(): void {
 
 <template>
   <DashboardWidget
+    title-class="text-lg"
     title="Каналы продаж"
     :loading="props.loading"
     :error="props.error"

@@ -360,6 +360,7 @@ export function buildWaterfall(totals: PnlSummaryRow | null, currency: string): 
   const revenue: number = totals?.revenueAmount ?? 0
   const netRevenue: number = totals?.netRevenueAmount ?? 0
   const margin: number = totals?.margin ?? 0
+  const marginKnown: boolean = totals !== null && totals.margin !== null
 
   const allSteps: WaterfallStep[] = [
     { key: 'revenue', label: 'Выручка', amount: revenue, kind: 'total' },
@@ -430,12 +431,16 @@ export function buildWaterfall(totals: PnlSummaryRow | null, currency: string): 
       step.kind === 'sub' && revenue > 0 ? formatSignedPercent((amount / revenue) * 100) : undefined
 
     const formatted: string =
-      step.kind === 'sub' ? formatSignedMoney(amount, currency) : formatMoney(amount, currency)
+      step.kind === 'result' && !marginKnown
+        ? '—'
+        : step.kind === 'sub'
+          ? formatSignedMoney(amount, currency)
+          : formatMoney(amount, currency)
 
     let bar: { offset: number; width: number; kind: PnlBarKind }
 
-    if (step.kind === 'result' && amount < 0) {
-      bar = { offset: 0, width: 0, kind: 'loss' }
+    if (step.kind === 'result' && (!marginKnown || amount < 0)) {
+      bar = { offset: 0, width: 0, kind: amount < 0 ? 'loss' : 'result' }
     } else {
       bar = {
         offset: toPercent(Math.min(start, end)),

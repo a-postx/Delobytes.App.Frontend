@@ -57,6 +57,7 @@ const noMargin: ComputedRef<boolean> = computed<boolean>(
 
 <template>
   <DashboardWidget
+    title-class="text-lg"
     title="Маржинальная прибыль"
     :loading="props.loading"
     :error="props.error"

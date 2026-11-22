@@ -2,7 +2,7 @@
 import { computed } from 'vue'
 import type { ComputedRef } from 'vue'
 import { RouterLink } from 'vue-router'
-import { AlertTriangle, Info } from 'lucide-vue-next'
+import { AlertTriangle } from 'lucide-vue-next'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { formatPercent } from '@/utils/financeFormat'
 import type { FreshnessView } from './overviewModel'
@@ -14,25 +14,39 @@ interface Props {
 
 const props = defineProps<Props>()
 
-const provisionalLabel: ComputedRef<string> = computed<string>(
-  () => `${formatPercent(props.provisionalShare)} выручки пока предварительно`,
+const provisionalLabel: ComputedRef<string | null> = computed<string | null>(() => {
+  if (props.provisionalShare === null || props.provisionalShare <= 0) {
+    return null
+  }
+  return `${formatPercent(props.provisionalShare)} выручки пока предварительно`
+})
+
+const hasFreshness: ComputedRef<boolean> = computed<boolean>(
+  () => props.freshness.updatedLabel !== '',
+)
+
+const hasMeta: ComputedRef<boolean> = computed<boolean>(
+  () => provisionalLabel.value !== null || hasFreshness.value,
 )
 </script>
 
 <template>
-  <header class="flex flex-wrap items-start justify-between gap-4">
-    <div class="min-w-0 flex-1 basis-72">
-      <h1 class="text-2xl font-semibold tracking-tight">
+  <header class="flex flex-wrap items-center justify-between gap-4">
+    <div class="flex flex-col gap-1">
+      <h1 class="text-xl font-bold">
         Финансы
       </h1>
-      <p class="mt-1 max-w-[64ch] text-sm text-muted-foreground">
+      <p class="text-sm text-muted-foreground">
         Выручка, удержания и маржинальная прибыль по финансовым отчётам маркетплейсов
       </p>
     </div>
 
-    <div class="flex max-w-full flex-col items-end gap-1 text-right text-xs text-muted-foreground max-sm:items-start max-sm:text-left">
+    <div
+      v-if="hasMeta"
+      class="flex max-w-full flex-col items-end gap-1 text-right text-xs text-muted-foreground max-sm:items-start max-sm:text-left"
+    >
       <p
-        v-if="props.provisionalShare !== null && props.provisionalShare > 0"
+        v-if="provisionalLabel"
         class="flex items-center gap-1.5 text-foreground/80"
       >
         <span class="size-1.5 shrink-0 rounded-full bg-warning" />
@@ -40,7 +54,7 @@ const provisionalLabel: ComputedRef<string> = computed<string>(
       </p>
 
       <p
-        v-if="props.freshness.updatedLabel"
+        v-if="hasFreshness"
         class="flex flex-wrap items-center justify-end gap-x-1.5 gap-y-1 max-sm:justify-start"
       >
         <span>Обновлено {{ props.freshness.updatedLabel }}</span>
@@ -70,14 +84,6 @@ const provisionalLabel: ComputedRef<string> = computed<string>(
         >
           Качество данных
         </RouterLink>
-      </p>
-
-      <p
-        v-else
-        class="flex items-center gap-1.5"
-      >
-        <Info class="size-3" />
-        Отчёты ещё не загружались
       </p>
     </div>
   </header>

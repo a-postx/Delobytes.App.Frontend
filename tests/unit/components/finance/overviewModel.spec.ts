@@ -152,6 +152,14 @@ describe('buildWaterfall', () => {
     // A positive compensation lifts the running total above the revenue: the scale follows it.
     expect(model.max).toBeGreaterThan(DECEMBER.revenueAmount ?? 0)
   })
+
+  it('shows an unknown margin as a dash instead of zero', () => {
+    const model = buildWaterfall({ ...DECEMBER, margin: null }, 'RUB')
+    const result = rowOf(model, 'margin')
+
+    expect(plain(result.amount)).toBe('—')
+    expect(result.bar?.width).toBe(0)
+  })
 })
 
 describe('buildMarginSummary', () => {
