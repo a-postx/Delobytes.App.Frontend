@@ -691,6 +691,7 @@ export function buildSkuRankings(
 
 export interface DynamicsPoint {
   idx: number
+  periodStart: string
   revenue: number
   margin: number | null
   cost: number
@@ -785,6 +786,7 @@ export function buildDynamicsSeries(
 
     const point: DynamicsPoint = {
       idx,
+      periodStart: row.periodStart,
       revenue,
       margin: row.margin,
       cost: row.productionCostWithMarginAmount,
@@ -810,7 +812,7 @@ export function buildDynamicsSeries(
 
 export function buildDynamicsTable(points: DynamicsPoint[], currency: string): DynamicsTableRow[] {
   return points.map((point: DynamicsPoint) => ({
-    key: `period-${point.idx}`,
+    key: `period-${point.periodStart}`,
     label: point.label,
     revenue: formatMoney(point.revenue, currency),
     margin: point.margin === null ? '—' : formatMoney(point.margin, currency),

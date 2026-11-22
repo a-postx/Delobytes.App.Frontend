@@ -53,6 +53,17 @@ const coverageLabel: ComputedRef<string> = computed<string>(() =>
 const noMargin: ComputedRef<boolean> = computed<boolean>(
   () => props.totals !== null && props.totals.margin === null,
 )
+
+const deltaToneClass: ComputedRef<string> = computed<string>(() => {
+  if (!summary.value.delta) {
+    return 'text-muted-foreground'
+  }
+  return summary.value.delta.tone === 'positive'
+    ? 'text-success'
+    : summary.value.delta.tone === 'negative'
+      ? 'text-destructive'
+      : 'text-muted-foreground'
+})
 </script>
 
 <template>
@@ -104,7 +115,7 @@ const noMargin: ComputedRef<boolean> = computed<boolean>(
           <span
             v-if="summary.delta"
             class="inline-flex items-center gap-0.5 font-medium tabular-nums"
-            :class="summary.delta.tone === 'positive' ? 'text-success' : summary.delta.tone === 'negative' ? 'text-destructive' : 'text-muted-foreground'"
+            :class="deltaToneClass"
           >
             <ArrowUp
               v-if="summary.delta.direction === 'up'"

@@ -8,19 +8,62 @@ const MONTHS_SHORT: string[] = [
   'июл', 'авг', 'сен', 'окт', 'ноя', 'дек',
 ]
 
-export function currencySymbol(currency: string): string {
-  try {
-    const parts: Intl.NumberFormatPart[] = new Intl.NumberFormat(LOCALE, {
+const currencySymbols = new Map<string, string>()
+const moneyFormatters = new Map<string, Intl.NumberFormat>()
+const numberFormatters = new Map<number, Intl.NumberFormat>()
+
+function moneyFormatter(currency: string, fractionDigits: number): Intl.NumberFormat {
+  const key = `${currency}:${fractionDigits}`
+  let formatter: Intl.NumberFormat | undefined = moneyFormatters.get(key)
+
+  if (!formatter) {
+    formatter = new Intl.NumberFormat(LOCALE, {
       style: 'currency',
       currency,
-    }).formatToParts(0)
+      minimumFractionDigits: fractionDigits,
+      maximumFractionDigits: fractionDigits,
+    })
+    moneyFormatters.set(key, formatter)
+  }
+
+  return formatter
+}
+
+function numberFormatter(fractionDigits: number): Intl.NumberFormat {
+  let formatter: Intl.NumberFormat | undefined = numberFormatters.get(fractionDigits)
+
+  if (!formatter) {
+    formatter = new Intl.NumberFormat(LOCALE, {
+      minimumFractionDigits: fractionDigits,
+      maximumFractionDigits: fractionDigits,
+    })
+    numberFormatters.set(fractionDigits, formatter)
+  }
+
+  return formatter
+}
+
+export function currencySymbol(currency: string): string {
+  const cached: string | undefined = currencySymbols.get(currency)
+
+  if (cached !== undefined) {
+    return cached
+  }
+
+  let symbol: string = currency
+
+  try {
+    const parts: Intl.NumberFormatPart[] = moneyFormatter(currency, 0).formatToParts(0)
     const currencyPart: Intl.NumberFormatPart | undefined = parts.find(
       (part: Intl.NumberFormatPart) => part.type === 'currency',
     )
-    return currencyPart?.value ?? currency
+    symbol = currencyPart?.value ?? currency
   } catch {
-    return currency
+    symbol = currency
   }
+
+  currencySymbols.set(currency, symbol)
+  return symbol
 }
 
 function withMinus(text: string): string {
@@ -37,12 +80,7 @@ export function formatMoney(
     return '—'
   }
 
-  const text: string = new Intl.NumberFormat(LOCALE, {
-    style: 'currency',
-    currency,
-    minimumFractionDigits: fractionDigits,
-    maximumFractionDigits: fractionDigits,
-  }).format(value)
+  const text: string = moneyFormatter(currency, fractionDigits).format(value)
 
   return withMinus(text)
 }
@@ -66,12 +104,7 @@ export function formatSignedMoney(
 }
 
 export function formatNumber(value: number, fractionDigits = 0): string {
-  return withMinus(
-    new Intl.NumberFormat(LOCALE, {
-      minimumFractionDigits: fractionDigits,
-      maximumFractionDigits: fractionDigits,
-    }).format(value),
-  )
+  return withMinus(numberFormatter(fractionDigits).format(value))
 }
 
 /** Percentage from a ratio already expressed as a percent: `39.0` → `39,0%`. */

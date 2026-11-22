@@ -68,6 +68,11 @@ const accessibleSteps: ComputedRef<Record<FinanceGranularity, boolean>> = comput
 
 const hasTable: ComputedRef<boolean> = computed<boolean>(() => props.step !== 'Day')
 
+const title: ComputedRef<string> = computed<string>(() => {
+  const unit = props.step === 'Day' ? 'дням' : props.step === 'Week' ? 'неделям' : 'месяцам'
+  return `Динамика по ${unit}` 
+})
+
 function stepTitle(step: FinanceGranularity): string | undefined {
   return accessibleSteps.value[step]
     ? undefined
@@ -130,7 +135,7 @@ function tooltipTemplate(point: unknown): string {
 <template>
   <DashboardWidget
     title-class="text-lg"
-    :title="`Динамика по ${props.step === 'Day' ? 'дням' : props.step === 'Week' ? 'неделям' : 'месяцам'}`"
+    :title="title"
     :loading="props.loading"
     :error="props.error"
     @retry="emit('retry')"
@@ -174,6 +179,8 @@ function tooltipTemplate(point: unknown): string {
 
       <div
         ref="chartContainerRef"
+        role="img"
+        :aria-label="title"
         class="transition-opacity"
         :class="props.loading ? 'opacity-60' : undefined"
       >

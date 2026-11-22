@@ -1,5 +1,5 @@
-import { computed, ref, watch } from 'vue'
-import type { ComputedRef, Ref } from 'vue'
+import { computed } from 'vue'
+import type { ComputedRef } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import type { LocationQueryValue } from 'vue-router'
 import { useTenantToday } from '@/composables/useTenantToday'
@@ -21,6 +21,20 @@ export const FINANCE_MAX_PERIODS = 366
 
 const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/
 
+export interface FinanceOverviewFilters {
+  preset: ComputedRef<FinancePeriodPreset>
+  currentRange: ComputedRef<FinanceRange>
+  comparisonRange: ComputedRef<FinanceRange>
+  channelId: ComputedRef<string | null>
+  step: ComputedRef<FinanceGranularity>
+  rangeLabel: ComputedRef<string>
+  setPreset: (next: FinancePeriodPreset) => void
+  setCustomRange: (range: FinanceRange) => void
+  setChannel: (next: string | null) => void
+  setStep: (next: FinanceGranularity) => void
+  isStepAllowed: (candidate: FinanceGranularity) => boolean
+}
+
 function queryValue(value: LocationQueryValue | LocationQueryValue[] | undefined): string | null {
   if (Array.isArray(value)) {
     return typeof value[0] === 'string' ? value[0] : null
@@ -33,43 +47,50 @@ function isGranularity(value: unknown): value is FinanceGranularity {
 }
 
 /**
- * Filters of the finance overview, kept in the URL so a refresh or a shared link restores the same
- * report. Invalid values fall back to the defaults silently.
+ * Filters of the finance overview. The URL is the single source of truth: every value is derived
+ * from `route.query`, so a shared link, a refresh and browser navigation all restore the same
+ * report. Actions only rewrite the query; invalid values fall back to the defaults silently.
  */
-export function useFinanceOverviewFilters() {
+export function useFinanceOverviewFilters(): FinanceOverviewFilters {
   const route = useRoute()
   const router = useRouter()
   const { todayIso } = useTenantToday()
 
-  const initialPreset: unknown = queryValue(route.query.period)
-  const preset: Ref<FinancePeriodPreset> = ref<FinancePeriodPreset>(
-    isFinancePeriodPreset(initialPreset) ? initialPreset : 'lastMonth',
-  )
-
-  const initialFrom: string | null = queryValue(route.query.from)
-  const initialTo: string | null = queryValue(route.query.to)
-  const hasValidCustom =
-    initialFrom !== null &&
-    initialTo !== null &&
-    ISO_DATE_PATTERN.test(initialFrom) &&
-    ISO_DATE_PATTERN.test(initialTo) &&
-    initialFrom <= initialTo
-
-  const customFrom: Ref<string> = ref<string>(hasValidCustom ? (initialFrom as string) : todayIso())
-  const customTo: Ref<string> = ref<string>(hasValidCustom ? (initialTo as string) : todayIso())
-
-  const channelId: Ref<string | null> = ref<string | null>(queryValue(route.query.channel))
-  const stepOverride: Ref<FinanceGranularity | null> = ref<FinanceGranularity | null>(
-    isGranularity(queryValue(route.query.step)) ? (queryValue(route.query.step) as FinanceGranularity) : null,
-  )
-
   const today: ComputedRef<string> = computed<string>(() => todayIso())
 
+  const preset: ComputedRef<FinancePeriodPreset> = computed<FinancePeriodPreset>(() => {
+    const raw: string | null = queryValue(route.query.period)
+    return isFinancePeriodPreset(raw) ? raw : 'lastMonth'
+  })
+
+  const customRange: ComputedRef<FinanceRange> = computed<FinanceRange>(() => {
+    const from: string | null = queryValue(route.query.from)
+    const to: string | null = queryValue(route.query.to)
+
+    if (
+      from !== null &&
+      to !== null &&
+      ISO_DATE_PATTERN.test(from) &&
+      ISO_DATE_PATTERN.test(to) &&
+      from <= to
+    ) {
+      return { from, to }
+    }
+
+    return { from: today.value, to: today.value }
+  })
+
+  const channelId: ComputedRef<string | null> = computed<string | null>(() =>
+    queryValue(route.query.channel),
+  )
+
+  const stepOverride: ComputedRef<FinanceGranularity | null> = computed<FinanceGranularity | null>(() => {
+    const raw: string | null = queryValue(route.query.step)
+    return isGranularity(raw) ? raw : null
+  })
+
   const ranges = computed(() =>
-    resolveFinancePeriod(preset.value, today.value, {
-      from: customFrom.value,
-      to: customTo.value,
-    }),
+    resolveFinancePeriod(preset.value, today.value, customRange.value),
   )
 
   const currentRange: ComputedRef<FinanceRange> = computed<FinanceRange>(() => ranges.value.current)
@@ -89,54 +110,73 @@ export function useFinanceOverviewFilters() {
     formatRangeLabel(currentRange.value.from, currentRange.value.to),
   )
 
-  const comparisonLabel: ComputedRef<string> = computed<string>(() =>
-    formatRangeLabel(comparisonRange.value.from, comparisonRange.value.to),
-  )
+  function stepFor(range: FinanceRange, preferred: FinanceGranularity | null): FinanceGranularity {
+    if (preferred !== null && granularityPeriodCount(range, preferred) <= FINANCE_MAX_PERIODS) {
+      return preferred
+    }
+    return defaultGranularity(range)
+  }
+
+  function replaceQuery(
+    nextPreset: FinancePeriodPreset,
+    range: FinanceRange,
+    nextChannel: string | null,
+    preferredStep: FinanceGranularity | null,
+  ): void {
+    const nextRange: FinanceRange = resolveFinancePeriod(nextPreset, today.value, range).current
+    const query: Record<string, string> = {
+      period: nextPreset,
+      step: stepFor(nextRange, preferredStep),
+    }
+
+    if (nextPreset === 'custom') {
+      query.from = range.from
+      query.to = range.to
+    }
+
+    if (nextChannel) {
+      query.channel = nextChannel
+    }
+
+    void router.replace({ query })
+  }
 
   function setPreset(next: FinancePeriodPreset): void {
-    preset.value = next
+    replaceQuery(next, customRange.value, channelId.value, stepOverride.value)
   }
 
   function setCustomRange(range: FinanceRange): void {
     if (range.from > range.to) {
       return
     }
-    customFrom.value = range.from
-    customTo.value = range.to
-    preset.value = 'custom'
+    replaceQuery('custom', range, channelId.value, stepOverride.value)
   }
 
   function setChannel(next: string | null): void {
-    channelId.value = next
+    replaceQuery(preset.value, customRange.value, next, stepOverride.value)
   }
 
   function setStep(next: FinanceGranularity): void {
-    if (isStepAllowed(next)) {
-      stepOverride.value = next
+    if (!isStepAllowed(next)) {
+      return
     }
+
+    const query: Record<string, string> = {
+      period: preset.value,
+      step: next,
+    }
+
+    if (preset.value === 'custom') {
+      query.from = customRange.value.from
+      query.to = customRange.value.to
+    }
+
+    if (channelId.value) {
+      query.channel = channelId.value
+    }
+
+    void router.replace({ query })
   }
-
-  watch(
-    [preset, customFrom, customTo, channelId, step],
-    () => {
-      const query: Record<string, string> = {
-        period: preset.value,
-        step: step.value,
-      }
-
-      if (preset.value === 'custom') {
-        query.from = customFrom.value
-        query.to = customTo.value
-      }
-
-      if (channelId.value) {
-        query.channel = channelId.value
-      }
-
-      void router.replace({ query })
-    },
-    { flush: 'post' },
-  )
 
   return {
     preset,
@@ -145,7 +185,6 @@ export function useFinanceOverviewFilters() {
     channelId,
     step,
     rangeLabel,
-    comparisonLabel,
     setPreset,
     setCustomRange,
     setChannel,

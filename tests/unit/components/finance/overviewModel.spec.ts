@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+﻿import { describe, expect, it } from 'vitest'
 import type { PnlProductRankingResponse, PnlSummaryRow } from '@/types/finance'
 import type { PnlStatementRow } from '@/components/finance/types'
 import {
@@ -372,6 +372,7 @@ describe('buildDynamicsSeries', () => {
     expect(points[0].isPartial).toBe(true)
     expect(points[0].deductions).toBe(74000)
     expect(buildDynamicsTable(points, 'RUB')[0].partialNote).toBe('3 дн.')
+    expect(buildDynamicsTable(points, 'RUB')[0].key).toBe('period-2025-12-29')
   })
 
   it('labels months and keeps an unknown margin as an em dash', () => {
