@@ -206,6 +206,8 @@ function tooltipTemplate(point: unknown): string {
             />
             <ChartCrosshair
               :data="props.points"
+              :x="xIndex"
+              :y="[yMargin, yCost, yNoCost, yDeductions]"
               :color="SERIES_COLORS"
               :template="tooltipTemplate"
             />

@@ -253,7 +253,7 @@ export function buildCoverageBanner(totals: PnlSummaryRow | null): { title: stri
 
   return {
     title: `Себестоимость известна только для ${formatNumber(coverage * 100, 0)}% выручки`,
-    description: 'Маржа и ROI посчитаны по части товаров — сравнение с прошлым периодом некорректно.',
+    description: 'Маржа и ROI посчитаны некорректно.',
   }
 }
 
