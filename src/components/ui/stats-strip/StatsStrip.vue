@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { ArrowDown, ArrowUp } from 'lucide-vue-next'
 import { cn } from '@/lib/utils'
-import type { StatsStripItem, StatsTone } from './types'
+import type { StatsDeltaTone, StatsStripItem, StatsTone } from './types'
 
 const props = withDefaults(
   defineProps<{
@@ -18,6 +19,12 @@ const toneClasses: Record<StatsTone, string> = {
   positive: 'text-success',
   negative: 'text-destructive',
   warning: 'text-warning',
+}
+
+const deltaToneClasses: Record<StatsDeltaTone, string> = {
+  positive: 'text-success',
+  negative: 'text-destructive',
+  neutral: 'text-muted-foreground',
 }
 
 const resolvedColumns = computed<number>(() => {
@@ -61,13 +68,31 @@ function cellClass(index: number): string {
           {{ item.label }}
         </p>
         <p :class="cn('mt-0.5 text-xl font-semibold tracking-tight tabular-nums', toneClasses[item.tone ?? 'default'])">
-          {{ item.value }}
+          {{ item.value }}<span
+            v-if="item.unit"
+            class="ml-0.5 text-xs font-medium text-muted-foreground"
+          >{{ item.unit }}</span>
         </p>
         <p
-          v-if="item.caption"
-          class="mt-0.5 text-xs text-muted-foreground"
+          v-if="item.caption || item.delta"
+          class="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-xs text-muted-foreground"
         >
-          {{ item.caption }}
+          <span
+            v-if="item.delta"
+            :class="cn('inline-flex items-center gap-0.5 font-medium tabular-nums', deltaToneClasses[item.delta.tone])"
+            data-slot="stats-strip-delta"
+          >
+            <ArrowUp
+              v-if="item.delta.direction === 'up'"
+              class="size-3"
+            />
+            <ArrowDown
+              v-else-if="item.delta.direction === 'down'"
+              class="size-3"
+            />
+            {{ item.delta.text }}
+          </span>
+          <span v-if="item.caption">{{ item.caption }}</span>
         </p>
       </div>
     </div>

@@ -1,4 +1,4 @@
-import type { RouteRecordRaw } from 'vue-router'
+﻿import type { RouteRecordRaw } from 'vue-router'
 import AppLayout from '@/layouts/AppLayout.vue'
 import { NavGroup } from '@/router/navGroups'
 import HomeView from '@/views/HomeView.vue'
@@ -18,6 +18,8 @@ import ProductEditView from '@/views/ProductEditView.vue'
 import WorkRatesView from '@/views/WorkRatesView.vue'
 import ProductWorkRatesView from '@/views/ProductWorkRatesView.vue'
 import StepperDemoView from '@/views/StepperDemoView.vue'
+import FinanceOverviewView from '@/views/finance/FinanceOverviewView.vue'
+import FinanceStubView from '@/views/finance/FinanceStubView.vue'
 import ProductImportsView from '@/views/ProductImportsView.vue'
 import NotFoundView from '@/views/NotFoundView.vue'
 
@@ -147,6 +149,46 @@ export const routes: RouteRecordRaw[] = [
         meta: {
           group: NavGroup.Production,
           title: 'Нормы выработки',
+          requiresAuth: true,
+        },
+      },
+      {
+        path: 'finance',
+        name: 'finance-overview',
+        component: FinanceOverviewView,
+        meta: {
+          group: NavGroup.Finance,
+          title: 'Обзор',
+          requiresAuth: true,
+        },
+      },
+      {
+        path: 'finance/products',
+        name: 'finance-products',
+        component: FinanceStubView,
+        meta: {
+          group: NavGroup.Finance,
+          title: 'Товары',
+          requiresAuth: true,
+        },
+      },
+      {
+        path: 'finance/operations',
+        name: 'finance-operations',
+        component: FinanceStubView,
+        meta: {
+          group: NavGroup.Finance,
+          title: 'Операции',
+          requiresAuth: true,
+        },
+      },
+      {
+        path: 'finance/quality',
+        name: 'finance-quality',
+        component: FinanceStubView,
+        meta: {
+          group: NavGroup.Finance,
+          title: 'Качество данных',
           requiresAuth: true,
         },
       },

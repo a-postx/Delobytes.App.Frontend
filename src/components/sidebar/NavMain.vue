@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import {
   ChevronRight,
   BookOpen,
@@ -13,8 +13,12 @@ import {
   Factory,
   Download,
   GalleryHorizontalEnd,
+  ChartLine,
+  Package,
+  ReceiptText,
+  ShieldCheck,
 } from 'lucide-vue-next'
-import { RouterLink } from 'vue-router'
+import { RouterLink, useRoute } from 'vue-router'
 import {
   Collapsible,
   CollapsibleContent,
@@ -31,6 +35,8 @@ import {
   SidebarMenuSubItem,
 } from '@/components/ui/sidebar'
 
+const route = useRoute()
+
 const productionItems = [
   { to: '/catalogs/components', label: 'Компоненты', icon: PackageOpen },
   { to: '/catalogs/work-rates', label: 'Ставки работ', icon: Hammer },
@@ -39,6 +45,13 @@ const productionItems = [
 
 const referenceItems = [
   { to: '/catalogs/suppliers', label: 'Контрагенты', icon: Truck },
+]
+
+const financeItems = [
+  { to: '/finance', label: 'Обзор', icon: ChartLine },
+  { to: '/finance/products', label: 'Товары', icon: Package },
+  { to: '/finance/operations', label: 'Операции', icon: ReceiptText },
+  { to: '/finance/quality', label: 'Качество данных', icon: ShieldCheck },
 ]
 </script>
 
@@ -54,6 +67,33 @@ const referenceItems = [
           <RouterLink to="/">
             <LayoutDashboard />
             <span>Главная</span>
+          </RouterLink>
+        </SidebarMenuButton>
+      </SidebarMenuItem>
+    </SidebarMenu>
+  </SidebarGroup>
+
+  <SidebarGroup>
+    <SidebarGroupLabel>Финансы</SidebarGroupLabel>
+    <SidebarMenu>
+      <SidebarMenuItem
+        v-for="item in financeItems"
+        :key="item.to"
+      >
+        <SidebarMenuButton
+          as-child
+          :tooltip="item.label"
+          :is-active="route.path === item.to"
+        >
+          <RouterLink
+            :to="item.to"
+            class="flex items-center gap-2"
+          >
+            <component
+              :is="item.icon"
+              class="size-4 shrink-0"
+            />
+            <span>{{ item.label }}</span>
           </RouterLink>
         </SidebarMenuButton>
       </SidebarMenuItem>

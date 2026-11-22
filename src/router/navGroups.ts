@@ -1,4 +1,4 @@
-import type { RouteLocationNormalizedLoaded } from 'vue-router'
+﻿import type { RouteLocationNormalizedLoaded } from 'vue-router'
 
 /**
  * Разделы главного меню. Отдельный модуль, чтобы заголовок раздела в хлебных
@@ -6,6 +6,7 @@ import type { RouteLocationNormalizedLoaded } from 'vue-router'
  */
 export const NavGroup = {
   Panels: 'panels',
+  Finance: 'finance',
   Platform: 'platform',
   Production: 'production',
   System: 'system',
@@ -15,6 +16,7 @@ export type NavGroupType = typeof NavGroup[keyof typeof NavGroup]
 
 export const navGroupLabels: Record<NavGroupType, string> = {
   [NavGroup.Panels]: 'Панели',
+  [NavGroup.Finance]: 'Финансы',
   [NavGroup.Platform]: 'Платформа',
   [NavGroup.Production]: 'Производство',
   [NavGroup.System]: 'Система',

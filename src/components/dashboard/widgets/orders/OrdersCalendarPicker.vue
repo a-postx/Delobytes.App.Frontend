@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { computed, nextTick, ref, shallowRef, watch } from 'vue'
 import type { ComputedRef, Ref, ShallowRef } from 'vue'
 import { CalendarDate, endOfMonth, getDayOfWeek } from '@internationalized/date'
@@ -19,9 +19,16 @@ interface OrdersDateRange {
 
 interface Props {
   timeZone: string
+  /** Финансовый обзор задаёт период своим тулбаром: пресеты календаря здесь лишние. */
+  showPresets?: boolean
+  /** Компактная подпись триггера для страницы, которая показывает диапазон по-своему. */
+  triggerLabel?: string
 }
 
-const props = defineProps<Props>()
+const props = withDefaults(defineProps<Props>(), {
+  showPresets: true,
+  triggerLabel: undefined,
+})
 
 const modelValue = defineModel<OrdersDateRange>({ required: true })
 
@@ -43,7 +50,7 @@ const monthSectionRefs: Record<number, HTMLElement | null> = {}
 
 const todayValue: ComputedRef<CalendarDate> = computed<CalendarDate>(() => getTenantToday(props.timeZone))
 
-const triggerLabel: ComputedRef<string> = computed<string>(
+const defaultTriggerLabel: ComputedRef<string> = computed<string>(
   () => `${formatFullDate(modelValue.value.from)} – ${formatFullDate(modelValue.value.to)}`,
 )
 
@@ -276,7 +283,7 @@ function selectPreset(id: OrdersPeriodPresetId): void {
         class="justify-start font-normal"
       >
         <CalendarDays class="size-4" />
-        {{ triggerLabel }}
+        {{ props.triggerLabel ?? defaultTriggerLabel }}
       </Button>
     </PopoverTrigger>
     <PopoverContent
@@ -359,7 +366,10 @@ function selectPreset(id: OrdersPeriodPresetId): void {
         </div>
 
         <div class="flex w-48 shrink-0 flex-col gap-3 p-3">
-          <div class="flex flex-col gap-1">
+          <div
+            v-if="props.showPresets"
+            class="flex flex-col gap-1"
+          >
             <Button
               v-for="preset in ORDERS_PERIOD_PRESETS"
               :key="preset.id"
@@ -375,7 +385,10 @@ function selectPreset(id: OrdersPeriodPresetId): void {
             </Button>
           </div>
 
-          <div class="h-px bg-border" />
+          <div
+            v-if="props.showPresets"
+            class="h-px bg-border"
+          />
 
           <div class="flex flex-col gap-1.5">
             <Label class="text-xs text-muted-foreground">Начало периода</Label>

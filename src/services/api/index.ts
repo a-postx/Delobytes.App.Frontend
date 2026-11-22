@@ -1,4 +1,4 @@
-export { apiClient, axiosInstance } from './client'
+﻿export { apiClient, axiosInstance } from './client'
 export { healthApi } from './endpoints/health'
 export { integrationsApi } from './endpoints/integrations'
 export { meApi } from './endpoints/me'
@@ -34,6 +34,19 @@ export {
 } from './endpoints/catalogs'
 export { bomApi, productCostApi } from './endpoints/bom'
 export { salesOrdersApi } from './endpoints/sales'
+export { financePnlApi } from './endpoints/finance'
+export type {
+  PnlCurrencyExclusion,
+  PnlFeedChannelFreshness,
+  PnlFeedFreshnessResponse,
+  PnlProductRankingResponse,
+  PnlRankingCoverage,
+  PnlRankingSortBy,
+  PnlSummaryResponse,
+  PnlSummaryRow,
+  GetPnlProductRankingParams,
+  GetPnlSummaryParams,
+} from '@/types/finance'
 export type {
   OrdersChartGranularity,
   OrdersChartPoint,

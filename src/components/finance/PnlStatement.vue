@@ -1,14 +1,20 @@
 <script setup lang="ts">
+import { computed } from 'vue'
+import type { ComputedRef } from 'vue'
 import { cn } from '@/lib/utils'
-import type { PnlRowTone, PnlStatementRow } from './types'
+import type { PnlAxisTick, PnlBarKind, PnlRowTone, PnlStatementRow } from './types'
 
 const props = withDefaults(
   defineProps<{
     rows: PnlStatementRow[]
     footnote?: string
+    axisTicks?: PnlAxisTick[]
+    ariaLabel?: string
   }>(),
   {
     footnote: undefined,
+    axisTicks: () => [],
+    ariaLabel: undefined,
   },
 )
 
@@ -20,6 +26,24 @@ const toneClasses: Record<PnlRowTone, string> = {
   muted: 'text-muted-foreground/70',
 }
 
+const barClasses: Record<PnlBarKind, string> = {
+  total: 'bg-foreground/70',
+  increase: 'bg-success/55',
+  decrease: 'bg-muted-foreground/35',
+  result: 'bg-success',
+}
+
+const hasBars: ComputedRef<boolean> = computed<boolean>(() =>
+  props.rows.some((row: PnlStatementRow) => row.bar !== undefined),
+)
+
+// The bar column exists only for the waterfall: the plain statement keeps its original grid.
+const gridClass: ComputedRef<string> = computed<string>(() =>
+  hasBars.value
+    ? 'grid grid-cols-[minmax(0,10.5rem)_minmax(56px,1fr)_auto_auto] items-center gap-3 rounded-md px-2 py-1.5 text-sm'
+    : 'grid grid-cols-[minmax(0,1fr)_auto_auto] items-baseline gap-3 rounded-md px-2 py-1.5 text-sm',
+)
+
 function toneOf(row: PnlStatementRow): PnlRowTone {
   return row.tone ?? 'default'
 }
@@ -27,23 +51,58 @@ function toneOf(row: PnlStatementRow): PnlRowTone {
 function isIndented(row: PnlStatementRow): boolean {
   return toneOf(row) === 'sub' || toneOf(row) === 'muted'
 }
+
+function barStyle(row: PnlStatementRow): Record<string, string> {
+  const bar = row.bar
+  if (!bar) {
+    return {}
+  }
+  return {
+    left: `${Math.max(0, Math.min(100, bar.offset))}%`,
+    width: `${Math.max(0, Math.min(100, bar.width))}%`,
+  }
+}
 </script>
 
 <template>
   <div
     class="flex flex-col"
+    :role="props.ariaLabel ? 'table' : undefined"
+    :aria-label="props.ariaLabel"
     data-slot="pnl-statement"
   >
     <div
+      v-if="hasBars && props.axisTicks.length > 0"
+      :class="gridClass"
+      aria-hidden="true"
+      data-slot="pnl-axis"
+    >
+      <span />
+      <span class="relative block h-4 border-b border-border">
+        <span
+          v-for="tick in props.axisTicks"
+          :key="`${tick.position}-${tick.label}`"
+          class="absolute bottom-0 whitespace-nowrap text-[11px] tabular-nums text-muted-foreground first:translate-x-0"
+          :style="{ left: `${tick.position}%`, transform: tick.position === 0 ? 'none' : 'translateX(-50%)' }"
+        >
+          {{ tick.label }}
+        </span>
+      </span>
+      <span />
+      <span />
+    </div>
+
+    <div
       v-for="row in props.rows"
       :key="row.key ?? row.label"
-      :class="cn(
-        'grid grid-cols-[minmax(0,1fr)_auto_auto] items-baseline gap-3 rounded-md px-2 py-1.5 text-sm',
-        toneClasses[toneOf(row)],
-      )"
+      :class="cn(gridClass, toneClasses[toneOf(row)])"
+      :role="props.ariaLabel ? 'row' : undefined"
       data-slot="pnl-row"
     >
-      <span :class="cn('flex min-w-0 items-center gap-1.5', isIndented(row) && 'pl-3.5')">
+      <span
+        :class="cn('flex min-w-0 items-center gap-1.5', isIndented(row) && 'pl-3.5')"
+        :role="props.ariaLabel ? 'cell' : undefined"
+      >
         <span class="truncate">{{ row.label }}</span>
         <span
           v-if="row.chip"
@@ -52,8 +111,25 @@ function isIndented(row: PnlStatementRow): boolean {
           {{ row.chip }}
         </span>
       </span>
-      <span class="tabular-nums">{{ row.amount }}</span>
-      <span class="w-12 text-right text-xs tabular-nums opacity-70">{{ row.percent }}</span>
+      <span
+        v-if="hasBars"
+        class="relative block h-4"
+        aria-hidden="true"
+      >
+        <span
+          v-if="row.bar"
+          :class="cn('absolute top-1/2 h-3 -translate-y-1/2 rounded-[3px]', barClasses[row.bar.kind])"
+          :style="barStyle(row)"
+        />
+      </span>
+      <span
+        class="tabular-nums"
+        :role="props.ariaLabel ? 'cell' : undefined"
+      >{{ row.amount }}</span>
+      <span
+        class="w-12 text-right text-xs tabular-nums opacity-70"
+        :role="props.ariaLabel ? 'cell' : undefined"
+      >{{ row.percent }}</span>
     </div>
     <p
       v-if="props.footnote"
