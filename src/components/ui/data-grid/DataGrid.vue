@@ -1,6 +1,6 @@
 <script setup lang="ts" generic="T extends DataGridRow">
 /* eslint-disable vue/require-default-prop -- необязательность выражена типом; default изменил бы контракт пропса */
-import type { ColumnDef, ExpandedState, RowSelectionState, SortingState, VisibilityState } from '@tanstack/vue-table'
+import type { ColumnDef, ExpandedState, Header, RowSelectionState, SortingState, VisibilityState } from '@tanstack/vue-table'
 import { FlexRender, getCoreRowModel, getExpandedRowModel, useVueTable } from '@tanstack/vue-table'
 import { Check, Minus, Package } from 'lucide-vue-next'
 import { computed, toRef } from 'vue'
@@ -135,6 +135,55 @@ const table = useVueTable({
   },
 })
 
+const headerRows = computed(() => table.getHeaderGroups())
+
+/**
+ * Колонки вне групп рисуются одной ячейкой на все строки шапки: tanstack отдаёт их подпись только
+ * в последней строке, а выше — пустую заглушку. Без склейки первая колонка висит пустой клеткой
+ * над собственным названием.
+ */
+const mergedHeaderColumnIds = computed<Set<string>>(() => {
+  const rows = headerRows.value
+  const firstRow = rows[0]
+  if (!firstRow || rows.length < 2) {
+    return new Set<string>()
+  }
+  const merged = new Set<string>()
+  for (const header of firstRow.headers) {
+    if (header.isPlaceholder && header.column.depth === 0 && !header.column.columns?.length) {
+      merged.add(header.column.id)
+    }
+  }
+  return merged
+})
+
+function isHeaderCellVisible(rowIndex: number, header: Header<T, unknown>): boolean {
+  if (rowIndex === 0) {
+    return true
+  }
+  return !mergedHeaderColumnIds.value.has(header.column.id)
+}
+
+function headerColSpan(header: Header<T, unknown>): number {
+  return Math.max(header.colSpan, 1)
+}
+
+function headerRowSpan(rowIndex: number, header: Header<T, unknown>): number {
+  if (rowIndex === 0 && mergedHeaderColumnIds.value.has(header.column.id)) {
+    return headerRows.value.length
+  }
+  return Math.max(header.rowSpan, 1)
+}
+
+function headerVariant(header: Header<T, unknown>): 'column' | 'group' {
+  return header.column.columns?.length ? 'group' : 'column'
+}
+
+/** Колонки действий не группируются: colspan ей не нужен, а rowspan — только когда шапка многоуровневая. */
+function headerRowSpanAttr(rowIndex: number, header: Header<T, unknown>): number | undefined {
+  const span = headerRowSpan(rowIndex, header)
+  return span > 1 ? span : undefined
+}
 /**
  * Выбор сознательно ограничен загруженной страницей: `toggleAllPageRowsSelected`
  * трогает только строки из `data`, поэтому в состояние не попадают id невидимых строк.
@@ -214,11 +263,12 @@ const summaryClass = 'text-xs text-muted-foreground'
     <Table v-else>
       <TableHeader>
         <TableRow
-          v-for="headerGroup in table.getHeaderGroups()"
+          v-for="(headerGroup, rowIndex) in headerRows"
           :key="headerGroup.id"
         >
           <TableHead
-            v-if="props.selectable"
+            v-if="props.selectable && rowIndex === 0"
+            :rowspan="headerRows.length > 1 ? headerRows.length : undefined"
             :class="selectCellClass"
           >
             <CheckboxRoot
@@ -250,7 +300,8 @@ const summaryClass = 'text-xs text-muted-foreground'
           >
             <!-- Настройка колонок живёт в заголовке столбца действий: отдельная панель над таблицей не нужна. -->
             <TableHead
-              v-if="props.actionsColumnId && header.column.id === props.actionsColumnId"
+              v-if="props.actionsColumnId && header.column.id === props.actionsColumnId && isHeaderCellVisible(rowIndex, header)"
+              :rowspan="headerRowSpanAttr(rowIndex, header)"
               :class="actionsHeadClass"
             >
               <slot
@@ -261,9 +312,12 @@ const summaryClass = 'text-xs text-muted-foreground'
               </slot>
             </TableHead>
             <DataGridColumnHeader
-              v-else
+              v-else-if="isHeaderCellVisible(rowIndex, header)"
               :column="header.column"
               :title="header.column.columnDef.meta?.title ?? header.column.id"
+              :col-span="headerColSpan(header)"
+              :row-span="headerRowSpan(rowIndex, header)"
+              :variant="headerVariant(header)"
             >
               <FlexRender
                 :render="header.column.columnDef.header"

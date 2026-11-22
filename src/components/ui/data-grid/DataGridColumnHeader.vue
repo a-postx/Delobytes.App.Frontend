@@ -1,5 +1,6 @@
 <script setup lang="ts" generic="T">
 import type { Column } from '@tanstack/vue-table'
+import type { HTMLAttributes } from 'vue'
 import { ArrowDown, ArrowUp, ChevronsUpDown } from 'lucide-vue-next'
 import { computed } from 'vue'
 import { TableHead } from '@/components/ui/table'
@@ -8,15 +9,29 @@ import { cn } from '@/lib/utils'
 interface Props {
   column: Column<T, unknown>
   title: string
-  class?: string
+  class?: HTMLAttributes['class']
+  colSpan?: number
+  rowSpan?: number
+  variant?: 'column' | 'group'
 }
 
-const props = defineProps<Props>()
+const props = withDefaults(defineProps<Props>(), {
+  class: undefined,
+  colSpan: 1,
+  rowSpan: 1,
+  variant: 'column',
+})
 
-const canSort = computed<boolean>(() => props.column.getCanSort())
-const sorted = computed<'asc' | 'desc' | false>(() => props.column.getIsSorted())
+const isGroup = computed<boolean>(() => props.variant === 'group')
 
-const ariaSort = computed<'ascending' | 'descending' | 'none'>(() => {
+const canSort = computed<boolean>(() => !isGroup.value && props.column.getCanSort())
+
+const sorted = computed<'asc' | 'desc' | false>(() => (isGroup.value ? false : props.column.getIsSorted()))
+
+const ariaSort = computed<'ascending' | 'descending' | 'none' | undefined>(() => {
+  if (!canSort.value) {
+    return undefined
+  }
   if (sorted.value === 'asc') {
     return 'ascending'
   }
@@ -28,19 +43,24 @@ const ariaSort = computed<'ascending' | 'descending' | 'none'>(() => {
 
 const headerClass = computed<string>(() =>
   cn(
-    '-mx-3 flex items-center gap-1 rounded-md px-3 py-1 text-left transition-colors',
-    canSort.value
-      ? 'cursor-pointer hover:text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40'
-      : 'cursor-default',
+    'flex items-center gap-1 text-left transition-colors',
+    !isGroup.value && '-mx-3 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-primary/40',
+    canSort.value ? 'cursor-pointer hover:text-foreground' : 'cursor-default',
     sorted.value ? 'text-foreground' : '',
   ),
+)
+
+const labelClass = computed<string>(() =>
+  cn('flex items-center gap-1', isGroup.value && 'text-xs font-medium uppercase tracking-wide text-muted-foreground'),
 )
 </script>
 
 <template>
   <TableHead
     :class="props.class"
-    :aria-sort="canSort ? ariaSort : undefined"
+    :colspan="props.colSpan > 1 ? props.colSpan : undefined"
+    :rowspan="props.rowSpan > 1 ? props.rowSpan : undefined"
+    :aria-sort="ariaSort"
   >
     <button
       v-if="canSort"
@@ -64,7 +84,7 @@ const headerClass = computed<string>(() =>
     </button>
     <span
       v-else
-      class="flex items-center gap-1"
+      :class="labelClass"
     >
       <slot>{{ title }}</slot>
     </span>
