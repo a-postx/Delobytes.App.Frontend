@@ -1,6 +1,6 @@
 ﻿export type PnlRowTone = 'default' | 'sub' | 'total' | 'result' | 'muted'
 
-export type PnlBarKind = 'total' | 'increase' | 'decrease' | 'result'
+export type PnlBarKind = 'total' | 'increase' | 'decrease' | 'result' | 'loss'
 
 /** Floating bar of the waterfall: offset and width as percentages of the shared scale. */
 export interface PnlStatementBar {

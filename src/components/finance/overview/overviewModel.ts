@@ -343,12 +343,6 @@ interface WaterfallStep {
   kind: 'total' | 'sub' | 'result'
 }
 
-const BAR_KIND: Record<WaterfallStep['kind'], PnlBarKind> = {
-  total: 'total',
-  sub: 'increase',
-  result: 'result',
-}
-
 function niceStep(max: number): number {
   if (max <= 0) {
     return 1
@@ -410,12 +404,28 @@ export function buildWaterfall(totals: PnlSummaryRow | null, currency: string): 
       step.amount !== null && (step.kind !== 'sub' || step.amount !== 0),
   )
 
-  const values: number[] = steps.map((step: WaterfallStep) => Math.abs(step.amount ?? 0))
-  const max: number = Math.max(...values, 1)
-
-  let running: number = 0
-  const rows: PnlStatementRow[] = steps.map((step: WaterfallStep): PnlStatementRow => {
+  let cursor = 0
+  const geometry: { start: number; end: number }[] = steps.map((step: WaterfallStep) => {
     const amount: number = step.amount ?? 0
+    const start: number = step.kind === 'sub' ? cursor : 0
+    const end: number = step.kind === 'sub' ? cursor + amount : amount
+    cursor = end
+    return { start, end }
+  })
+
+  // The scale must cover every running total, not just the step amounts: a positive component
+  // pushes the running total above the revenue, and a bar measured against the step maximum
+  // would paint past its own column and over the figures on the right.
+  const max: number = Math.max(
+    ...geometry.map((item) => Math.max(Math.abs(item.start), Math.abs(item.end))),
+    1,
+  )
+
+  const toPercent = (value: number): number => clamp((value / max) * 100, 0, 100)
+
+  const rows: PnlStatementRow[] = steps.map((step: WaterfallStep, index: number): PnlStatementRow => {
+    const amount: number = step.amount ?? 0
+    const { start, end } = geometry[index]
     const percent: string | undefined =
       step.kind === 'sub' && revenue > 0 ? formatSignedPercent((amount / revenue) * 100) : undefined
 
@@ -424,20 +434,21 @@ export function buildWaterfall(totals: PnlSummaryRow | null, currency: string): 
 
     let bar: { offset: number; width: number; kind: PnlBarKind }
 
-    if (step.kind === 'sub') {
-      const start: number = running
-      const end: number = running + amount
-      running = end
-      bar = {
-        offset: (Math.min(start, end) / max) * 100,
-        width: (Math.abs(amount) / max) * 100,
-        kind: amount >= 0 ? 'increase' : 'decrease',
-      }
-    } else if (step.kind === 'total') {
-      running = amount
-      bar = { offset: 0, width: (Math.abs(amount) / max) * 100, kind: BAR_KIND.total }
+    if (step.kind === 'result' && amount < 0) {
+      bar = { offset: 0, width: 0, kind: 'loss' }
     } else {
-      bar = { offset: 0, width: (Math.max(0, amount) / max) * 100, kind: BAR_KIND.result }
+      bar = {
+        offset: toPercent(Math.min(start, end)),
+        width: toPercent(Math.abs(end - start)),
+        kind:
+          step.kind === 'sub'
+            ? amount >= 0
+              ? 'increase'
+              : 'decrease'
+            : step.kind === 'total'
+              ? 'total'
+              : 'result',
+      }
     }
 
     return {

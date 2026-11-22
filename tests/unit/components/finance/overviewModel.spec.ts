@@ -140,6 +140,18 @@ describe('buildWaterfall', () => {
 
     expect(withoutRefunds.rows.some((row: PnlStatementRow) => row.key === 'refund')).toBe(false)
   })
+
+  it('keeps every bar inside the shared scale', () => {
+    const model = buildWaterfall(DECEMBER, 'RUB')
+
+    for (const row of model.rows) {
+      expect(row.bar?.offset ?? 0).toBeGreaterThanOrEqual(0)
+      expect((row.bar?.offset ?? 0) + (row.bar?.width ?? 0)).toBeLessThanOrEqual(100.001)
+    }
+
+    // A positive compensation lifts the running total above the revenue: the scale follows it.
+    expect(model.max).toBeGreaterThan(DECEMBER.revenueAmount ?? 0)
+  })
 })
 
 describe('buildMarginSummary', () => {

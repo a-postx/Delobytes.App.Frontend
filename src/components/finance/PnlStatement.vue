@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { computed } from 'vue'
 import type { ComputedRef } from 'vue'
 import { cn } from '@/lib/utils'
@@ -31,6 +31,7 @@ const barClasses: Record<PnlBarKind, string> = {
   increase: 'bg-success/55',
   decrease: 'bg-muted-foreground/35',
   result: 'bg-success',
+  loss: 'bg-destructive',
 }
 
 const hasBars: ComputedRef<boolean> = computed<boolean>(() =>
@@ -40,7 +41,7 @@ const hasBars: ComputedRef<boolean> = computed<boolean>(() =>
 // The bar column exists only for the waterfall: the plain statement keeps its original grid.
 const gridClass: ComputedRef<string> = computed<string>(() =>
   hasBars.value
-    ? 'grid grid-cols-[minmax(0,10.5rem)_minmax(56px,1fr)_auto_auto] items-center gap-3 rounded-md px-2 py-1.5 text-sm'
+    ? 'grid grid-cols-[minmax(0,13.5rem)_minmax(48px,1fr)_auto_auto] items-center gap-3 rounded-md px-2 py-1.5 text-sm'
     : 'grid grid-cols-[minmax(0,1fr)_auto_auto] items-baseline gap-3 rounded-md px-2 py-1.5 text-sm',
 )
 
@@ -113,7 +114,7 @@ function barStyle(row: PnlStatementRow): Record<string, string> {
       </span>
       <span
         v-if="hasBars"
-        class="relative block h-4"
+        class="relative block h-4 overflow-hidden"
         aria-hidden="true"
       >
         <span
