@@ -91,6 +91,31 @@ export function mapProductSegments(counts: FinanceProductSegmentCounts): Product
   ]
 }
 
+/**
+ * Why the cost of a row is incomplete, or null when it is complete and the figure needs no
+ * explanation. A zero coverage is reported as an absent cost: «посчитано по 0,0% выручки» would
+ * describe nothing.
+ */
+export function costCoverageHint(row: FinanceProductRow): string | null {
+  if (row.costCoverage === 'Missing') {
+    return 'Себестоимость не рассчитана: у товара нет данных о затратах'
+  }
+
+  if (row.costCoverage !== 'Partial') {
+    return null
+  }
+
+  if (row.marginCoveragePercent === null) {
+    return 'Себестоимость рассчитана не полностью'
+  }
+
+  if (row.marginCoveragePercent <= 0) {
+    return 'Себестоимость не рассчитана: маржа посчитана без неё'
+  }
+
+  return `Посчитано по ${formatPercent(row.marginCoveragePercent)} выручки товара`
+}
+
 export interface RevenueFlow {
   caption: string
   ariaLabel: string

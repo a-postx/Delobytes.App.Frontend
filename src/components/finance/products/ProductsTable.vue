@@ -7,7 +7,8 @@ import { DataGrid } from '@/components/ui/data-grid'
 import type { DataGridPaginationState } from '@/components/ui/data-grid'
 import ProductMetricCell from './ProductMetricCell.vue'
 import ProductSkuCell from './ProductSkuCell.vue'
-import type { FinanceProductRow, FinanceProductTableItem } from '@/types/financeProducts'
+import { costCoverageHint } from './productsModel'
+import type { FinanceProductTableItem } from '@/types/financeProducts'
 import { MINUS, formatMoney, formatNumber, formatPercent, formatSignedMoney } from '@/utils/financeFormat'
 
 interface Props {
@@ -51,20 +52,6 @@ const rowSelection = ref<RowSelectionState>({})
 watch(columnVisibility, (value: VisibilityState) => {
   localStorage.setItem(COLUMN_VISIBILITY_KEY, JSON.stringify(value))
 }, { deep: true })
-
-function coverageHint(row: FinanceProductRow): string | null {
-  if (row.costCoverage === 'Missing') {
-    return 'Себестоимость не рассчитана: у товара нет данных о затратах'
-  }
-
-  if (row.costCoverage !== 'Partial') {
-    return null
-  }
-
-  return row.marginCoveragePercent === null
-    ? 'Себестоимость рассчитана не полностью'
-    : `Посчитано по ${formatPercent(row.marginCoveragePercent)} выручки товара`
-}
 
 function soldCostText(value: number | null): string {
   if (value === null) {
@@ -166,7 +153,7 @@ const columns = computed<ColumnDef<FinanceProductTableItem, unknown>[]>(() => {
           enableHiding: true,
           cell: ({ row }) => h(ProductMetricCell, {
             text: soldCostText(row.original.soldCostAmount),
-            hint: coverageHint(row.original),
+            hint: costCoverageHint(row.original),
           }),
         },
         {
@@ -180,7 +167,7 @@ const columns = computed<ColumnDef<FinanceProductTableItem, unknown>[]>(() => {
             bold: true,
             currency: true,
             negative: (row.original.margin ?? 0) < 0,
-            hint: coverageHint(row.original),
+            hint: costCoverageHint(row.original),
           }),
         },
         {
@@ -192,7 +179,7 @@ const columns = computed<ColumnDef<FinanceProductTableItem, unknown>[]>(() => {
           enableHiding: true,
           cell: ({ row }) => metric(row.original.contributionMarginPercent, {
             negative: (row.original.contributionMarginPercent ?? 0) < 0,
-            hint: coverageHint(row.original),
+            hint: costCoverageHint(row.original),
           }),
         },
         {
@@ -207,7 +194,7 @@ const columns = computed<ColumnDef<FinanceProductTableItem, unknown>[]>(() => {
           enableHiding: true,
           cell: ({ row }) => metric(row.original.returnOnSoldCostPercent, {
             negative: (row.original.returnOnSoldCostPercent ?? 0) < 0,
-            hint: coverageHint(row.original),
+            hint: costCoverageHint(row.original),
           }),
         },
       ],
