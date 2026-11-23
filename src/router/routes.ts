@@ -19,6 +19,7 @@ import WorkRatesView from '@/views/WorkRatesView.vue'
 import ProductWorkRatesView from '@/views/ProductWorkRatesView.vue'
 import StepperDemoView from '@/views/StepperDemoView.vue'
 import FinanceOverviewView from '@/views/finance/FinanceOverviewView.vue'
+import FinanceProductsView from '@/views/finance/FinanceProductsView.vue'
 import FinanceStubView from '@/views/finance/FinanceStubView.vue'
 import ProductImportsView from '@/views/ProductImportsView.vue'
 import NotFoundView from '@/views/NotFoundView.vue'
@@ -165,7 +166,7 @@ export const routes: RouteRecordRaw[] = [
       {
         path: 'finance/products',
         name: 'finance-products',
-        component: FinanceStubView,
+        component: FinanceProductsView,
         meta: {
           group: NavGroup.Finance,
           title: 'Товары',

@@ -11,6 +11,8 @@ interface Props {
   productCount: number | null
   loading: boolean
   error: string | null
+  /** Period and channel of the overview, carried into the product table links. */
+  productsQuery: Record<string, string>
 }
 
 const props = defineProps<Props>()
@@ -31,7 +33,7 @@ const emit = defineEmits<{
   >
     <template #actions>
       <RouterLink
-        :to="{ name: 'finance-products' }"
+        :to="{ name: 'finance-products', query: props.productsQuery }"
         class="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline hover:underline-offset-4"
       >
         <template v-if="props.productCount !== null">

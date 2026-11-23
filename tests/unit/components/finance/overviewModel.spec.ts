@@ -351,14 +351,17 @@ describe('mapAttentionItems', () => {
   it('prints the product remarks with the counts the backend folded', () => {
     expect(itemOf('withoutCost').title).toBe('2 SKU без себестоимости')
     expect(plain(itemOf('withoutCost').subtitle)).toContain('131 800')
+    expect(itemOf('withoutCost').query).toEqual({ segment: 'withoutCost' })
     expect(itemOf('unlinked').title).toBe('Продажи без привязки к каталогу')
     expect(plain(itemOf('unlinked').subtitle)).toContain('214 300')
+    expect(itemOf('unlinked').query).toBeUndefined()
   })
 
   it('sums the loss-making products', () => {
     expect(itemOf('loss').title).toBe('2 убыточных SKU')
     expect(plain(itemOf('loss').subtitle)).toContain('31 800')
     expect(plain(itemOf('loss').subtitle)).toContain('−')
+    expect(itemOf('loss').query).toEqual({ segment: 'loss' })
   })
 
   it('lists the excluded currencies by code', () => {

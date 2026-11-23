@@ -9,6 +9,8 @@ interface Props {
   overdueLines: number
   loading: boolean
   error: string | null
+  /** Period and channel of the overview, carried into the product table links. */
+  productsQuery: Record<string, string>
 }
 
 const props = defineProps<Props>()
@@ -16,6 +18,18 @@ const props = defineProps<Props>()
 const emit = defineEmits<{
   (event: 'retry'): void
 }>()
+
+/** Operations and quality links stay parameterless; product links keep the overview context. */
+function linkTarget(item: AttentionItem): { name: string; query?: Record<string, string> } {
+  if (item.to !== 'finance-products') {
+    return { name: item.to }
+  }
+
+  return {
+    name: item.to,
+    query: { ...props.productsQuery, ...(item.query ?? {}) },
+  }
+}
 
 const toneClasses: Record<AttentionItem['tone'], string> = {
   danger: 'bg-badge-destructive text-badge-destructive-foreground',
@@ -58,7 +72,7 @@ const toneClasses: Record<AttentionItem['tone'], string> = {
       <RouterLink
         v-for="item in props.items"
         :key="item.key"
-        :to="{ name: item.to }"
+        :to="linkTarget(item)"
         class="group flex items-center gap-3 rounded-md px-2 py-3 transition-colors hover:bg-muted/60"
       >
         <span

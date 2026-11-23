@@ -532,6 +532,8 @@ export interface AttentionItem {
   title: string
   subtitle: string
   to: string
+  /** Extra URL parameters of a product-table link, on top of the page's period and channel. */
+  query?: Record<string, string>
 }
 
 /**
@@ -560,6 +562,7 @@ export function mapAttentionItems(
           title: `${item.count} SKU без себестоимости`,
           subtitle: `${formatMoney(item.amount, currency)} чистой выручки не попали в маржу`,
           to: 'finance-products',
+          query: { segment: 'withoutCost' },
         }
       case 'Unlinked':
         return {
@@ -576,6 +579,7 @@ export function mapAttentionItems(
           title: `${item.count} ${pluralRu(item.count, ['убыточный SKU', 'убыточных SKU', 'убыточных SKU'])}`,
           subtitle: `суммарно ${formatSignedMoney(item.amount, currency)} маржинальной прибыли`,
           to: 'finance-products',
+          query: { segment: 'loss' },
         }
       case 'Currency':
         return {

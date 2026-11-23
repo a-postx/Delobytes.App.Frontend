@@ -35,6 +35,26 @@ export {
 export { bomApi, productCostApi } from './endpoints/bom'
 export { salesOrdersApi } from './endpoints/sales'
 export { financePnlApi } from './endpoints/finance'
+export { financeProductsApi } from './endpoints/financeProducts'
+export type {
+  FinanceProductChannelRow,
+  FinanceProductDetailsResponse,
+  FinanceProductDocumentGaps,
+  FinanceProductRow,
+  FinanceProductSegment,
+  FinanceProductSegmentCounts,
+  FinanceProductSortKey,
+  FinanceProductSummary,
+  FinanceProductTableItem,
+  FinanceProductTableResponse,
+  FinanceUnlinkedSales,
+  GetFinanceProductDetailsParams,
+  GetFinanceProductTableParams,
+  PnlDocumentGapGroup,
+  PnlMissingDocumentCount,
+  PnlProductCostCoverage,
+} from '@/types/financeProducts'
+export { isFinanceProductSegment, isFinanceProductSortKey } from '@/types/financeProducts'
 export type {
   PnlCurrencyExclusion,
   PnlFeedChannelFreshness,

@@ -1,4 +1,4 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 import { computed } from 'vue'
 import type { ComputedRef } from 'vue'
 import { CalendarDate } from '@internationalized/date'
@@ -19,6 +19,9 @@ interface Props {
   channelId: string | null
   channels: ChannelItem[]
   timeZone: string
+  /** Overview compares the period with a previous one; the product table has no comparison. */
+  showComparison: boolean
+  comparisonLabel?: string
 }
 
 const props = defineProps<Props>()
@@ -113,5 +116,12 @@ function handleChannel(value: unknown): void {
         </SelectItem>
       </SelectContent>
     </Select>
+
+    <span
+      v-if="props.showComparison && props.comparisonLabel"
+      class="ml-auto text-xs text-muted-foreground"
+    >
+      Сравнение с <b class="font-medium text-foreground/70">{{ props.comparisonLabel }}</b>
+    </span>
   </div>
 </template>

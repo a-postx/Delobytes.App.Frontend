@@ -9,7 +9,7 @@ import type { ChartConfig, ChartTooltipItem } from '@/components/ui/chart'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import type { FinanceGranularity, FinanceRange } from '@/utils/financePeriod'
 import { granularityPeriodCount } from '@/utils/financePeriod'
-import { FINANCE_MAX_PERIODS } from '@/composables/useFinanceOverviewFilters'
+import { FINANCE_MAX_PERIODS } from '@/composables/useFinanceFilters'
 import { formatCompactMoney, formatMoney } from '@/utils/financeFormat'
 import type { DynamicsPoint, DynamicsTableRow } from './overviewModel'
 

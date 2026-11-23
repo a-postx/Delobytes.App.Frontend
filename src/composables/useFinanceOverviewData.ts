@@ -37,7 +37,13 @@ import type {
   SkuRankings,
 } from '@/components/finance/overview/overviewModel'
 import type { StatsStripItem } from '@/components/ui/stats-strip'
-import type { FinanceOverviewFilters } from '@/composables/useFinanceOverviewFilters'
+import type { FinanceFilters } from '@/composables/useFinanceFilters'
+import type { FinanceGranularity } from '@/utils/financePeriod'
+
+/** Overview filters plus the step of its dynamics chart, which no other finance page owns. */
+export interface FinanceOverviewFilters extends FinanceFilters {
+  step: ComputedRef<FinanceGranularity>
+}
 
 export type FinanceBlock = 'totals' | 'series' | 'channels' | 'attention' | 'rankings'
 
