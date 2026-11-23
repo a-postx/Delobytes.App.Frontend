@@ -7,25 +7,25 @@ import { useTenantToday } from '@/composables/useTenantToday'
 import { channelsApi, financePnlApi } from '@/services/api'
 import type { ChannelItem, GetChannelsResponse } from '@/services/api'
 import type {
+  GetPnlOverviewParams,
   GetPnlProductRankingParams,
   GetPnlSummaryParams,
-  PnlCompleteness,
   PnlFeedFreshnessResponse,
-  PnlGranularity,
-  PnlGroupBy,
+  PnlOverviewMargin,
+  PnlOverviewResponse,
   PnlProductRankingResponse,
   PnlSummaryResponse,
   PnlSummaryRow,
 } from '@/types/finance'
 import {
-  buildAttentionItems,
-  buildChannelRows,
   buildCoverageBanner,
   buildDynamicsSeries,
   buildDynamicsTable,
   buildFreshnessView,
-  buildKpis,
   buildSkuRankings,
+  mapAttentionItems,
+  mapChannelRows,
+  mapKpis,
   provisionalShare,
 } from '@/components/finance/overview/overviewModel'
 import type {
@@ -51,7 +51,7 @@ function errorOf(resource: UseAsyncResource<unknown>): string | null {
 /**
  * Metrics of the overview for the selected filters: the request resources, their loading and
  * failure state, the derived view models and the retry actions. The page composes blocks from
- * this workflow instead of owning eight request lifecycles itself.
+ * this workflow instead of owning the request lifecycles itself.
  */
 export function useFinanceOverviewData(filters: FinanceOverviewFilters) {
   const { timeZone } = useTenantToday()
@@ -67,50 +67,21 @@ export function useFinanceOverviewData(filters: FinanceOverviewFilters) {
       fallbackMessage: 'Не удалось загрузить свежесть данных',
     })
 
-  function summaryFetcher(
-    groupBy: PnlGroupBy,
-    granularity: PnlGranularity,
-    completeness: PnlCompleteness,
-    range: 'current' | 'comparison' = 'current',
-  ): () => Promise<PnlSummaryResponse> {
-    return () => {
-      const period = range === 'current' ? filters.currentRange.value : filters.comparisonRange.value
-      const params: GetPnlSummaryParams = {
-        channelId: filters.channelId.value ?? undefined,
-        from: period.from,
-        to: period.to,
-        granularity,
-        groupBy,
-        completeness,
-      }
-      return financePnlApi.getSummary(params)
-    }
-  }
-
-  function rankingFetcher(sortDir: 'asc' | 'desc'): () => Promise<PnlProductRankingResponse> {
-    return () => {
-      const params: GetPnlProductRankingParams = {
+  // The totals, their comparison, the channels and the remarks come from one response, so the
+  // blocks of the page cannot describe different snapshots of the same period.
+  const overview: UseAsyncResource<PnlOverviewResponse> = useAsyncResource<PnlOverviewResponse>({
+    fetcher: () => {
+      const params: GetPnlOverviewParams = {
         channelId: filters.channelId.value ?? undefined,
         from: filters.currentRange.value.from,
         to: filters.currentRange.value.to,
+        compareFrom: filters.comparisonRange.value.from,
+        compareTo: filters.comparisonRange.value.to,
         completeness: 'all',
-        sortBy: 'margin',
-        sortDir,
-        take: 5,
-        coverage: 'complete',
       }
-      return financePnlApi.getProductRanking(params)
-    }
-  }
-
-  const totals = useAsyncResource<PnlSummaryResponse>({
-    fetcher: summaryFetcher('None', 'Total', 'all'),
-    fallbackMessage: 'Не удалось загрузить итоги периода',
-  })
-
-  const totalsPrev = useAsyncResource<PnlSummaryResponse>({
-    fetcher: summaryFetcher('None', 'Total', 'all', 'comparison'),
-    fallbackMessage: 'Не удалось загрузить итоги прошлого периода',
+      return financePnlApi.getOverview(params)
+    },
+    fallbackMessage: 'Не удалось загрузить обзор финансов',
   })
 
   const series = useAsyncResource<PnlSummaryResponse>({
@@ -128,20 +99,21 @@ export function useFinanceOverviewData(filters: FinanceOverviewFilters) {
     fallbackMessage: 'Не удалось загрузить динамику',
   })
 
-  const byChannel = useAsyncResource<PnlSummaryResponse>({
-    fetcher: summaryFetcher('Channel', 'Total', 'all'),
-    fallbackMessage: 'Не удалось загрузить каналы',
-  })
-
-  const byProduct = useAsyncResource<PnlSummaryResponse>({
-    fetcher: summaryFetcher('Product', 'Total', 'all'),
-    fallbackMessage: 'Не удалось загрузить товары',
-  })
-
-  const overdue = useAsyncResource<PnlSummaryResponse>({
-    fetcher: summaryFetcher('None', 'Total', 'overdue'),
-    fallbackMessage: 'Не удалось загрузить просроченные документы',
-  })
+  function rankingFetcher(sortDir: 'asc' | 'desc'): () => Promise<PnlProductRankingResponse> {
+    return () => {
+      const params: GetPnlProductRankingParams = {
+        channelId: filters.channelId.value ?? undefined,
+        from: filters.currentRange.value.from,
+        to: filters.currentRange.value.to,
+        completeness: 'all',
+        sortBy: 'margin',
+        sortDir,
+        take: 5,
+        coverage: 'complete',
+      }
+      return financePnlApi.getProductRanking(params)
+    }
+  }
 
   const rankTop = useAsyncResource<PnlProductRankingResponse>({
     fetcher: rankingFetcher('desc'),
@@ -154,15 +126,7 @@ export function useFinanceOverviewData(filters: FinanceOverviewFilters) {
   })
 
   function loadPeriod(): void {
-    void Promise.all([
-      totals.load(),
-      totalsPrev.load(),
-      byChannel.load(),
-      byProduct.load(),
-      overdue.load(),
-      rankTop.load(),
-      rankBottom.load(),
-    ])
+    void Promise.all([overview.load(), rankTop.load(), rankBottom.load()])
   }
 
   // Channels and freshness describe the feed, not the period: they load once per page visit.
@@ -188,15 +152,15 @@ export function useFinanceOverviewData(filters: FinanceOverviewFilters) {
   )
 
   const currency: ComputedRef<string> = computed<string>(
-    () => totals.data.value?.currency ?? byChannel.data.value?.currency ?? 'RUB',
+    () => overview.data.value?.currency ?? 'RUB',
   )
 
   const totalsRow: ComputedRef<PnlSummaryRow | null> = computed<PnlSummaryRow | null>(
-    () => totals.data.value?.rows[0] ?? null,
+    () => overview.data.value?.totals ?? null,
   )
 
-  const previousRow: ComputedRef<PnlSummaryRow | null> = computed<PnlSummaryRow | null>(
-    () => totalsPrev.data.value?.rows[0] ?? null,
+  const marginView: ComputedRef<PnlOverviewMargin | null> = computed<PnlOverviewMargin | null>(
+    () => overview.data.value?.margin ?? null,
   )
 
   const channelItems: ComputedRef<ChannelItem[]> = computed<ChannelItem[]>(
@@ -222,36 +186,31 @@ export function useFinanceOverviewData(filters: FinanceOverviewFilters) {
   )
 
   const kpis: ComputedRef<StatsStripItem[]> = computed<StatsStripItem[]>(() =>
-    buildKpis(totalsRow.value, previousRow.value, currency.value),
+    mapKpis(overview.data.value, currency.value),
   )
 
   const coverageBanner: ComputedRef<{ title: string; description: string } | null> =
     computed(() => buildCoverageBanner(totalsRow.value))
 
   const channelRows: ComputedRef<ChannelRow[]> = computed<ChannelRow[]>(() =>
-    buildChannelRows(byChannel.data.value?.rows ?? [], channelMap.value, currency.value),
+    mapChannelRows(overview.data.value?.channels ?? [], channelMap.value, currency.value),
   )
 
   const attentionItems: ComputedRef<AttentionItem[]> = computed<AttentionItem[]>(() =>
-    buildAttentionItems({
-      overdue: overdue.data.value?.rows[0] ?? null,
-      byProduct: byProduct.data.value?.rows ?? [],
-      excludedByCurrency: totals.data.value?.excludedByCurrency ?? 0,
-      excludedCurrencies: totals.data.value?.excludedCurrencies ?? [],
-      currency: currency.value,
-    }),
+    mapAttentionItems(
+      overview.data.value?.attention ?? [],
+      overview.data.value?.excludedCurrencies ?? [],
+      currency.value,
+    ),
   )
 
   const overdueLines: ComputedRef<number> = computed<number>(
-    () => overdue.data.value?.rows[0]?.lines ?? 0,
+    () => totalsRow.value?.overdueLines ?? 0,
   )
 
   const productCount: ComputedRef<number | null> = computed<number | null>(() => {
-    const rows: PnlSummaryRow[] | null = byProduct.data.value?.rows ?? null
-    if (rows === null) {
-      return null
-    }
-    return rows.filter((row: PnlSummaryRow) => row.productId !== null).length
+    const data: PnlOverviewResponse | null = overview.data.value
+    return data === null ? null : data.productCount
   })
 
   const rankings: ComputedRef<SkuRankings> = computed<SkuRankings>(() =>
@@ -271,56 +230,51 @@ export function useFinanceOverviewData(filters: FinanceOverviewFilters) {
   )
 
   const noFinanceData: ComputedRef<boolean> = computed<boolean>(() => {
-    if (freshness.data.value === null || totals.data.value === null) {
+    if (freshness.data.value === null || overview.data.value === null) {
       return false
     }
-    return freshness.data.value.channels.length === 0 && totals.data.value.rows.length === 0
+    return freshness.data.value.channels.length === 0 && overview.data.value.totals === null
   })
 
   const emptyPeriod: ComputedRef<boolean> = computed<boolean>(() => {
-    if (noFinanceData.value || totals.data.value === null) {
+    if (noFinanceData.value || overview.data.value === null) {
       return false
     }
-    return totals.data.value.rows.length === 0
+    return overview.data.value.totals === null
   })
 
   const loading = computed<Record<FinanceBlock, boolean>>(() => ({
-    totals: totals.isInitialLoading.value,
+    totals: overview.isInitialLoading.value,
     series: series.isInitialLoading.value,
-    channels: byChannel.isInitialLoading.value,
-    attention: overdue.isInitialLoading.value || byProduct.isInitialLoading.value,
+    channels: overview.isInitialLoading.value,
+    attention: overview.isInitialLoading.value,
     rankings: rankTop.isInitialLoading.value || rankBottom.isInitialLoading.value,
   }))
 
   const errors = computed<Record<FinanceBlock, string | null>>(() => ({
-    totals: errorOf(totals),
+    totals: errorOf(overview),
     series: errorOf(series),
-    channels: errorOf(byChannel),
-    attention: errorOf(overdue) ?? errorOf(byProduct),
+    channels: errorOf(overview),
+    attention: errorOf(overview),
     rankings: errorOf(rankTop) ?? errorOf(rankBottom),
   }))
 
   const retry: Record<FinanceBlock | 'period', () => void> = {
     totals: () => {
-      void totals.load()
-      void totalsPrev.load()
+      void overview.load()
     },
     series: () => {
       void series.load()
     },
     channels: () => {
-      void byChannel.load()
-      void totals.load()
+      void overview.load()
     },
     attention: () => {
-      void overdue.load()
-      void byProduct.load()
-      void totals.load()
+      void overview.load()
     },
     rankings: () => {
       void rankTop.load()
       void rankBottom.load()
-      void byProduct.load()
     },
     period: () => {
       loadPeriod()
@@ -331,7 +285,7 @@ export function useFinanceOverviewData(filters: FinanceOverviewFilters) {
   return {
     currency,
     totalsRow,
-    previousRow,
+    marginView,
     channelItems,
     freshnessView,
     provisional,

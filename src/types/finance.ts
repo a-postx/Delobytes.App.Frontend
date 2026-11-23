@@ -75,6 +75,7 @@ export interface PnlSummaryRow {
   isMarginComplete: boolean
   isTaxAdjustedMarginComplete: boolean
   provisionalRevenueAmount: number
+  overdueLines: number
   overdueRevenueAmount: number
   closedWithExceptionRevenueAmount: number
   completenessState: PnlCompletenessState
@@ -113,6 +114,86 @@ export interface PnlFeedChannelFreshness {
 export interface PnlFeedFreshnessResponse {
   asOf: string
   channels: PnlFeedChannelFreshness[]
+}
+
+/** Metric of the overview strip. */
+export type PnlOverviewKpiKey = 'Revenue' | 'NetRevenue' | 'Sold' | 'AverageCheck' | 'Buyout'
+
+/** Remark the overview raises about the period. */
+export type PnlOverviewAttentionCode = 'Overdue' | 'WithoutCost' | 'Unlinked' | 'Loss' | 'Currency'
+
+/**
+ * One metric of the overview with its movement against the comparison range. The backend already
+ * reduced it to the change a reader cares about: a percent for money and units, points for a share.
+ */
+export interface PnlOverviewKpi {
+  key: PnlOverviewKpiKey
+  value: number | null
+  previousValue: number | null
+  deltaPercent: number | null
+  deltaPoints: number | null
+}
+
+/** Margin of the period with the coverage and tax figures that qualify it. */
+export interface PnlOverviewMargin {
+  amount: number | null
+  previousAmount: number | null
+  deltaPercent: number | null
+  contributionMarginPercent: number | null
+  returnOnSoldCostPercent: number | null
+  coveragePercent: number | null
+  previousCoveragePercent: number | null
+  isComplete: boolean
+  hasTaxProfile: boolean
+  estimatedTaxAmount: number | null
+  taxAdjustedMarginAmount: number | null
+  isTaxAdjustedComplete: boolean
+}
+
+export interface PnlOverviewChannel {
+  channelId: string | null
+  lines: number
+  revenueAmount: number | null
+  netRevenueAmount: number | null
+  deductionsAmount: number | null
+  deductionsPercent: number | null
+  margin: number | null
+  contributionMarginPercent: number | null
+  isMarginComplete: boolean
+  sharePercent: number
+}
+
+export interface PnlOverviewAttention {
+  code: PnlOverviewAttentionCode
+  count: number
+  amount: number | null
+}
+
+/** Whole overview of one period: one request instead of a request per block. */
+export interface PnlOverviewResponse {
+  from: string
+  to: string
+  comparisonFrom: string | null
+  comparisonTo: string | null
+  currency: string
+  totals: PnlSummaryRow | null
+  previousTotals: PnlSummaryRow | null
+  kpis: PnlOverviewKpi[]
+  margin: PnlOverviewMargin
+  channels: PnlOverviewChannel[]
+  attention: PnlOverviewAttention[]
+  productCount: number
+  excludedByCurrency: number
+  excludedCurrencies: PnlCurrencyExclusion[]
+}
+
+export interface GetPnlOverviewParams {
+  channelId?: string
+  from: string
+  to: string
+  compareFrom?: string
+  compareTo?: string
+  completeness?: PnlCompleteness
 }
 
 export interface GetPnlSummaryParams {

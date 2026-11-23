@@ -34,7 +34,7 @@ const {
 const {
   currency,
   totalsRow,
-  previousRow,
+  marginView,
   channelItems,
   freshnessView,
   provisional,
@@ -170,7 +170,7 @@ function openProduct(): void {
         <MarginCard
           class="xl:col-span-7"
           :totals="totalsRow"
-          :previous="previousRow"
+          :margin="marginView"
           :currency="currency"
           :range-label="rangeLabel"
           :loading="loading.totals"

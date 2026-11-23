@@ -1,17 +1,23 @@
 ﻿import { describe, expect, it } from 'vitest'
-import type { PnlProductRankingResponse, PnlSummaryRow } from '@/types/finance'
+import type {
+  PnlOverviewAttention,
+  PnlOverviewMargin,
+  PnlOverviewResponse,
+  PnlProductRankingResponse,
+  PnlSummaryRow,
+} from '@/types/finance'
 import type { PnlStatementRow } from '@/components/finance/types'
 import {
-  buildAttentionItems,
   buildCoverageBanner,
   buildDynamicsSeries,
   buildDynamicsTable,
-  buildKpis,
   buildMarginBreakdowns,
   buildMarginSummary,
   buildSkuRankings,
   buildWaterfall,
   coverageOf,
+  mapAttentionItems,
+  mapKpis,
   provisionalShare,
 } from '@/components/finance/overview/overviewModel'
 import type { StatsStripItem } from '@/components/ui/stats-strip'
@@ -86,6 +92,47 @@ const DECEMBER: PnlSummaryRow = makeRow({
   revenueWithMarginAmount: 4660000,
   isMarginComplete: false,
 })
+
+const MARGIN: PnlOverviewMargin = {
+  amount: 1522300,
+  previousAmount: null,
+  deltaPercent: null,
+  contributionMarginPercent: 39.0,
+  returnOnSoldCostPercent: 63.93,
+  coveragePercent: 96.8,
+  previousCoveragePercent: null,
+  isComplete: false,
+  hasTaxProfile: true,
+  estimatedTaxAmount: 98400,
+  taxAdjustedMarginAmount: 1423900,
+  isTaxAdjustedComplete: true,
+}
+
+function makeOverview(overrides: Partial<PnlOverviewResponse> = {}): PnlOverviewResponse {
+  return {
+    from: '2025-12-01',
+    to: '2025-12-31',
+    comparisonFrom: null,
+    comparisonTo: null,
+    currency: 'RUB',
+    totals: DECEMBER,
+    previousTotals: null,
+    kpis: [
+      { key: 'Revenue', value: 4812400, previousValue: null, deltaPercent: null, deltaPoints: null },
+      { key: 'NetRevenue', value: 4035200, previousValue: null, deltaPercent: null, deltaPoints: null },
+      { key: 'Sold', value: 3412, previousValue: null, deltaPercent: null, deltaPoints: null },
+      { key: 'AverageCheck', value: 1410.5, previousValue: null, deltaPercent: null, deltaPoints: null },
+      { key: 'Buyout', value: 90.1, previousValue: null, deltaPercent: null, deltaPoints: null },
+    ],
+    margin: MARGIN,
+    channels: [],
+    attention: [],
+    productCount: 0,
+    excludedByCurrency: 0,
+    excludedCurrencies: [],
+    ...overrides,
+  }
+}
 
 function rowOf(model: { rows: PnlStatementRow[] }, key: string): PnlStatementRow {
   const row: PnlStatementRow | undefined = model.rows.find(
@@ -164,7 +211,7 @@ describe('buildWaterfall', () => {
 
 describe('buildMarginSummary', () => {
   it('takes ROI from the sold-cost base, not from the invested one', () => {
-    const summary = buildMarginSummary(DECEMBER, null, 'RUB')
+    const summary = buildMarginSummary(MARGIN, 'RUB')
 
     expect(summary.roiPercent).toBe('63,9%')
     expect(summary.contributionPercent).toBe('39,0%')
@@ -172,24 +219,22 @@ describe('buildMarginSummary', () => {
   })
 
   it('renders an unknown ROI as an em dash', () => {
-    const summary = buildMarginSummary({ ...DECEMBER, returnOnSoldCostPercent: null }, null, 'RUB')
+    const summary = buildMarginSummary({ ...MARGIN, returnOnSoldCostPercent: null }, 'RUB')
 
     expect(summary.roiPercent).toBe('—')
   })
 
   it('shows the tax estimate with its after-tax result', () => {
-    const summary = buildMarginSummary(DECEMBER, null, 'RUB')
+    const summary = buildMarginSummary(MARGIN, 'RUB')
 
     expect(plain(summary.tax?.amount ?? '')).toContain('98 400')
     expect(plain(summary.tax?.afterTax ?? '')).toContain('1 423 900')
     expect(summary.tax?.partial).toBe(false)
   })
 
-  it('hides the margin delta while the cost coverage is partial on either side', () => {
-    const previous = { ...DECEMBER, revenueWithMarginAmount: 3000000, margin: 1200000 }
-    const summary = buildMarginSummary(DECEMBER, previous, 'RUB')
-
-    expect(summary.delta).toBeUndefined()
+  it('prints the delta the backend dared to compare and hides its absence', () => {
+    expect(buildMarginSummary({ ...MARGIN, deltaPercent: 8.4 }, 'RUB').delta?.text).toBe('8,4%')
+    expect(buildMarginSummary(MARGIN, 'RUB').delta).toBeUndefined()
   })
 })
 
@@ -207,8 +252,8 @@ describe('coverage', () => {
   })
 })
 
-describe('buildKpis', () => {
-  const items: StatsStripItem[] = buildKpis(DECEMBER, null, 'RUB')
+describe('mapKpis', () => {
+  const items: StatsStripItem[] = mapKpis(makeOverview(), 'RUB')
   const itemOf = (key: string): StatsStripItem => {
     const item: StatsStripItem | undefined = items.find((entry: StatsStripItem) => entry.key === key)
     if (!item) {
@@ -223,8 +268,8 @@ describe('buildKpis', () => {
     expect(itemOf('revenue').unit).toBe('₽')
   })
 
-  it('derives the average check, buyout and provisional share', () => {
-    expect(plain(itemOf('averageCheck').value)).toBe('1 410')
+  it('prints the average check, buyout and provisional share the backend measured', () => {
+    expect(plain(itemOf('averageCheck').value)).toBe('1 411')
     expect(plain(itemOf('buyout').value)).toBe('90,1')
     expect(plain(itemOf('buyout').caption ?? '')).toBe('невыкуп 9,9%')
     expect(plain(itemOf('sold').caption ?? '')).toBe('заказов 3 786')
@@ -232,8 +277,22 @@ describe('buildKpis', () => {
     expect(Math.round((provisionalShare(DECEMBER) ?? 0) * 10) / 10).toBe(11.8)
   })
 
+  it('prints a delta in percent and a share movement in points', () => {
+    const moved: PnlOverviewResponse = makeOverview({
+      kpis: [
+        { key: 'Revenue', value: 110, previousValue: 100, deltaPercent: 10, deltaPoints: null },
+        { key: 'Buyout', value: 90, previousValue: 89.3, deltaPercent: null, deltaPoints: 0.7 },
+      ],
+    })
+
+    const metrics: StatsStripItem[] = mapKpis(moved, 'RUB')
+
+    expect(metrics.find((item: StatsStripItem) => item.key === 'revenue')?.delta?.text).toBe('10,0%')
+    expect(metrics.find((item: StatsStripItem) => item.key === 'buyout')?.delta?.text).toBe('+0,7 п.п.')
+  })
+
   it('renders dashes for an empty period', () => {
-    const empty: StatsStripItem[] = buildKpis(null, null, 'RUB')
+    const empty: StatsStripItem[] = mapKpis(null, 'RUB')
 
     expect(empty.every((item: StatsStripItem) => item.value === '—')).toBe(true)
   })
@@ -256,24 +315,23 @@ describe('buildMarginBreakdowns', () => {
   })
 })
 
-describe('buildAttentionItems', () => {
-  const byProduct: PnlSummaryRow[] = [
-    makeRow({ productId: 'p1', netRevenueWithoutCostAmount: 100000, revenueAmount: 120000, margin: -5000 }),
-    makeRow({ productId: 'p2', netRevenueWithoutCostAmount: 31800, revenueAmount: 50000 }),
-    makeRow({ productId: null, isUnlinkedProduct: true, revenueAmount: 214300 }),
-    makeRow({ productId: 'p3', margin: -26800 }),
+describe('mapAttentionItems', () => {
+  const attention: PnlOverviewAttention[] = [
+    { code: 'Overdue', count: 43, amount: 128900 },
+    { code: 'WithoutCost', count: 2, amount: 131800 },
+    { code: 'Unlinked', count: 1, amount: 214300 },
+    { code: 'Loss', count: 2, amount: -31800 },
+    { code: 'Currency', count: 62, amount: null },
   ]
 
-  const items = buildAttentionItems({
-    overdue: makeRow({ lines: 43, revenueAmount: 128900 }),
-    byProduct,
-    excludedByCurrency: 62,
-    excludedCurrencies: [
+  const items = mapAttentionItems(
+    attention,
+    [
       { currency: 'KZT', lines: 54, revenueAmount: 171200 },
       { currency: 'BYN', lines: 8, revenueAmount: 16200 },
     ],
-    currency: 'RUB',
-  })
+    'RUB',
+  )
 
   const itemOf = (key: string) => {
     const item = items.find((entry) => entry.key === key)
@@ -290,10 +348,11 @@ describe('buildAttentionItems', () => {
     expect(itemOf('overdue').to).toBe('finance-quality')
   })
 
-  it('counts the products without a cost and the unlinked sales', () => {
+  it('prints the product remarks with the counts the backend folded', () => {
     expect(itemOf('withoutCost').title).toBe('2 SKU без себестоимости')
     expect(plain(itemOf('withoutCost').subtitle)).toContain('131 800')
     expect(itemOf('unlinked').title).toBe('Продажи без привязки к каталогу')
+    expect(plain(itemOf('unlinked').subtitle)).toContain('214 300')
   })
 
   it('sums the loss-making products', () => {

@@ -5,11 +5,17 @@ import { createMemoryHistory, createRouter } from 'vue-router'
 import type { Router } from 'vue-router'
 import FinanceOverviewView from '@/views/finance/FinanceOverviewView.vue'
 import { channelsApi, financePnlApi } from '@/services/api'
-import type { GetPnlSummaryParams, PnlSummaryResponse, PnlSummaryRow } from '@/types/finance'
+import type {
+  PnlOverviewResponse,
+  PnlProductRankingResponse,
+  PnlSummaryResponse,
+  PnlSummaryRow,
+} from '@/types/finance'
 
 vi.mock('@/services/api', () => ({
   channelsApi: { getAll: vi.fn() },
   financePnlApi: {
+    getOverview: vi.fn(),
     getSummary: vi.fn(),
     getProductRanking: vi.fn(),
     getFreshness: vi.fn(),
@@ -24,6 +30,7 @@ vi.mock('@/composables/useCurrentUser', () => ({
   }),
 }))
 
+const getOverview = vi.mocked(financePnlApi.getOverview)
 const getSummary = vi.mocked(financePnlApi.getSummary)
 const getRanking = vi.mocked(financePnlApi.getProductRanking)
 const getFreshness = vi.mocked(financePnlApi.getFreshness)
@@ -65,6 +72,7 @@ function makeRow(overrides: Partial<PnlSummaryRow> = {}): PnlSummaryRow {
     isMarginComplete: true,
     isTaxAdjustedMarginComplete: true,
     provisionalRevenueAmount: 0,
+    overdueLines: 0,
     overdueRevenueAmount: 0,
     closedWithExceptionRevenueAmount: 0,
     completenessState: 'Complete',
@@ -72,7 +80,40 @@ function makeRow(overrides: Partial<PnlSummaryRow> = {}): PnlSummaryRow {
   }
 }
 
-function summary(overrides: Partial<PnlSummaryResponse> = {}): PnlSummaryResponse {
+function overview(overrides: Partial<PnlOverviewResponse> = {}): PnlOverviewResponse {
+  return {
+    from: '2025-12-01',
+    to: '2025-12-31',
+    comparisonFrom: '2025-11-01',
+    comparisonTo: '2025-11-30',
+    currency: 'RUB',
+    totals: makeRow(),
+    previousTotals: null,
+    kpis: [],
+    margin: {
+      amount: 34000,
+      previousAmount: null,
+      deltaPercent: null,
+      contributionMarginPercent: 40.5,
+      returnOnSoldCostPercent: 68,
+      coveragePercent: 100,
+      previousCoveragePercent: null,
+      isComplete: true,
+      hasTaxProfile: false,
+      estimatedTaxAmount: null,
+      taxAdjustedMarginAmount: null,
+      isTaxAdjustedComplete: false,
+    },
+    channels: [],
+    attention: [],
+    productCount: 0,
+    excludedByCurrency: 0,
+    excludedCurrencies: [],
+    ...overrides,
+  }
+}
+
+function series(overrides: Partial<PnlSummaryResponse> = {}): PnlSummaryResponse {
   return {
     rows: [],
     currency: 'RUB',
@@ -83,7 +124,7 @@ function summary(overrides: Partial<PnlSummaryResponse> = {}): PnlSummaryRespons
   }
 }
 
-function ranking(): Awaited<ReturnType<typeof financePnlApi.getProductRanking>> {
+function ranking(): PnlProductRankingResponse {
   return {
     rows: [],
     rankedRows: 0,
@@ -161,7 +202,8 @@ beforeEach(() => {
       },
     ],
   })
-  getSummary.mockResolvedValue(summary({ rows: [makeRow()] }))
+  getOverview.mockResolvedValue(overview())
+  getSummary.mockResolvedValue(series())
   getRanking.mockResolvedValue(ranking())
 })
 
@@ -169,7 +211,7 @@ describe('FinanceOverviewView', () => {
   it('replaces the dashboard with the empty state when no finance data exists', async () => {
     getFreshness.mockResolvedValue({ asOf: '2026-01-05T06:00:00Z', channels: [] })
     getChannels.mockResolvedValue({ items: [] })
-    getSummary.mockResolvedValue(summary())
+    getOverview.mockResolvedValue(overview({ totals: null }))
 
     const { wrapper } = await mountView('/finance?period=lastMonth')
 
@@ -178,36 +220,24 @@ describe('FinanceOverviewView', () => {
     expect(wrapper.find('[data-test="dynamics"]').exists()).toBe(false)
   })
 
-  it('keeps the other blocks alive when the channel summary fails and retries it', async () => {
-    const failure = {
+  it('reports a failed overview and retries the same request', async () => {
+    getOverview.mockRejectedValue({
       response: { status: 500, data: { message: 'Сервер не смог обработать запрос' } },
-    }
-
-    getSummary.mockImplementation(async (params: GetPnlSummaryParams) => {
-      if (params.groupBy === 'Channel') {
-        throw failure
-      }
-      return summary({ rows: [makeRow()] })
     })
 
     const { wrapper } = await mountView('/finance?period=lastMonth')
-
-    expect(wrapper.text()).toContain('Выручка')
-    expect(wrapper.text()).toContain('Не удалось загрузить данные')
-
-    const channelCalls = (): number =>
-      getSummary.mock.calls.filter(([params]) => params.groupBy === 'Channel').length
-    const before: number = channelCalls()
 
     const retry = wrapper
       .findAll('button')
       .find((button) => button.text().includes('Повторить'))
 
     expect(retry).toBeDefined()
+
+    const before: number = getOverview.mock.calls.length
     await retry?.trigger('click')
     await flushPromises()
 
-    expect(channelCalls()).toBeGreaterThan(before)
+    expect(getOverview.mock.calls.length).toBeGreaterThan(before)
   })
 
   it('restores the range and the channel from the URL and sends completeness=all', async () => {
@@ -216,17 +246,23 @@ describe('FinanceOverviewView', () => {
     )
 
     expect(wrapper.text()).toContain('1 – 31 дек 2025')
+    expect(wrapper.text()).toContain('Выручка')
 
-    const totalsCall = getSummary.mock.calls.find(
-      ([params]) => params.groupBy === 'None' && params.granularity === 'Total',
-    )
-
-    expect(totalsCall?.[0]).toMatchObject({
+    expect(getOverview.mock.calls[0]?.[0]).toMatchObject({
       from: '2025-12-01',
       to: '2025-12-31',
       channelId: 'ch-1',
       completeness: 'all',
-      granularity: 'Total',
+      // The comparison is the same 31 days immediately before the range, not a calendar month.
+      compareFrom: '2025-10-31',
+      compareTo: '2025-11-30',
+    })
+
+    // The dynamics chart keeps its own request: it is the only block with a granularity.
+    expect(getSummary.mock.calls[0]?.[0]).toMatchObject({
+      from: '2025-12-01',
+      to: '2025-12-31',
+      granularity: 'Week',
       groupBy: 'None',
     })
   })

@@ -8,7 +8,7 @@ import PnlStatement from '@/components/finance/PnlStatement.vue'
 import { Badge } from '@/components/ui/badge'
 import { BreakdownBar } from '@/components/ui/breakdown-bar'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
-import type { PnlSummaryRow } from '@/types/finance'
+import type { PnlOverviewMargin, PnlSummaryRow } from '@/types/finance'
 import { formatPercent } from '@/utils/financeFormat'
 import {
   buildMarginBreakdowns,
@@ -19,7 +19,7 @@ import type { MarginBreakdowns, MarginSummary, WaterfallModel } from './overview
 
 interface Props {
   totals: PnlSummaryRow | null
-  previous: PnlSummaryRow | null
+  margin: PnlOverviewMargin | null
   currency: string
   rangeLabel: string
   loading: boolean
@@ -33,7 +33,7 @@ const emit = defineEmits<{
 }>()
 
 const summary: ComputedRef<MarginSummary> = computed<MarginSummary>(() =>
-  buildMarginSummary(props.totals, props.previous, props.currency),
+  buildMarginSummary(props.margin, props.currency),
 )
 
 const breakdowns: ComputedRef<MarginBreakdowns> = computed<MarginBreakdowns>(() =>
@@ -45,9 +45,7 @@ const waterfall: ComputedRef<WaterfallModel> = computed<WaterfallModel>(() =>
 )
 
 const coverageLabel: ComputedRef<string> = computed<string>(() =>
-  props.totals && props.totals.revenueAmount
-    ? formatPercent((props.totals.revenueWithMarginAmount / props.totals.revenueAmount) * 100)
-    : '—',
+  formatPercent(props.margin?.coveragePercent),
 )
 
 const noMargin: ComputedRef<boolean> = computed<boolean>(

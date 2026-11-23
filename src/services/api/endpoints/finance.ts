@@ -1,8 +1,10 @@
 import { axiosInstance } from '../client'
 import type {
+  GetPnlOverviewParams,
   GetPnlProductRankingParams,
   GetPnlSummaryParams,
   PnlFeedFreshnessResponse,
+  PnlOverviewResponse,
   PnlProductRankingResponse,
   PnlSummaryResponse,
 } from '@/types/finance'
@@ -61,6 +63,25 @@ export const financePnlApi = {
 
   getFreshness: async (): Promise<PnlFeedFreshnessResponse> => {
     const response = await axiosInstance.get<PnlFeedFreshnessResponse>('/api/finance/freshness')
+    return response.data
+  },
+
+  /**
+   * Whole overview of a period: totals, their comparison, channels and the remarks of the page.
+   * One request keeps every block on the same snapshot instead of five reads that may see a
+   * different import.
+   */
+  getOverview: async (params: GetPnlOverviewParams): Promise<PnlOverviewResponse> => {
+    const response = await axiosInstance.get<PnlOverviewResponse>('/api/finance/overview', {
+      params: buildQuery({
+        channelId: params.channelId,
+        from: params.from,
+        to: params.to,
+        compareFrom: params.compareFrom,
+        compareTo: params.compareTo,
+        completeness: params.completeness,
+      }),
+    })
     return response.data
   },
 }

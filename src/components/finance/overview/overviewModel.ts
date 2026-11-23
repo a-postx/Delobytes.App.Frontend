@@ -2,6 +2,12 @@
   PnlCurrencyExclusion,
   PnlFeedChannelFreshness,
   PnlFeedFreshnessResponse,
+  PnlOverviewAttention,
+  PnlOverviewChannel,
+  PnlOverviewKpi,
+  PnlOverviewKpiKey,
+  PnlOverviewMargin,
+  PnlOverviewResponse,
   PnlProductRankingResponse,
   PnlSummaryRow,
 } from '@/types/finance'
@@ -76,112 +82,99 @@ export function provisionalShare(row: PnlSummaryRow | null | undefined): number 
   return (row.provisionalRevenueAmount / row.revenueAmount) * 100
 }
 
-function percentDelta(current: number | null, previous: number | null): StatsDelta | undefined {
-  if (current === null || previous === null || previous === 0) {
+function deltaOf(value: number | null | undefined, unit: 'percent' | 'points'): StatsDelta | undefined {
+  if (value === null || value === undefined) {
     return undefined
   }
 
-  const percent: number = ((current - previous) / Math.abs(previous)) * 100
-  const rounded: number = Math.round(percent * 10) / 10
-
-  if (rounded === 0) {
-    return { text: `0,0%`, direction: 'flat', tone: 'neutral' }
+  if (value === 0) {
+    return {
+      text: unit === 'points' ? formatPercentagePoints(0) : '0,0%',
+      direction: 'flat',
+      tone: 'neutral',
+    }
   }
 
   return {
-    text: `${formatNumber(Math.abs(rounded), 1)}%`,
-    direction: rounded > 0 ? 'up' : 'down',
-    tone: rounded > 0 ? 'positive' : 'negative',
+    text: unit === 'points' ? formatPercentagePoints(value) : `${formatNumber(Math.abs(value), 1)}%`,
+    direction: value > 0 ? 'up' : 'down',
+    tone: value > 0 ? 'positive' : 'negative',
   }
 }
 
-function buyoutOf(row: PnlSummaryRow | null | undefined): number | null {
-  if (!row || row.quantityOrdered <= 0) {
-    return null
-  }
-  return (row.quantitySold / row.quantityOrdered) * 100
+function formatKpiValue(value: number | null | undefined, fractionDigits = 0): string {
+  return value === null || value === undefined ? '—' : formatNumber(value, fractionDigits)
 }
 
-function averageCheckOf(row: PnlSummaryRow | null | undefined): number | null {
-  if (!row || row.revenueAmount === null || row.quantitySold <= 0) {
-    return null
-  }
-  return row.revenueAmount / row.quantitySold
-}
-
-function buyoutDelta(current: number | null, previous: number | null): StatsDelta | undefined {
-  if (current === null || previous === null) {
-    return undefined
-  }
-
-  const delta: number = current - previous
-  const rounded: number = Math.round(delta * 10) / 10
-
-  return {
-    text: formatPercentagePoints(rounded),
-    direction: rounded === 0 ? 'flat' : rounded > 0 ? 'up' : 'down',
-    tone: rounded === 0 ? 'neutral' : rounded > 0 ? 'positive' : 'negative',
-  }
-}
-
-/** KPI strip of the overview: five metrics and their change against the comparison range. */
-export function buildKpis(
-  totals: PnlSummaryRow | null,
-  previous: PnlSummaryRow | null,
-  currency: string,
-): StatsStripItem[] {
+/**
+ * KPI strip of the overview. The metrics and their movement are computed by the backend, which
+ * already knows which values may be compared; the strip only decides how to print them.
+ */
+export function mapKpis(overview: PnlOverviewResponse | null, currency: string): StatsStripItem[] {
   const symbol: string = currencySymbol(currency)
-  const empty: boolean = totals === null
-  const revenue: number | null = totals?.revenueAmount ?? null
-  const netRevenue: number | null = totals?.netRevenueAmount ?? null
-  const buyout: number | null = buyoutOf(totals)
-  const averageCheck: number | null = averageCheckOf(totals)
+  const empty: boolean = overview === null || overview.totals === null
+  const kpis: PnlOverviewKpi[] = overview?.kpis ?? []
 
+  function find(key: PnlOverviewKpiKey): PnlOverviewKpi | undefined {
+    return kpis.find((item: PnlOverviewKpi) => item.key === key)
+  }
+
+  const revenue: PnlOverviewKpi | undefined = find('Revenue')
+  const netRevenue: PnlOverviewKpi | undefined = find('NetRevenue')
+  const sold: PnlOverviewKpi | undefined = find('Sold')
+  const averageCheck: PnlOverviewKpi | undefined = find('AverageCheck')
+  const buyout: PnlOverviewKpi | undefined = find('Buyout')
+
+  const revenueValue: number | null = revenue?.value ?? null
+  const netValue: number | null = netRevenue?.value ?? null
+  const buyoutValue: number | null = buyout?.value ?? null
+
+  // A caption restates the figure next to it: it is a share of the same money, not a new metric.
   const netCaption: string | undefined =
-    !empty && revenue !== null && revenue > 0 && netRevenue !== null
-      ? `${formatPercent((netRevenue / revenue) * 100)} выручки после удержаний`
+    !empty && revenueValue !== null && revenueValue > 0 && netValue !== null
+      ? `${formatPercent((netValue / revenueValue) * 100)} выручки после удержаний`
       : undefined
 
   const buyoutCaption: string | undefined =
-    buyout !== null ? `невыкуп ${formatPercent(100 - buyout)}` : undefined
+    buyoutValue !== null ? `невыкуп ${formatPercent(100 - buyoutValue)}` : undefined
 
   return [
     {
       key: 'revenue',
       label: 'Выручка',
-      value: !empty && revenue !== null ? formatNumber(revenue) : '—',
+      value: empty ? '—' : formatKpiValue(revenueValue),
       unit: empty ? undefined : symbol,
-      delta: percentDelta(revenue, previous?.revenueAmount ?? null),
+      delta: deltaOf(revenue?.deltaPercent, 'percent'),
     },
     {
       key: 'netRevenue',
       label: 'Чистая выручка',
-      value: !empty && netRevenue !== null ? formatNumber(netRevenue) : '—',
+      value: empty ? '—' : formatKpiValue(netValue),
       unit: empty ? undefined : symbol,
       caption: netCaption,
     },
     {
       key: 'sold',
       label: 'Продано',
-      value: !empty ? formatNumber(totals?.quantitySold ?? 0) : '—',
+      value: empty ? '—' : formatKpiValue(sold?.value ?? 0),
       unit: empty ? undefined : 'шт',
-      caption: empty ? undefined : `заказов ${formatNumber(totals?.quantityOrdered ?? 0)}`,
-      delta: percentDelta(totals?.quantitySold ?? null, previous?.quantitySold ?? null),
+      caption: empty ? undefined : `заказов ${formatNumber(overview?.totals?.quantityOrdered ?? 0)}`,
+      delta: deltaOf(sold?.deltaPercent, 'percent'),
     },
     {
       key: 'averageCheck',
       label: 'Средний чек',
-      value: !empty && averageCheck !== null ? formatNumber(averageCheck) : '—',
+      value: empty ? '—' : formatKpiValue(averageCheck?.value),
       unit: empty ? undefined : symbol,
-      delta: percentDelta(averageCheck, averageCheckOf(previous)),
+      delta: deltaOf(averageCheck?.deltaPercent, 'percent'),
     },
     {
       key: 'buyout',
       label: 'Выкуп',
-      value: !empty && buyout !== null ? formatNumber(buyout, 1) : '—',
+      value: empty ? '—' : formatKpiValue(buyoutValue, 1),
       unit: empty ? undefined : '%',
       caption: buyoutCaption,
-      delta: buyoutDelta(buyout, buyoutOf(previous)),
+      delta: deltaOf(buyout?.deltaPoints, 'points'),
     },
   ]
 }
@@ -205,44 +198,41 @@ export interface MarginSummary {
   hasTaxProfile: boolean
 }
 
+/**
+ * Margin block of the card. The amount, its coverage and the comparison come from the backend,
+ * which knows which populations may be compared; this function only formats them.
+ */
 export function buildMarginSummary(
-  totals: PnlSummaryRow | null,
-  previous: PnlSummaryRow | null,
+  margin: PnlOverviewMargin | null,
   currency: string,
 ): MarginSummary {
-  const coverage: number | null = coverageOf(totals)
-  const previousCoverage: number | null = coverageOf(previous)
-  const margin: number | null = totals?.margin ?? null
-
-  // Deltas of a partially covered margin compare different populations, so they are hidden.
-  const comparable: boolean =
-    coverage !== null &&
-    previousCoverage !== null &&
-    coverage >= MARGIN_COVERAGE_WARN &&
-    previousCoverage >= MARGIN_COVERAGE_WARN
+  const amount: number | null = margin?.amount ?? null
 
   const tax: MarginTaxSummary | null =
-    totals?.estimatedTax !== null && totals?.estimatedTax !== undefined
+    margin?.hasTaxProfile === true
       ? {
-          amount: formatMoney(Math.abs(totals.estimatedTax), currency),
-          afterTax: formatMoney(totals.taxAdjustedMargin, currency),
-          partial: totals.isTaxAdjustedMarginComplete === false,
+          amount: formatMoney(Math.abs(margin.estimatedTaxAmount ?? 0), currency),
+          afterTax: formatMoney(margin.taxAdjustedMarginAmount, currency),
+          partial: !margin.isTaxAdjustedComplete,
         }
       : null
 
   return {
-    margin,
-    marginFormatted: formatMoney(margin, currency),
+    margin: amount,
+    marginFormatted: formatMoney(amount, currency),
     currency,
-    contributionPercent: formatPercent(totals?.contributionMarginPercent ?? null),
-    roiPercent: formatPercent(totals?.returnOnSoldCostPercent ?? null),
-    delta: comparable ? percentDelta(margin, previous?.margin ?? null) : undefined,
-    partial: totals?.isMarginComplete === false,
-    coverage,
+    contributionPercent: formatPercent(margin?.contributionMarginPercent),
+    roiPercent: formatPercent(margin?.returnOnSoldCostPercent),
+    delta: deltaOf(margin?.deltaPercent, 'percent'),
+    partial: margin !== null && !margin.isComplete,
+    coverage: margin?.coveragePercent === null || margin?.coveragePercent === undefined
+      ? null
+      : margin.coveragePercent / 100,
     tax,
     hasTaxProfile: tax !== null,
   }
 }
+
 
 export function buildCoverageBanner(totals: PnlSummaryRow | null): { title: string; description: string } | null {
   const coverage: number | null = coverageOf(totals)
@@ -496,47 +486,40 @@ const CHANNEL_BAR_CLASS: Record<ChannelBadgeVariant, string> = {
   default: 'bg-muted-foreground',
 }
 
-export function buildChannelRows(
-  rows: PnlSummaryRow[],
-  channels: Map<string, { name: string; code: string | null }>,
+/**
+ * Channel rows of the overview. The figures and their shares come from the backend, which folded
+ * the period once; the row only resolves the channel name and decides how to print the money.
+ */
+export function mapChannelRows(
+  channels: PnlOverviewChannel[],
+  names: Map<string, { name: string; code: string | null }>,
   currency: string,
 ): ChannelRow[] {
-  const withRevenue: PnlSummaryRow[] = [...rows]
-    .filter((row: PnlSummaryRow) => row.channelId !== null)
-    .sort((left: PnlSummaryRow, right: PnlSummaryRow) => (right.revenueAmount ?? 0) - (left.revenueAmount ?? 0))
+  return channels
+    .filter(
+      (channel: PnlOverviewChannel): channel is PnlOverviewChannel & { channelId: string } =>
+        channel.channelId !== null,
+    )
+    .map((channel: PnlOverviewChannel & { channelId: string }) => {
+      const known = names.get(channel.channelId)
 
-  const totalRevenue: number = withRevenue.reduce(
-    (sum: number, row: PnlSummaryRow) => sum + (row.revenueAmount ?? 0),
-    0,
-  )
-
-  return withRevenue.map((row: PnlSummaryRow) => {
-    const channelId: string = row.channelId ?? ''
-    const channel = channels.get(channelId)
-    const revenue: number = row.revenueAmount ?? 0
-    const deductions: number = revenue - (row.netRevenueAmount ?? 0)
-
-    return {
-      channelId,
-      label: channel?.name ?? `Канал ${channelId.slice(0, 8)}`,
-      variant: channelDisplay(channel?.code).variant,
-      revenue,
-      revenueFormatted: formatNumber(revenue),
-      deductionsFormatted: formatMoney(deductions * -1, currency),
-      deductionsShare: formatPercent(shareOfRevenue(deductions, revenue)),
-      marginFormatted: formatMoney(row.margin, currency),
-      marginPercent: formatPercent(row.contributionMarginPercent),
-      marginPartial: row.isMarginComplete === false,
-      sharePercent: shareOfRevenue(revenue, totalRevenue),
-    }
-  })
-}
-
-function shareOfRevenue(part: number, total: number): number {
-  if (!Number.isFinite(total) || total <= 0) {
-    return 0
-  }
-  return (part / total) * 100
+      return {
+        channelId: channel.channelId,
+        label: known?.name ?? `Канал ${channel.channelId.slice(0, 8)}`,
+        variant: channelDisplay(known?.code).variant,
+        revenue: channel.revenueAmount ?? 0,
+        revenueFormatted: formatNumber(channel.revenueAmount ?? 0),
+        deductionsFormatted: formatMoney(
+          channel.deductionsAmount === null ? null : channel.deductionsAmount * -1,
+          currency,
+        ),
+        deductionsShare: formatPercent(channel.deductionsPercent),
+        marginFormatted: formatMoney(channel.margin, currency),
+        marginPercent: formatPercent(channel.contributionMarginPercent),
+        marginPartial: !channel.isMarginComplete,
+        sharePercent: channel.sharePercent,
+      }
+    })
 }
 
 export function channelBarClass(variant: ChannelBadgeVariant): string {
@@ -551,95 +534,61 @@ export interface AttentionItem {
   to: string
 }
 
-export function buildAttentionItems(input: {
-  overdue: PnlSummaryRow | null
-  byProduct: PnlSummaryRow[]
-  excludedByCurrency: number
-  excludedCurrencies: PnlCurrencyExclusion[]
-  currency: string
-}): AttentionItem[] {
-  const items: AttentionItem[] = []
-  const overdueLines: number = input.overdue?.lines ?? 0
-
-  if (overdueLines > 0) {
-    items.push({
-      key: 'overdue',
-      tone: 'danger',
-      title: `Просрочены документы по ${overdueLines} ${pluralRu(overdueLines, ['строке', 'строкам', 'строкам'])}`,
-      subtitle: `${formatMoney(input.overdue?.revenueAmount ?? null, input.currency)} выручки ждут подтверждения`,
-      to: 'finance-quality',
-    })
-  }
-
-  const withoutCost: PnlSummaryRow[] = input.byProduct.filter(
-    (row: PnlSummaryRow) =>
-      row.productId !== null && row.netRevenueWithoutCostAmount > 0,
-  )
-
-  if (withoutCost.length > 0) {
-    const sum: number = withoutCost.reduce(
-      (total: number, row: PnlSummaryRow) => total + row.netRevenueWithoutCostAmount,
-      0,
-    )
-    items.push({
-      key: 'withoutCost',
-      tone: 'warning',
-      title: `${withoutCost.length} SKU без себестоимости`,
-      subtitle: `${formatMoney(sum, input.currency)} чистой выручки не попали в маржу`,
-      to: 'finance-products',
-    })
-  }
-
-  const unlinked: PnlSummaryRow[] = input.byProduct.filter(
-    (row: PnlSummaryRow) => row.isUnlinkedProduct && (row.revenueAmount ?? 0) > 0,
-  )
-
-  if (unlinked.length > 0) {
-    const sum: number = unlinked.reduce(
-      (total: number, row: PnlSummaryRow) => total + (row.revenueAmount ?? 0),
-      0,
-    )
-    items.push({
-      key: 'unlinked',
-      tone: 'warning',
-      title: 'Продажи без привязки к каталогу',
-      subtitle: `${formatMoney(sum, input.currency)} выручки`,
-      to: 'finance-products',
-    })
-  }
-
-  const lossMaking: PnlSummaryRow[] = input.byProduct.filter(
-    (row: PnlSummaryRow) => row.margin !== null && row.margin < 0,
-  )
-
-  if (lossMaking.length > 0) {
-    const sum: number = lossMaking.reduce(
-      (total: number, row: PnlSummaryRow) => total + (row.margin ?? 0),
-      0,
-    )
-    items.push({
-      key: 'loss',
-      tone: 'warning',
-      title: `${lossMaking.length} ${pluralRu(lossMaking.length, ['убыточный SKU', 'убыточных SKU', 'убыточных SKU'])}`,
-      subtitle: `суммарно ${formatSignedMoney(sum, input.currency)} маржинальной прибыли`,
-      to: 'finance-products',
-    })
-  }
-
-  if (input.excludedByCurrency > 0) {
-    const breakdown: string = input.excludedCurrencies
-      .map((item: PnlCurrencyExclusion) => `${item.currency} — ${item.lines}`)
-      .join(', ')
-    items.push({
-      key: 'currency',
-      tone: 'info',
-      title: `${input.excludedByCurrency} ${pluralRu(input.excludedByCurrency, ['строка', 'строки', 'строк'])} в других валютах`,
-      subtitle: `${breakdown}. В итоги в ${input.currency} не вошли`,
-      to: 'finance-quality',
-    })
-  }
-
-  return items
+/**
+ * Remarks of the overview. Which populations are worth a remark is decided by the backend, so the
+ * counts here always describe the same lines as the totals next to them; the wording is local.
+ */
+export function mapAttentionItems(
+  attention: PnlOverviewAttention[],
+  excludedCurrencies: PnlCurrencyExclusion[],
+  currency: string,
+): AttentionItem[] {
+  return attention.map((item: PnlOverviewAttention): AttentionItem => {
+    switch (item.code) {
+      case 'Overdue':
+        return {
+          key: 'overdue',
+          tone: 'danger',
+          title: `Просрочены документы по ${item.count} ${pluralRu(item.count, ['строке', 'строкам', 'строкам'])}`,
+          subtitle: `${formatMoney(item.amount, currency)} выручки ждут подтверждения`,
+          to: 'finance-quality',
+        }
+      case 'WithoutCost':
+        return {
+          key: 'withoutCost',
+          tone: 'warning',
+          title: `${item.count} SKU без себестоимости`,
+          subtitle: `${formatMoney(item.amount, currency)} чистой выручки не попали в маржу`,
+          to: 'finance-products',
+        }
+      case 'Unlinked':
+        return {
+          key: 'unlinked',
+          tone: 'warning',
+          title: 'Продажи без привязки к каталогу',
+          subtitle: `${formatMoney(item.amount, currency)} выручки`,
+          to: 'finance-products',
+        }
+      case 'Loss':
+        return {
+          key: 'loss',
+          tone: 'warning',
+          title: `${item.count} ${pluralRu(item.count, ['убыточный SKU', 'убыточных SKU', 'убыточных SKU'])}`,
+          subtitle: `суммарно ${formatSignedMoney(item.amount, currency)} маржинальной прибыли`,
+          to: 'finance-products',
+        }
+      case 'Currency':
+        return {
+          key: 'currency',
+          tone: 'info',
+          title: `${item.count} ${pluralRu(item.count, ['строка', 'строки', 'строк'])} в других валютах`,
+          subtitle: `${excludedCurrencies
+            .map((excluded: PnlCurrencyExclusion) => `${excluded.currency} — ${excluded.lines}`)
+            .join(', ')}. В итоги в ${currency} не вошли`,
+          to: 'finance-quality',
+        }
+    }
+  })
 }
 
 export interface SkuRankings {
