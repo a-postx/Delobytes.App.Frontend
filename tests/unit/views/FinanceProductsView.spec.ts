@@ -430,6 +430,41 @@ describe('FinanceProductsView', () => {
     expect(document.body.textContent).toContain('BAG-CLASSIC-BLK')
   })
 
+  it('shows the populated table even when the feed state is empty', async () => {
+    // Reports may have been loaded before the feed state existed: the freshness list is then
+    // empty while the product table holds the whole period.
+    getFreshness.mockResolvedValue({ asOf: '2026-01-05T06:00:00Z', channels: [] })
+
+    const { wrapper } = await mountView('/finance/products?period=lastMonth')
+
+    expect(wrapper.text()).not.toContain('Финансовых данных пока нет')
+    expect(wrapper.findComponent(ProductsTable).exists()).toBe(true)
+    expect(wrapper.text()).toContain('SKU в периоде')
+  })
+
+  it('shows the no-data state when the feed and the table are both empty', async () => {
+    getFreshness.mockResolvedValue({ asOf: '2026-01-05T06:00:00Z', channels: [] })
+    getTable.mockResolvedValue(tableResponse({
+      items: [],
+      totalCount: 0,
+      counts: { all: 0, loss: 0, withoutCost: 0 },
+      summary: {
+        products: 0,
+        lossProducts: 0,
+        lossMarginAmount: 0,
+        withoutCostProducts: 0,
+        withoutCostNetRevenueAmount: 0,
+        medianContributionMarginPercent: null,
+      },
+      unlinked: null,
+    }))
+
+    const { wrapper } = await mountView('/finance/products?period=lastMonth')
+
+    expect(wrapper.text()).toContain('Финансовых данных пока нет')
+    expect(wrapper.findComponent(ProductsTable).exists()).toBe(false)
+  })
+
   it('replaces the page with a retry block when the table fails', async () => {
     getTable.mockRejectedValue({
       response: { status: 500, data: { message: 'Сервер не смог обработать запрос' } },
