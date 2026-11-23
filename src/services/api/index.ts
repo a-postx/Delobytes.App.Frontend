@@ -1,4 +1,6 @@
 ﻿export { apiClient, axiosInstance } from './client'
+export { authApi } from './endpoints/auth'
+export type { ChangePasswordRequest } from './endpoints/auth'
 export { healthApi } from './endpoints/health'
 export { integrationsApi } from './endpoints/integrations'
 export { meApi } from './endpoints/me'

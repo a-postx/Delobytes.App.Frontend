@@ -95,6 +95,7 @@ class ApiClient {
               404: 'Запрошенный ресурс не найден.',
               409: 'Конфликт данных. Возможно, ресурс уже существует.',
               422: 'Проверьте корректность отправленных данных.',
+              429: 'Слишком много попыток. Попробуйте позже.',
               500: 'Внутренняя ошибка сервера. Попробуйте позже.',
               502: 'Сервис временно недоступен.',
               503: 'Сервис на обслуживании. Попробуйте позже.',
@@ -107,12 +108,12 @@ class ApiClient {
             }
           }
 
-          // Redirect to login on 401 only for authenticated requests,
-          // not for auth endpoints themselves (login, register, etc.)
+          // Redirect to login on 401 only for authenticated requests. Public auth
+          // endpoints must show their own error instead of wiping the session.
           const url = error.config?.url ?? ''
-          const isAuthEndpoint = url.includes('/api/auth/')
+          const isPublicAuthEndpoint = /\/api\/auth\/(login|register|yandex\/callback|google\/callback)$/.test(url)
 
-          if (error.response.status === 401 && !isAuthEndpoint) {
+          if (error.response.status === 401 && !isPublicAuthEndpoint) {
             localStorage.removeItem('accessToken')
             localStorage.removeItem('userId')
             localStorage.removeItem('tenantId')

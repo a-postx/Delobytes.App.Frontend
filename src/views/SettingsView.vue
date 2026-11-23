@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
 import {
   Card,
   CardContent,
@@ -7,18 +6,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { useCurrentUser } from '@/composables/useCurrentUser'
-
-const { currentUser, fetchCurrentUser } = useCurrentUser()
-
-onMounted(async () => {
-  if (!currentUser.value) {
-    await fetchCurrentUser()
-  }
-})
-
-const userEmail = computed(() => currentUser.value?.email ?? '')
+import ChangePasswordDialog from '@/components/features/ChangePasswordDialog.vue'
 </script>
 
 <template>
@@ -38,14 +26,12 @@ const userEmail = computed(() => currentUser.value?.email ?? '')
           Пароль
         </CardTitle>
         <CardDescription>
-          Мы отправим письмо с волшебной ссылкой на {{ userEmail }}.
-          Эта ссылка позволит создать новый пароль.
+          Смените пароль. После сохранения текущая сессия завершится,
+          и вы войдёте заново с новым паролем.
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <Button disabled>
-          Сменить пароль
-        </Button>
+        <ChangePasswordDialog />
       </CardContent>
     </Card>
   </div>
