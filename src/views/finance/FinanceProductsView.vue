@@ -224,15 +224,16 @@ const channelMap: ComputedRef<Map<string, { name: string; code: string | null }>
 const freshnessView = computed(() => buildFreshnessView(freshness.data.value, channelMap.value, timeZone.value))
 
 /**
- * A tenant may hold finance reports without a feed state: the freshness list is then empty while
- * the product table is populated. Only an empty table confirms there is nothing to show.
+ * Freshness is not a reliable "has any data" signal: a tenant may hold reports without a feed
+ * state. Connected channels and an empty table are. A period without sales keeps the toolbar, so
+ * the reader can leave it instead of losing navigation.
  */
 const noFinanceData: ComputedRef<boolean> = computed<boolean>(() => {
-  const feed = freshness.data.value
+  const channelList = channels.data.value
   const data = table.data.value
 
-  return feed !== null
-    && feed.channels.length === 0
+  return channelList !== null
+    && activeChannels.value.length === 0
     && data !== null
     && data.summary.products === 0
     && data.unlinked === null

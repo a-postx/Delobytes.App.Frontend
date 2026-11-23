@@ -442,7 +442,8 @@ describe('FinanceProductsView', () => {
     expect(wrapper.text()).toContain('SKU в периоде')
   })
 
-  it('shows the no-data state when the feed and the table are both empty', async () => {
+  it('shows the no-data state when no channel is connected and the table is empty', async () => {
+    getChannels.mockResolvedValue({ items: [] })
     getFreshness.mockResolvedValue({ asOf: '2026-01-05T06:00:00Z', channels: [] })
     getTable.mockResolvedValue(tableResponse({
       items: [],
@@ -463,6 +464,30 @@ describe('FinanceProductsView', () => {
 
     expect(wrapper.text()).toContain('Финансовых данных пока нет')
     expect(wrapper.findComponent(ProductsTable).exists()).toBe(false)
+  })
+
+  it('keeps the toolbar and the empty-period state when the period has no sales', async () => {
+    getFreshness.mockResolvedValue({ asOf: '2026-01-05T06:00:00Z', channels: [] })
+    getTable.mockResolvedValue(tableResponse({
+      items: [],
+      totalCount: 0,
+      counts: { all: 0, loss: 0, withoutCost: 0 },
+      summary: {
+        products: 0,
+        lossProducts: 0,
+        lossMarginAmount: 0,
+        withoutCostProducts: 0,
+        withoutCostNetRevenueAmount: 0,
+        medianContributionMarginPercent: null,
+      },
+      unlinked: null,
+    }))
+
+    const { wrapper } = await mountView('/finance/products?period=lastMonth')
+
+    expect(wrapper.text()).not.toContain('Финансовых данных пока нет')
+    expect(wrapper.text()).toContain('За выбранный период продаж нет')
+    expect(wrapper.text()).toContain('Все каналы')
   })
 
   it('replaces the page with a retry block when the table fails', async () => {
