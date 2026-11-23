@@ -343,6 +343,30 @@ describe('FinanceProductsView', () => {
     expect(text.indexOf('ZZZ-1')).toBeLessThan(text.indexOf('AAA-2'))
   })
 
+  it('does not repeat the cost coverage marker in the SKU column', async () => {
+    getTable.mockResolvedValue(tableResponse({
+      items: [{
+        ...row({
+          sku: 'ZZZ-1',
+          productId: 'p-1',
+          costCoverage: 'Partial',
+          margin: null,
+          contributionMarginPercent: null,
+          returnOnSoldCostPercent: null,
+          soldCostAmount: null,
+        }),
+        id: 'p-1',
+      }],
+      counts: { all: 1, loss: 0, withoutCost: 1 },
+    }))
+
+    const { wrapper } = await mountView('/finance/products?period=lastMonth')
+
+    expect(wrapper.find('[data-product-row="p-1"]').text()).toBe('ZZZ-1')
+    expect(wrapper.text()).not.toContain('частично')
+    expect(wrapper.text()).not.toContain('нет себестоимости')
+  })
+
   it('renders the KPI strip and the segment counters from the response', async () => {
     getTable.mockResolvedValue(tableResponse({
       counts: { all: 214, loss: 9, withoutCost: 6 },

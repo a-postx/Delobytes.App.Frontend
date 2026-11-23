@@ -6,7 +6,6 @@ import type {
   FinanceProductSummary,
   FinanceUnlinkedSales,
   PnlDocumentGapGroup,
-  PnlProductCostCoverage,
 } from '@/types/financeProducts'
 import type { BreakdownSegment } from '@/components/ui/breakdown-bar'
 import type { StatsStripItem } from '@/components/ui/stats-strip'
@@ -90,18 +89,6 @@ export function mapProductSegments(counts: FinanceProductSegmentCounts): Product
     { value: 'loss', label: 'Убыточные', count: counts.loss },
     { value: 'withoutCost', label: 'Без себестоимости', count: counts.withoutCost },
   ]
-}
-
-export function costCoverageLabel(coverage: PnlProductCostCoverage): string | null {
-  if (coverage === 'Missing') {
-    return 'нет себестоимости'
-  }
-
-  if (coverage === 'Partial') {
-    return 'частично'
-  }
-
-  return null
 }
 
 export interface RevenueFlow {
@@ -327,10 +314,4 @@ export function marginPercentLabel(product: FinanceProductRow): string | null {
   return product.contributionMarginPercent === null
     ? null
     : formatPercent(product.contributionMarginPercent)
-}
-
-export function coveragePercentLabel(product: FinanceProductRow): string | null {
-  return product.marginCoveragePercent === null
-    ? null
-    : formatPercent(100 - product.marginCoveragePercent)
 }

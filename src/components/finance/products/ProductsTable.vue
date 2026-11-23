@@ -53,10 +53,17 @@ watch(columnVisibility, (value: VisibilityState) => {
 }, { deep: true })
 
 function coverageHint(row: FinanceProductRow): string | null {
-  if (row.costCoverage !== 'Partial' || row.marginCoveragePercent === null) {
+  if (row.costCoverage === 'Missing') {
+    return 'Себестоимость не рассчитана: у товара нет данных о затратах'
+  }
+
+  if (row.costCoverage !== 'Partial') {
     return null
   }
-  return `Посчитано по ${formatPercent(row.marginCoveragePercent)} выручки товара`
+
+  return row.marginCoveragePercent === null
+    ? 'Себестоимость рассчитана не полностью'
+    : `Посчитано по ${formatPercent(row.marginCoveragePercent)} выручки товара`
 }
 
 function soldCostText(value: number | null): string {
@@ -105,7 +112,6 @@ const columns = computed<ColumnDef<FinanceProductTableItem, unknown>[]>(() => {
       cell: ({ row }) => h(ProductSkuCell, {
         productId: row.original.productId,
         sku: row.original.sku,
-        coverage: row.original.costCoverage,
       }),
     },
     {
@@ -158,11 +164,10 @@ const columns = computed<ColumnDef<FinanceProductTableItem, unknown>[]>(() => {
           meta: { title: 'Себестоимость' },
           enableSorting: true,
           enableHiding: true,
-          cell: ({ row }) => h(
-            'span',
-            { class: 'tabular-nums' },
-            soldCostText(row.original.soldCostAmount),
-          ),
+          cell: ({ row }) => h(ProductMetricCell, {
+            text: soldCostText(row.original.soldCostAmount),
+            hint: coverageHint(row.original),
+          }),
         },
         {
           id: 'margin',
