@@ -93,13 +93,24 @@ export const groupWorkRates = (items: ProductWorkRateItem[]): WorkRateGroup[] =>
 export const countHistory = (group: WorkRateGroup): number => group.history.length
 
 /**
- * Счётчики в фильтре описывают товары, а не версии: сервер считает группы, поэтому подпись
- * «Активные (12)» означает 12 товаров.
+ * Раскрытые строки товаров, у которых есть история. Строка товара показывает статус действующей
+ * версии, поэтому в срезе «С историей» без раскрытия видны только активные записи.
+ */
+export const expandedGroupsWithHistory = (groups: WorkRateGroup[]): Record<string, boolean> =>
+  Object.fromEntries(groups
+    .filter(group => group.history.length > 0)
+    .map(group => [group.productId, true]))
+
+/**
+ * Счётчики описывают товары, а не версии, и фильтры пересекаются: товар с действующей нормой и
+ * историей попадает и в «Активные», и в «С историей». Поэтому active + inactive ≠ all, и третья
+ * подпись называет признак группы («есть вытесненные или снятые версии»), а не дополнение к
+ * активным — иначе счётчики читаются как разбиение и противоречат друг другу.
  */
 export const filterOptionsFromCounts = (counts: ProductWorkRateStatusCounts): WorkRateFilterOption[] => [
   { value: 'active', label: 'Активные', count: counts.active },
   { value: 'all', label: 'Все', count: counts.all },
-  { value: 'inactive', label: 'Неактивные', count: counts.inactive },
+  { value: 'inactive', label: 'С историей', count: counts.inactive },
 ]
 
 /**

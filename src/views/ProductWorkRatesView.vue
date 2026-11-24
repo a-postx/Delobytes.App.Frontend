@@ -64,6 +64,7 @@ import ErrorState from '@/components/feedback/ErrorState.vue'
 import { ErrorCodes } from '@/types/errors'
 import type { ApiError } from '@/types/errors'
 import {
+  expandedGroupsWithHistory,
   isDateTaken,
   filterOptionsFromCounts,
   formatIsoDate,
@@ -280,7 +281,11 @@ watch(statusFilter, () => {
   rowSelection.value = {}
   expanded.value = {}
   pagination.value = { ...pagination.value, pageIndex: 0 }
-  void loadRates()
+  void loadRates().then(() => {
+    if (statusFilter.value === 'inactive') {
+      expanded.value = expandedGroupsWithHistory(groups.value)
+    }
+  })
 })
 
 watch(
@@ -714,7 +719,7 @@ const emptyText = computed<string>(() => {
   if (hasEmptyCatalog.value) {
     return 'Сначала добавьте товары в систему'
   }
-  return statusFilter.value === 'inactive' ? 'Нет неактивных записей' : 'Нормы выработки не добавлены'
+  return statusFilter.value === 'inactive' ? 'Нет товаров с историей норм' : 'Нормы выработки не добавлены'
 })
 
 </script>
@@ -758,6 +763,15 @@ const emptyText = computed<string>(() => {
         class="text-xs text-muted-foreground"
       >Обновление…</span>
     </div>
+
+    <!-- Фильтры считают товары и пересекаются: товар с действующей нормой и историей есть в обоих срезах -->
+    <p
+      v-if="statusFilter === 'inactive'"
+      class="-mt-3 text-xs text-muted-foreground"
+    >
+      Показаны товары, у которых есть вытесненные или снятые версии. Действующая норма у них может сохраняться,
+      поэтому счётчики фильтров не складываются.
+    </p>
 
     <!-- Loading -->
     <div

@@ -8,6 +8,7 @@ import { describe, it, expect } from 'vitest'
 import {
   currentVersionOf,
   countHistory,
+  expandedGroupsWithHistory,
   filterOptionsFromCounts,
   formatIsoDate,
   groupWorkRates,
@@ -223,6 +224,11 @@ describe('groupWorkRates', () => {
     expect(countHistory(groups[1])).toBe(0)
   })
 
+  it('expands exactly the groups that have history', () => {
+    const groups = groupWorkRates(items)
+    expect(expandedGroupsWithHistory(groups)).toEqual({ p1: true })
+  })
+
   it('finds the current version of a product', () => {
     expect(currentVersionOf(items, 'p1')?.id).toBe('a2')
     expect(currentVersionOf(items, 'missing')).toBeNull()
@@ -242,8 +248,15 @@ describe('filterOptionsFromCounts', () => {
     expect(options).toEqual([
       { value: 'active', label: 'Активные', count: 12 },
       { value: 'all', label: 'Все', count: 15 },
-      { value: 'inactive', label: 'Неактивные', count: 4 },
+      { value: 'inactive', label: 'С историей', count: 4 },
     ])
+  })
+
+  it('labels overlapping counters as a group trait, not a complement to active', () => {
+    // Товар с действующей нормой и историей попадает в оба среза: 3 + 1 ≠ 3 — это не ошибка.
+    const options = filterOptionsFromCounts({ active: 3, inactive: 1, all: 3 })
+    expect(options.map(option => option.label)).toEqual(['Активные', 'Все', 'С историей'])
+    expect(options.map(option => option.count)).toEqual([3, 3, 1])
   })
 
   it('renders zeroes before the first response arrives', () => {
