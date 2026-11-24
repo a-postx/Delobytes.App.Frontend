@@ -102,7 +102,7 @@ const currency: ComputedRef<string> = computed<string>(() => details.data.value?
 
 const catalogName: ComputedRef<string | null> = computed<string | null>(() => {
   const value: GetProductResponse | null = catalog.data.value
-  return value !== null && value.found ? value.name : null
+  return value !== null ? value.name : null
 })
 
 const channelLinks: ComputedRef<ProductChannelLink[]> = computed<ProductChannelLink[]>(

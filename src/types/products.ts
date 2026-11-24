@@ -154,7 +154,6 @@ export interface GetProductsParams {
 }
 
 export interface GetProductResponse {
-  found: boolean
   id: string
   code: string
   sku: string
@@ -205,7 +204,6 @@ export interface UpdateProductRequest {
 }
 
 export interface ProductDeletionStatusResponse {
-  found: boolean
   productId: string
   status: ProductStatus
   deletionRequestedAt?: string

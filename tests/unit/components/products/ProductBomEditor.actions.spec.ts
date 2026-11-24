@@ -57,7 +57,6 @@ const COMPONENTS = [
 ]
 
 const COST = {
-  found: true,
   productId: 'p1',
   asOfDate: '2024-06-01',
   materialCost: 120,

@@ -164,7 +164,6 @@ beforeEach(() => {
 
   getDetails.mockResolvedValue(details())
   getCatalogProduct.mockResolvedValue({
-    found: true,
     id: PRODUCT_ID,
     code: 'P-1',
     sku: 'BAG-CLASSIC-BLK',

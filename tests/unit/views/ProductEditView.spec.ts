@@ -42,7 +42,6 @@ const getById = catalogProductsApi.getById as ReturnType<typeof vi.fn>
 const update = catalogProductsApi.update as ReturnType<typeof vi.fn>
 
 const baseProduct: GetProductResponse = {
-  found: true,
   id: 'product-1',
   code: 'P-000001',
   sku: 'SKU-001',
@@ -342,6 +341,22 @@ describe('ProductEditView: маршрут', () => {
     await flushPromises()
 
     expect(getById).toHaveBeenCalledWith('product-42')
+    wrapper.unmount()
+  })
+
+  it('показывает «не найдено», когда бэкенд отвечает 404', async () => {
+    routeParams.value = { id: 'missing' }
+    getById.mockRejectedValue({
+      response: {
+        status: 404,
+        data: { code: 'catalog.product.not_found', message: 'Товар не найден.' },
+      },
+    })
+
+    const wrapper = factory()
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('Товар не найден')
     wrapper.unmount()
   })
 })

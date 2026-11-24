@@ -19,7 +19,6 @@ vi.mock('@/services/api', () => ({
 const DEBOUNCE_MS: number = 500
 
 const buildCost = (totalCost: number): ProductCostResponse => ({
-  found: true,
   productId: 'p1',
   asOfDate: '2024-06-01',
   materialCost: totalCost,
@@ -33,7 +32,6 @@ const buildCost = (totalCost: number): ProductCostResponse => ({
 })
 
 const buildResponse = (draftTotal: number, savedTotal: number): PreviewProductBomCostResponse => ({
-  found: true,
   preview: buildCost(draftTotal),
   baseline: {
     materialCost: savedTotal,

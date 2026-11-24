@@ -103,19 +103,20 @@ const loadProduct = async (): Promise<void> => {
   loadError.value = null
 
   try {
-    const response = await catalogProductsApi.getById(productId.value)
+    product.value = await catalogProductsApi.getById(productId.value)
+  } catch (error: unknown) {
+    const status: number = (error as { response?: { status?: number } })?.response?.status ?? 0
 
-    if (!response.found) {
+    // Бэкенд сообщает об отсутствии товара через 404: это состояние страницы, а не сбой загрузки.
+    if (status === 404) {
       notFound.value = true
       return
     }
 
-    product.value = response
-  } catch (error: unknown) {
     const apiError: ApiError = {
       code: extractErrorCode(error) ?? 'common.unexpected_error',
       message: extractErrorMessage(error, FALLBACK_LOAD_MESSAGE),
-      status: (error as { response?: { status?: number } })?.response?.status ?? 0,
+      status,
     }
     loadError.value = describeFailure(apiError, FALLBACK_LOAD_MESSAGE)
     toast.error(apiError.message)

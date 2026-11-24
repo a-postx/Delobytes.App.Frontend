@@ -215,7 +215,7 @@ describe('TaxProfileCard', () => {
     mockCanEdit(true)
     vi.mocked(tenantTaxProfilesApi.getAll).mockResolvedValue({ items: [] })
     vi.mocked(tenantTaxProfilesApi.create).mockResolvedValue({ id: 'new-id', conflict: false })
-    vi.mocked(tenantTaxProfilesApi.remove).mockResolvedValue({ found: true, notLatest: false, alreadyEffective: false })
+    vi.mocked(tenantTaxProfilesApi.remove).mockResolvedValue(undefined)
   })
 
   describe('render', () => {

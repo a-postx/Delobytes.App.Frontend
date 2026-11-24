@@ -100,7 +100,6 @@ export interface CostWarningDto {
 
 /** Детальный расчёт себестоимости товара (GetProductCostResponse). */
 export interface ProductCostResponse {
-  found: boolean
   productId: string
   asOfDate: string
   materialCost: number
@@ -129,7 +128,6 @@ export interface ProductCostSnapshotDto {
 }
 
 export interface GetProductCostHistoryResponse {
-  found: boolean
   totalCount: number
   items: ProductCostSnapshotDto[]
 }
@@ -176,7 +174,6 @@ export interface PreviewProductBomCostDelta {
 
 /** Ответ предпросмотра: расчёт черновика плюс база сравнения и дельта, посчитанные одним запросом. */
 export interface PreviewProductBomCostResponse {
-  found: boolean
   preview: ProductCostResponse | null
   baseline: PreviewProductBomCostBaseline | null
   delta: PreviewProductBomCostDelta | null

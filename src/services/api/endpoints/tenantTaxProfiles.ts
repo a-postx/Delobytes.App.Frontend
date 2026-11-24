@@ -52,13 +52,6 @@ export interface CreateTenantTaxProfileResponse {
   conflict: boolean
 }
 
-export interface DeleteTenantTaxProfileResponse {
-  found: boolean
-  notLatest: boolean
-  /** Последняя версия уже наступила: могла попасть в отчёты, удалять нельзя. */
-  alreadyEffective: boolean
-}
-
 export const tenantTaxProfilesApi = {
   getAll: async (): Promise<GetTenantTaxProfilesResponse> => {
     const response = await axiosInstance.get<GetTenantTaxProfilesResponse>(
@@ -83,10 +76,12 @@ export const tenantTaxProfilesApi = {
     return response.data
   },
 
-  remove: async (id: string): Promise<DeleteTenantTaxProfileResponse> => {
-    const response = await axiosInstance.delete<DeleteTenantTaxProfileResponse>(
-      `/api/tenant/tax-profiles/${id}`
-    )
-    return response.data
+  /**
+   * Удаление версии профиля. Отказы приходят кодами в общем конверте ошибок:
+   * `identity.tenant_tax_profile.not_found` (404),
+   * `identity.tenant_tax_profile.not_latest` и `...already_effective` (409).
+   */
+  remove: async (id: string): Promise<void> => {
+    await axiosInstance.delete(`/api/tenant/tax-profiles/${id}`)
   },
 }

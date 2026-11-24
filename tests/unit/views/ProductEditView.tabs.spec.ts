@@ -44,7 +44,6 @@ import ProductEditView from '@/views/ProductEditView.vue'
 const getById = catalogProductsApi.getById as ReturnType<typeof vi.fn>
 
 const productWithChannels: GetProductResponse = {
-  found: true,
   id: 'product-1',
   code: 'P-000001',
   sku: 'SKU-001',

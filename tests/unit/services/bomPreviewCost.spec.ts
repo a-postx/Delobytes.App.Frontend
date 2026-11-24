@@ -13,7 +13,6 @@ vi.mock('@/services/api/client', () => ({
 }))
 
 const emptyPreview: PreviewProductBomCostResponse = {
-  found: true,
   preview: null,
   baseline: null,
   delta: null,

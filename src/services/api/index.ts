@@ -24,7 +24,6 @@ export type {
   GetActiveTenantTaxProfileResponse,
   CreateTenantTaxProfileRequest,
   CreateTenantTaxProfileResponse,
-  DeleteTenantTaxProfileResponse,
 } from './endpoints/tenantTaxProfiles'
 export {
   channelsApi,
