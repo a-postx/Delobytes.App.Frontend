@@ -74,6 +74,10 @@ export interface CurrentUser {
   timeZone: string
   role: string
   tenants: UserTenant[]
+  /** Провайдер, через который создан аккаунт: "Local", "YandexID", "GoogleID". */
+  identityProvider: string
+  /** Можно ли менять пароль: только у локальных аккаунтов с сохранённым хешем. */
+  canChangePassword: boolean
 }
 
 export interface UserTenant {

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed, onMounted } from 'vue'
 import {
   Card,
   CardContent,
@@ -7,6 +8,18 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import ChangePasswordDialog from '@/components/features/ChangePasswordDialog.vue'
+import { useCurrentUser } from '@/composables/useCurrentUser'
+
+const { currentUser, fetchCurrentUser } = useCurrentUser()
+
+// Секция показывается только когда бэкенд подтвердил, что пароль можно менять.
+const canChangePassword = computed<boolean>(() => currentUser.value?.canChangePassword === true)
+
+onMounted(async () => {
+  if (!currentUser.value) {
+    await fetchCurrentUser()
+  }
+})
 </script>
 
 <template>
@@ -20,7 +33,7 @@ import ChangePasswordDialog from '@/components/features/ChangePasswordDialog.vue
       </p>
     </div>
 
-    <Card>
+    <Card v-if="canChangePassword">
       <CardHeader>
         <CardTitle class="text-lg">
           Пароль
