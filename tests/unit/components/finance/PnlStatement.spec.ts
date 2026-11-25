@@ -46,6 +46,17 @@ describe('PnlStatement', () => {
     expect(rendered[5].classes()).toContain('text-badge-success-foreground')
   })
 
+  it('marks a negative result as a loss, not as a success', () => {
+    const wrapper = mountStatement({
+      rows: [{ key: 'margin', label: 'Маржинальная прибыль', amount: '−33 317', tone: 'loss' }],
+    })
+    const row = wrapper.findAll('[data-slot="pnl-row"]')[0]
+
+    expect(row.classes()).toContain('bg-badge-destructive')
+    expect(row.classes()).toContain('text-badge-destructive-foreground')
+    expect(row.classes()).not.toContain('bg-badge-success')
+  })
+
   it('renders the chip of a row', () => {
     const wrapper = mountStatement({ rows })
     const taxRow = wrapper.findAll('[data-slot="pnl-row"]')[4]

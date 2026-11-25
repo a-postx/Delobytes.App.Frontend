@@ -1,4 +1,4 @@
-﻿export type PnlRowTone = 'default' | 'sub' | 'total' | 'result' | 'muted'
+﻿export type PnlRowTone = 'default' | 'sub' | 'total' | 'result' | 'loss' | 'muted'
 
 export type PnlBarKind = 'total' | 'increase' | 'decrease' | 'result' | 'loss'
 

@@ -23,6 +23,7 @@ const toneClasses: Record<PnlRowTone, string> = {
   sub: 'text-muted-foreground',
   total: 'bg-muted font-medium text-foreground',
   result: 'bg-badge-success font-semibold text-badge-success-foreground',
+  loss: 'bg-badge-destructive font-semibold text-badge-destructive-foreground',
   muted: 'text-muted-foreground/70',
 }
 

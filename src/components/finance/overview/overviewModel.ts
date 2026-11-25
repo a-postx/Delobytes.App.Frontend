@@ -185,28 +185,60 @@ export interface MarginTaxSummary {
   partial: boolean
 }
 
+/**
+ * How much of the margin the figures can describe: no line has a margin, some do, all do. The
+ * component branches on this instead of guessing from three separate flags.
+ */
+export type MarginState = 'unavailable' | 'partial' | 'complete'
+
+/** The two populations the margin is folded from, printed side by side. */
+export interface MarginSplit {
+  salesFormatted: string
+  noSaleFormatted: string
+}
+
 export interface MarginSummary {
+  state: MarginState
   margin: number | null
   marginFormatted: string
   currency: string
+  /** Null when the margin covers the whole revenue: a badge would then restate «100%». */
+  badgeLabel: string | null
+  badgeVariant: 'warning' | 'muted'
+  /** Share of the revenue with a known and complete cost, 0..1, as the backend measured it. */
+  coverage: number | null
+  coverageLabel: string
+  split: MarginSplit | null
   contributionPercent: string
   roiPercent: string
   delta?: StatsDelta
   partial: boolean
-  coverage: number | null
   tax: MarginTaxSummary | null
   hasTaxProfile: boolean
 }
 
 /**
  * Margin block of the card. The amount, its coverage and the comparison come from the backend,
- * which knows which populations may be compared; this function only formats them.
+ * which knows which populations may be compared; this function only formats them and derives the
+ * state the template branches on.
+ *
+ * @param margin Margin of the period with its coverage figures.
+ * @param currency Reporting currency of the card.
+ * @param totals Totals of the period: only the margin split is read from them, so a caller that
+ * shows the amount alone can omit them.
  */
 export function buildMarginSummary(
   margin: PnlOverviewMargin | null,
   currency: string,
+  totals: PnlSummaryRow | null = null,
 ): MarginSummary {
   const amount: number | null = margin?.amount ?? null
+  const coverage: number | null = margin?.coveragePercent == null
+    ? null
+    : margin.coveragePercent / 100
+  const state: MarginState = amount === null
+    ? 'unavailable'
+    : margin?.isComplete === true ? 'complete' : 'partial'
 
   const tax: MarginTaxSummary | null =
     margin?.hasTaxProfile === true
@@ -217,17 +249,40 @@ export function buildMarginSummary(
         }
       : null
 
+  // A sold line without a complete cost and a line that never sold are different populations:
+  // the first has no margin at all, the second carries its net revenue as the result. The split
+  // exists only when the second one does, otherwise there is nothing to explain.
+  const split: MarginSplit | null =
+    totals !== null
+    && (totals.marginFromSalesAmount !== null || totals.marginWithoutSaleAmount !== null)
+      ? {
+          salesFormatted: formatMoney(totals.marginFromSalesAmount, currency),
+          noSaleFormatted: formatMoney(totals.marginWithoutSaleAmount, currency),
+        }
+      : null
+
+  const badgeLabel: string | null = state === 'complete'
+    ? null
+    : state === 'unavailable' || coverage === null
+      ? 'нет данных'
+      : `${formatNumber(coverage * 100, 0)}% выручки`
+
   return {
+    state,
     margin: amount,
     marginFormatted: formatMoney(amount, currency),
     currency,
+    badgeLabel,
+    badgeVariant: state === 'unavailable' ? 'muted' : 'warning',
+    coverage,
+    coverageLabel: coverage === null
+      ? 'покрытие неизвестно'
+      : `${formatNumber(coverage * 100, 0)} из 100% выручки`,
+    split,
     contributionPercent: formatPercent(margin?.contributionMarginPercent),
     roiPercent: formatPercent(margin?.returnOnSoldCostPercent),
     delta: deltaOf(margin?.deltaPercent, 'percent'),
-    partial: margin !== null && !margin.isComplete,
-    coverage: margin?.coveragePercent === null || margin?.coveragePercent === undefined
-      ? null
-      : margin.coveragePercent / 100,
+    partial: state === 'partial',
     tax,
     hasTaxProfile: tax !== null,
   }
@@ -243,7 +298,7 @@ export function buildCoverageBanner(totals: PnlSummaryRow | null): { title: stri
 
   return {
     title: `Себестоимость известна только для ${formatNumber(coverage * 100, 0)}% выручки`,
-    description: 'Маржа и ROI посчитаны некорректно.',
+    description: 'Остальные продажи в маржу не входят: итог описывает только покрытую часть выручки.',
   }
 }
 
@@ -329,6 +384,7 @@ export interface WaterfallModel {
 interface WaterfallStep {
   key: string
   label: string
+  chip?: string
   amount: number | null
   kind: 'total' | 'sub' | 'result'
 }
@@ -377,7 +433,10 @@ export function buildWaterfall(totals: PnlSummaryRow | null, currency: string): 
     { key: 'netRevenue', label: 'Чистая выручка', amount: netRevenue, kind: 'total' },
     {
       key: 'withoutCost',
-      label: 'Товары без себестоимости',
+      // The row is a subtraction of the running total, not an expense: the chip says so, because
+      // next to the commission and the delivery fee a minus reads as money spent.
+      label: 'Без себестоимости',
+      chip: 'вне маржи',
       amount: (totals?.netRevenueWithoutCostAmount ?? 0) * -1,
       kind: 'sub',
     },
@@ -449,9 +508,14 @@ export function buildWaterfall(totals: PnlSummaryRow | null, currency: string): 
     return {
       key: step.key,
       label: step.label,
+      chip: step.chip,
       amount: formatted,
       percent,
-      tone: step.kind === 'result' ? 'result' : step.kind === 'total' ? 'total' : 'sub',
+      // A negative result is a loss, not a success row: the tone follows the sign, while the bar
+      // kind of a sub step keeps following its own direction.
+      tone: step.kind === 'result'
+        ? (marginKnown && margin < 0 ? 'loss' : 'result')
+        : step.kind === 'total' ? 'total' : 'sub',
       bar,
     }
   })

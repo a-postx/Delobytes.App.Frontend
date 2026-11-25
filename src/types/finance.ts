@@ -60,6 +60,8 @@ export interface PnlSummaryRow {
   productionCostAmount: number | null
   estimatedTax: number | null
   margin: number | null
+  marginFromSalesAmount: number | null
+  marginWithoutSaleAmount: number | null
   taxAdjustedMargin: number | null
   contributionMarginPercent: number | null
   returnOnSoldCostPercent: number | null

@@ -46,6 +46,8 @@ function makeRow(overrides: Partial<PnlSummaryRow> = {}): PnlSummaryRow {
     productionCostAmount: null,
     estimatedTax: null,
     margin: null,
+    marginFromSalesAmount: null,
+    marginWithoutSaleAmount: null,
     taxAdjustedMargin: null,
     contributionMarginPercent: null,
     returnOnSoldCostPercent: null,
@@ -206,10 +208,62 @@ describe('buildWaterfall', () => {
 
     expect(plain(result.amount)).toBe('—')
     expect(result.bar?.width).toBe(0)
+    expect(result.tone).toBe('result')
+  })
+
+  it('marks a negative result as a loss and calls the uncovered revenue what it is', () => {
+    const model = buildWaterfall({ ...DECEMBER, margin: -33317 }, 'RUB')
+    const withoutCost = rowOf(model, 'withoutCost')
+
+    expect(rowOf(model, 'margin').tone).toBe('loss')
+    expect(withoutCost.label).toBe('Без себестоимости')
+    expect(withoutCost.chip).toBe('вне маржи')
+    expect(withoutCost.tone).toBe('sub')
   })
 })
 
 describe('buildMarginSummary', () => {
+  it('names the coverage in the badge instead of saying «частично»', () => {
+    const summary = buildMarginSummary(MARGIN, 'RUB')
+
+    expect(summary.state).toBe('partial')
+    expect(summary.badgeVariant).toBe('warning')
+    expect(plain(summary.badgeLabel ?? '')).toBe('97% выручки')
+    expect(plain(summary.coverageLabel)).toBe('97 из 100% выручки')
+  })
+
+  it('reports a margin nobody could compute as unavailable', () => {
+    const summary = buildMarginSummary(
+      { ...MARGIN, amount: null, coveragePercent: 0, isComplete: false },
+      'RUB',
+    )
+
+    expect(summary.state).toBe('unavailable')
+    expect(summary.badgeVariant).toBe('muted')
+    expect(summary.badgeLabel).toBe('нет данных')
+    expect(plain(summary.marginFormatted)).toBe('—')
+  })
+
+  it('hides the badge when the margin covers the whole revenue', () => {
+    const summary = buildMarginSummary({ ...MARGIN, coveragePercent: 100, isComplete: true }, 'RUB')
+
+    expect(summary.state).toBe('complete')
+    expect(summary.badgeLabel).toBeNull()
+  })
+
+  it('splits the total into the sales and the lines that never sold', () => {
+    const totals = makeRow({ marginFromSalesAmount: null, marginWithoutSaleAmount: -50 })
+    const summary = buildMarginSummary({ ...MARGIN, amount: -50 }, 'RUB', totals)
+
+    expect(summary.split).not.toBeNull()
+    expect(plain(summary.split?.salesFormatted ?? '')).toBe('—')
+    expect(plain(summary.split?.noSaleFormatted ?? '')).toContain('50')
+  })
+
+  it('omits the split when only the sales carry a margin', () => {
+    expect(buildMarginSummary(MARGIN, 'RUB', DECEMBER).split).toBeNull()
+  })
+
   it('takes ROI from the sold-cost base, not from the invested one', () => {
     const summary = buildMarginSummary(MARGIN, 'RUB')
 

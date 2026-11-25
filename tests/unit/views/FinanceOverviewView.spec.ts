@@ -57,6 +57,8 @@ function makeRow(overrides: Partial<PnlSummaryRow> = {}): PnlSummaryRow {
     productionCostAmount: 50000,
     estimatedTax: null,
     margin: 34000,
+    marginFromSalesAmount: 34000,
+    marginWithoutSaleAmount: null,
     taxAdjustedMargin: null,
     contributionMarginPercent: 40.5,
     returnOnSoldCostPercent: 68,
