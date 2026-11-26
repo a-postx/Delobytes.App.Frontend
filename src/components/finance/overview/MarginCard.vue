@@ -2,7 +2,7 @@
 import { computed } from 'vue'
 import type { ComputedRef } from 'vue'
 import { RouterLink } from 'vue-router'
-import { ArrowDown, ArrowUp, Info, Minus } from 'lucide-vue-next'
+import { ArrowDown, ArrowUp, HelpCircle, Minus } from 'lucide-vue-next'
 import DashboardWidget from '@/components/dashboard/DashboardWidget.vue'
 import PnlStatement from '@/components/finance/PnlStatement.vue'
 import { Badge } from '@/components/ui/badge'
@@ -118,6 +118,24 @@ const deltaToneClass: ComputedRef<string> = computed<string>(() => {
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger as-child>
+                <button
+                  type="button"
+                  class="inline-flex size-4 shrink-0 items-center justify-center self-center rounded-full text-muted-foreground transition-colors hover:text-foreground focus-visible:text-foreground"
+                  aria-label="Что не учитывается в маржинальной прибыли"
+                >
+                  <HelpCircle class="size-4" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent class="max-w-xs">
+                Реклама, хранение, приёмка и штрафы пока не учитываются — фактическая прибыль
+                ниже. Выручка товаров без себестоимости не входит в маржу, чтобы не завышать
+                результат.
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </div>
 
         <div class="mt-1.5 flex flex-wrap items-center gap-x-5 gap-y-1.5 text-xs text-muted-foreground">
@@ -223,6 +241,27 @@ const deltaToneClass: ComputedRef<string> = computed<string>(() => {
             </RouterLink>
           </Button>
         </div>
+
+        <details class="mt-3 rounded-md border border-border px-3 py-2 text-xs">
+          <summary class="cursor-pointer font-medium text-foreground">
+            Как считается маржа
+          </summary>
+          <div class="mt-2 flex flex-col gap-2 text-muted-foreground">
+            <p>
+              Маржа строки — чистая выручка минус себестоимость. Если себестоимость неизвестна или
+              неполна, маржи у строки нет: частичная себестоимость дала бы не осторожную оценку,
+              а завышенный результат, поэтому такая выручка в итог не входит.
+            </p>
+            <p>
+              Невыкуп и полный возврат себестоимости не несут — товар не ушёл. Их результат равен их
+              чистой выручке, а она отрицательная: удержания и логистика есть, выручки нет.
+            </p>
+            <p>
+              Покрытие — доля выручки с посчитанной маржой. Сравнивать итог с прошлым периодом можно,
+              только когда покрыта почти вся выручка.
+            </p>
+          </div>
+        </details>
       </div>
 
       <div class="flex flex-col gap-4">
@@ -273,35 +312,6 @@ const deltaToneClass: ComputedRef<string> = computed<string>(() => {
         >
           Настроить
         </RouterLink>
-      </p>
-
-      <details class="rounded-md border border-border px-3 py-2 text-xs">
-        <summary class="cursor-pointer font-medium text-foreground">
-          Как считается маржа
-        </summary>
-        <div class="mt-2 flex flex-col gap-2 text-muted-foreground">
-          <p>
-            Маржа строки — чистая выручка минус себестоимость. Если себестоимость неизвестна или
-            неполна, маржи у строки нет: частичная себестоимость дала бы не осторожную оценку,
-            а завышенный результат, поэтому такая выручка в итог не входит.
-          </p>
-          <p>
-            Невыкуп и полный возврат себестоимости не несут — товар не ушёл. Их результат равен их
-            чистой выручке, а она отрицательная: удержания и логистика есть, выручки нет.
-          </p>
-          <p>
-            Покрытие — доля выручки с посчитанной маржой. Сравнивать итог с прошлым периодом можно,
-            только когда покрыта почти вся выручка.
-          </p>
-        </div>
-      </details>
-
-      <p class="flex items-start gap-1.5 text-xs text-muted-foreground">
-        <Info class="mt-0.5 size-3.5 shrink-0" />
-        <span>
-          Реклама, хранение, приёмка и штрафы пока не учитываются — фактическая прибыль ниже.
-          Выручка товаров без себестоимости не входит в маржу, чтобы не завышать результат.
-        </span>
       </p>
     </div>
   </DashboardWidget>

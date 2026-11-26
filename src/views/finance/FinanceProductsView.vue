@@ -414,7 +414,6 @@ onUnmounted(() => {
         :channel-id="channelId"
         :channels="channelItems"
         :time-zone="timeZone"
-        :show-comparison="false"
         @update:preset="setPreset"
         @update:range="setCustomRange"
         @update:channel="setChannel"

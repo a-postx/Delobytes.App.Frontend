@@ -217,7 +217,6 @@ describe('buildWaterfall', () => {
 
     expect(rowOf(model, 'margin').tone).toBe('loss')
     expect(withoutCost.label).toBe('Без себестоимости')
-    expect(withoutCost.chip).toBe('вне маржи')
     expect(withoutCost.tone).toBe('sub')
   })
 })

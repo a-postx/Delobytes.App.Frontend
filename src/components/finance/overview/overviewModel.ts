@@ -433,10 +433,7 @@ export function buildWaterfall(totals: PnlSummaryRow | null, currency: string): 
     { key: 'netRevenue', label: 'Чистая выручка', amount: netRevenue, kind: 'total' },
     {
       key: 'withoutCost',
-      // The row is a subtraction of the running total, not an expense: the chip says so, because
-      // next to the commission and the delivery fee a minus reads as money spent.
       label: 'Без себестоимости',
-      chip: 'вне маржи',
       amount: (totals?.netRevenueWithoutCostAmount ?? 0) * -1,
       kind: 'sub',
     },

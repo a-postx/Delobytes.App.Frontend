@@ -11,11 +11,10 @@ import type { FinanceGranularity, FinanceRange } from '@/utils/financePeriod'
 import { granularityPeriodCount } from '@/utils/financePeriod'
 import { FINANCE_MAX_PERIODS } from '@/composables/useFinanceFilters'
 import { formatCompactMoney, formatMoney } from '@/utils/financeFormat'
-import type { DynamicsPoint, DynamicsTableRow } from './overviewModel'
+import type { DynamicsPoint } from './overviewModel'
 
 interface Props {
   points: DynamicsPoint[]
-  tableRows: DynamicsTableRow[]
   step: FinanceGranularity
   range: FinanceRange
   currency: string
@@ -65,8 +64,6 @@ const accessibleSteps: ComputedRef<Record<FinanceGranularity, boolean>> = comput
     Month: granularityPeriodCount(props.range, 'Month') <= FINANCE_MAX_PERIODS,
   }),
 )
-
-const hasTable: ComputedRef<boolean> = computed<boolean>(() => props.step !== 'Day')
 
 const title: ComputedRef<string> = computed<string>(() => {
   const unit = props.step === 'Day' ? 'дням' : props.step === 'Week' ? 'неделям' : 'месяцам'
@@ -229,32 +226,6 @@ function tooltipTemplate(point: unknown): string {
       >
         За выбранный период операций нет
       </p>
-
-      <div
-        v-else-if="hasTable"
-        class="border-t border-border pt-3"
-      >
-        <div class="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-3 pb-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-          <span>{{ props.step === 'Week' ? 'Неделя' : 'Месяц' }}</span>
-          <span class="w-24 text-right">Выручка</span>
-          <span class="w-24 text-right">Маржа</span>
-        </div>
-        <div
-          v-for="row in props.tableRows"
-          :key="row.key"
-          class="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-3 border-t border-border/60 py-1.5 text-xs first:border-t-0"
-        >
-          <span class="truncate text-muted-foreground">
-            {{ row.label }}
-            <span
-              v-if="row.partialNote"
-              class="ml-1 text-[11px] opacity-70"
-            >{{ row.partialNote }}</span>
-          </span>
-          <span class="w-24 text-right tabular-nums">{{ row.revenue }}</span>
-          <span class="w-24 text-right tabular-nums">{{ row.margin }}</span>
-        </div>
-      </div>
     </div>
   </DashboardWidget>
 </template>

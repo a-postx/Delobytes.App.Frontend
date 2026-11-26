@@ -18,7 +18,6 @@ import ChannelsCard from '@/components/finance/overview/ChannelsCard.vue'
 import AttentionCard from '@/components/finance/overview/AttentionCard.vue'
 import SkuEconomicsCard from '@/components/finance/overview/SkuEconomicsCard.vue'
 import type { RankListItem } from '@/components/ui/rank-list'
-import { formatRangeLabel } from '@/utils/financeFormat'
 import { defaultGranularity, granularityPeriodCount } from '@/utils/financePeriod'
 import type { FinanceGranularity } from '@/utils/financePeriod'
 
@@ -30,7 +29,6 @@ const filters = useFinanceFilters()
 const {
   preset,
   currentRange,
-  comparisonRange,
   channelId,
   rangeLabel,
   setPreset,
@@ -60,10 +58,6 @@ function setStep(next: FinanceGranularity): void {
   }
   void router.replace({ query: { ...route.query, step: next } })
 }
-
-const comparisonLabel: ComputedRef<string> = computed<string>(() =>
-  formatRangeLabel(comparisonRange.value.from, comparisonRange.value.to),
-)
 
 const PRODUCT_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
@@ -100,7 +94,6 @@ const {
   productCount,
   rankings,
   dynamicsPoints,
-  dynamicsTable,
   activeChannels,
   noFinanceData,
   emptyPeriod,
@@ -139,8 +132,6 @@ function openProduct(item: RankListItem): void {
         :channel-id="channelId"
         :channels="channelItems"
         :time-zone="timeZone"
-        :show-comparison="true"
-        :comparison-label="comparisonLabel"
         @update:preset="setPreset"
         @update:range="setCustomRange"
         @update:channel="setChannel"
@@ -203,7 +194,6 @@ function openProduct(item: RankListItem): void {
         <DynamicsCard
           class="xl:col-span-5"
           :points="dynamicsPoints"
-          :table-rows="dynamicsTable"
           :step="step"
           :range="currentRange"
           :currency="currency"
