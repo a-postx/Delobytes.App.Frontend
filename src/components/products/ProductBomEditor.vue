@@ -7,7 +7,6 @@ import {
   Trash2,
   Calculator,
   History,
-  AlertTriangle,
   RefreshCw,
   AlertCircle,
   ArrowRight,
@@ -36,7 +35,6 @@ import type {
   BomLineItem,
   ProductCostResponse,
   ComponentCategory,
-  CostWarningDto,
   PreviewProductBomCostDelta,
   PreviewProductBomCostLine,
 } from '@/types/bom'
@@ -323,11 +321,6 @@ const {
 
 type CostTotals = Pick<ProductCostResponse, 'materialCost' | 'logisticsCost' | 'packagingCost' | 'laborCost' | 'totalCost'>
 
-interface IncompleteSource {
-  isComplete: boolean
-  warnings: CostWarningDto[]
-}
-
 const isDraftPreviewActive: ComputedRef<boolean> = computed<boolean>(
   () => hasUnsavedChanges.value && hasPreview.value,
 )
@@ -348,16 +341,6 @@ const draftDelta: ComputedRef<PreviewProductBomCostDelta | null> = computed<Prev
 const savedCost: ComputedRef<CostTotals | null> = computed<CostTotals | null>(
   () => (hasUnsavedChanges.value && previewBaseline.value ? previewBaseline.value : cost.value),
 )
-
-const incompleteSource: ComputedRef<IncompleteSource | null> = computed<IncompleteSource | null>(() => {
-  if (isDraftPreviewActive.value && draftCost.value) {
-    return { isComplete: draftCost.value.isComplete, warnings: draftCost.value.warnings }
-  }
-  if (cost.value) {
-    return { isComplete: cost.value.isComplete, warnings: cost.value.warnings }
-  }
-  return null
-})
 
 /** Округление до копеек: без него погрешность float даст «+0,00 ₽» с жёлтым бейджем. */
 const roundMoney = (value: number): number => Math.round(value * 100) / 100
@@ -681,27 +664,6 @@ const selectClass = 'flex h-9 w-full rounded-md border border-input bg-backgroun
       </div>
 
       <template v-else-if="cost">
-        <!-- Предупреждение о неполном расчёте: при черновике берём его, иначе сохранённый состав -->
-        <div
-          v-if="incompleteSource && !incompleteSource.isComplete"
-          class="flex items-start gap-3 rounded-lg border border-warning/30 bg-warning/5 px-4 py-3 text-sm"
-        >
-          <AlertTriangle class="size-4 mt-0.5 shrink-0 text-warning" />
-          <div class="flex flex-col gap-1">
-            <p class="font-medium text-foreground">
-              Расчёт себестоимости неполный — показана сумма по доступным данным
-            </p>
-            <ul class="list-disc pl-4 text-muted-foreground">
-              <li
-                v-for="(warning, idx) in incompleteSource.warnings"
-                :key="idx"
-              >
-                {{ warning.message }}
-              </li>
-            </ul>
-          </div>
-        </div>
-
         <!-- Карточки по статьям затрат: «было» видно всегда, «стало» — только при несохранённом черновике -->
         <div
           v-if="savedCost"
