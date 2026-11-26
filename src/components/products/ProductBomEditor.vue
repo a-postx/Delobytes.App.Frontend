@@ -12,7 +12,6 @@ import {
   AlertCircle,
   ArrowRight,
   Minus,
-  Pencil,
   TrendingDown,
   TrendingUp,
 } from 'lucide-vue-next'
@@ -434,25 +433,6 @@ const selectClass = 'flex h-9 w-full rounded-md border border-input bg-backgroun
         <span class="text-sm font-medium text-foreground">
           Есть несохранённые изменения в составе товара
         </span>
-        <!-- Что произойдёт после сохранения: ответ заранее, до нажатия кнопки -->
-        <span
-          v-if="isPreviewLoading"
-          class="inline-flex items-center gap-1.5 text-xs text-muted-foreground"
-        >
-          <Spinner class="size-3" />
-          Пересчёт итога…
-        </span>
-        <span
-          v-else-if="savedCost && draftCost && draftDelta"
-          class="flex flex-wrap items-center gap-1 text-xs text-muted-foreground"
-        >
-          Итого: <span class="tabular-nums">{{ formatMoney(savedCost.totalCost) }}</span>
-          <ArrowRight class="size-3 shrink-0" />
-          <span class="font-medium tabular-nums text-foreground">{{ formatMoney(draftCost.totalCost) }}</span>
-          <Badge :variant="deltaPresentation(draftDelta.totalDelta).variant">
-            {{ deltaText(draftDelta.totalDelta) }}
-          </Badge>
-        </span>
       </div>
       <div
         v-if="canWrite"
@@ -720,21 +700,6 @@ const selectClass = 'flex h-9 w-full rounded-md border border-input bg-backgroun
               </li>
             </ul>
           </div>
-        </div>
-
-        <!-- Пояснение: без него значение «после» легко принять за уже сохранённое -->
-        <div
-          v-if="hasUnsavedChanges"
-          class="flex flex-wrap items-center gap-2 text-xs text-muted-foreground"
-        >
-          <Badge
-            variant="secondary"
-            class="gap-1"
-          >
-            <Pencil class="size-3" />
-            Черновик
-          </Badge>
-          <span>Значения после «→» предварительные: они зафиксируются после сохранения состава</span>
         </div>
 
         <!-- Карточки по статьям затрат: «было» видно всегда, «стало» — только при несохранённом черновике -->

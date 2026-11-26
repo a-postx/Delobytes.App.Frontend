@@ -254,12 +254,7 @@ const columns = computed<ColumnDef<ComponentItem, unknown>[]>(() => {
       enableHiding: false,
       meta: { title: 'Название' },
       header: 'Название',
-      cell: ({ row }) => h('div', [
-        h('span', { class: 'font-medium' }, row.original.name),
-        row.original.description
-          ? h('p', { class: 'text-xs text-muted-foreground mt-0.5' }, row.original.description)
-          : null,
-      ]),
+      cell: ({ row }) => h('span', { class: 'font-medium' }, row.original.name),
     },
     {
       id: 'unit',
