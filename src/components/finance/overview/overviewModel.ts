@@ -378,6 +378,7 @@ export function buildMarginBreakdowns(
 export interface WaterfallModel {
   rows: PnlStatementRow[]
   axisTicks: PnlAxisTick[]
+  /** End of the shared scale: a round number that covers every running total. */
   max: number
 }
 
@@ -463,10 +464,16 @@ export function buildWaterfall(totals: PnlSummaryRow | null, currency: string): 
   // The scale must cover every running total, not just the step amounts: a positive component
   // pushes the running total above the revenue, and a bar measured against the step maximum
   // would paint past its own column and over the figures on the right.
-  const max: number = Math.max(
+  const reach: number = Math.max(
     ...geometry.map((item) => Math.max(Math.abs(item.start), Math.abs(item.end))),
     1,
   )
+
+  // The axis ends on a round number rather than on the running total, so its last tick sits on the
+  // right edge of the plot. Otherwise the scale stops at the last round tick and the unlabelled
+  // tail makes every bar read as a fraction of its real value.
+  const tickStep: number = niceStep(reach)
+  const max: number = Math.ceil(reach / tickStep) * tickStep
 
   const toPercent = (value: number): number => clamp((value / max) * 100, 0, 100)
 
@@ -517,9 +524,8 @@ export function buildWaterfall(totals: PnlSummaryRow | null, currency: string): 
     }
   })
 
-  const step: number = niceStep(max)
   const axisTicks: PnlAxisTick[] = []
-  for (let value = 0; value <= max + step * 0.001; value += step) {
+  for (let value = 0; value <= max + tickStep * 0.001; value += tickStep) {
     axisTicks.push({ position: (value / max) * 100, label: formatCompactMoney(value) })
   }
 

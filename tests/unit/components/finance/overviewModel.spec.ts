@@ -202,6 +202,29 @@ describe('buildWaterfall', () => {
     expect(model.max).toBeGreaterThan(DECEMBER.revenueAmount ?? 0)
   })
 
+  it('ends the scale on a round number the last tick reaches', () => {
+    const model = buildWaterfall(DECEMBER, 'RUB')
+
+    // The running total tops out at 4 998 700, so the axis stops on the next round step and its
+    // last label sits on the right edge instead of leaving an unlabelled tail.
+    expect(model.max).toBe(5_000_000)
+    expect(model.axisTicks[model.axisTicks.length - 1]).toEqual({ position: 100, label: '5 млн' })
+  })
+
+  it('measures the bars against that same round scale', () => {
+    const model = buildWaterfall(DECEMBER, 'RUB')
+
+    expect(((rowOf(model, 'revenue').bar?.width ?? 0) / 100) * model.max).toBeCloseTo(
+      DECEMBER.revenueAmount ?? 0,
+      1,
+    )
+    expect(((rowOf(model, 'netRevenue').bar?.width ?? 0) / 100) * model.max).toBeCloseTo(
+      DECEMBER.netRevenueAmount ?? 0,
+      1,
+    )
+  })
+
+
   it('shows an unknown margin as a dash instead of zero', () => {
     const model = buildWaterfall({ ...DECEMBER, margin: null }, 'RUB')
     const result = rowOf(model, 'margin')

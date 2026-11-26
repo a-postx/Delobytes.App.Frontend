@@ -76,3 +76,46 @@ describe('PnlStatement', () => {
     expect(wrapper.findAll('p')).toHaveLength(0)
   })
 })
+
+describe('PnlStatement waterfall', () => {
+  const bars: PnlStatementRow[] = [
+    { key: 'revenue', label: 'Выручка', amount: '3 107 835', bar: { offset: 0, width: 62.2, kind: 'total' } },
+    { key: 'margin', label: 'Маржинальная прибыль', amount: '−33 317', tone: 'loss', bar: { offset: 0, width: 0, kind: 'loss' } },
+  ]
+
+  const mountWithAxis = () =>
+    mount(PnlStatement, {
+      props: {
+        rows: bars,
+        axisTicks: [
+          { position: 0, label: '0' },
+          { position: 50, label: '2,5 млн' },
+          { position: 100, label: '5 млн' },
+        ],
+      },
+    })
+
+  const gridColumns = (element: { classes: () => string[] }): string[] =>
+    element.classes().filter((name: string) => name.startsWith('grid-cols-'))
+
+  it('gives the axis row and the data rows the same bar column', () => {
+    const wrapper = mountWithAxis()
+    const axis = wrapper.find('[data-slot="pnl-axis"]')
+    const row = wrapper.findAll('[data-slot="pnl-row"]')[0]
+
+    // An `auto` track would be empty in the axis row and content-sized in the data rows, so the
+    // bars would be measured against a narrower column than the ticks are placed in.
+    expect(gridColumns(row)).toEqual(gridColumns(axis))
+    expect(gridColumns(row)[0]).not.toContain('auto')
+  })
+
+  it('right-aligns the label of the tick on the right edge', () => {
+    const wrapper = mountWithAxis()
+    const ticks = wrapper.findAll('[data-slot="pnl-axis"] span[style]')
+
+    expect(ticks).toHaveLength(3)
+    expect(ticks[0].attributes('style')).toContain('transform: none')
+    expect(ticks[1].attributes('style')).toContain('translateX(-50%)')
+    expect(ticks[2].attributes('style')).toContain('translateX(-100%)')
+  })
+})

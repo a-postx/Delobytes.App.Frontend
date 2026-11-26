@@ -40,9 +40,12 @@ const hasBars: ComputedRef<boolean> = computed<boolean>(() =>
 )
 
 // The bar column exists only for the waterfall: the plain statement keeps its original grid.
+// Every track left of the bar column is content-independent, so the axis row and the data rows
+// resolve the same bar width. An `auto` amount column would give the axis row (whose cells are
+// empty) a wider plot than the bars are drawn in.
 const gridClass: ComputedRef<string> = computed<string>(() =>
   hasBars.value
-    ? 'grid grid-cols-[minmax(0,13.5rem)_minmax(48px,1fr)_auto_auto] items-center gap-3 rounded-md px-2 py-1.5 text-sm'
+    ? 'grid grid-cols-[minmax(0,12rem)_minmax(48px,1fr)_8rem_3rem] items-center gap-3 rounded-md px-2 py-1.5 text-sm'
     : 'grid grid-cols-[minmax(0,1fr)_auto_auto] items-baseline gap-3 rounded-md px-2 py-1.5 text-sm',
 )
 
@@ -64,6 +67,14 @@ function barStyle(row: PnlStatementRow): Record<string, string> {
     width: `${Math.max(0, Math.min(100, bar.width))}%`,
   }
 }
+
+// The scale ends on its last tick, so that label is right-aligned instead of centred: centring
+// would push half of it past the plot edge.
+function tickStyle(tick: PnlAxisTick): Record<string, string> {
+  const anchor: string =
+    tick.position <= 0 ? 'none' : tick.position >= 100 ? 'translateX(-100%)' : 'translateX(-50%)'
+  return { left: `${tick.position}%`, transform: anchor }
+}
 </script>
 
 <template>
@@ -84,8 +95,8 @@ function barStyle(row: PnlStatementRow): Record<string, string> {
         <span
           v-for="tick in props.axisTicks"
           :key="`${tick.position}-${tick.label}`"
-          class="absolute bottom-0 whitespace-nowrap text-[11px] tabular-nums text-muted-foreground first:translate-x-0"
-          :style="{ left: `${tick.position}%`, transform: tick.position === 0 ? 'none' : 'translateX(-50%)' }"
+          class="absolute bottom-0 whitespace-nowrap text-[11px] tabular-nums text-muted-foreground"
+          :style="tickStyle(tick)"
         >
           {{ tick.label }}
         </span>
@@ -125,7 +136,7 @@ function barStyle(row: PnlStatementRow): Record<string, string> {
         />
       </span>
       <span
-        class="tabular-nums"
+        :class="cn('tabular-nums', hasBars && 'whitespace-nowrap text-right')"
         :role="props.ariaLabel ? 'cell' : undefined"
       >{{ row.amount }}</span>
       <span
