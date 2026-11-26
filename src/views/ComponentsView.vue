@@ -161,6 +161,7 @@ const form = ref({
   name: '',
   description: '',
   unit: Unit.Piece,
+  quantity: 1,
   category: 'Material' as ComponentCategory,
   pricePerUnit: 0,
   supplierId: '' as string,
@@ -174,8 +175,15 @@ const editForm = ref({
   category: 'Material' as ComponentCategory,
 })
 
+/**
+ * Единицу можно менять только пока у компонента нет цен: сохранённая цена описывает количество
+ * в этой единице, и состав товаров задаётся в ней же. Бэкенд проверяет то же правило и отвечает 409.
+ */
+const isUnitLocked = computed<boolean>(() => editTarget.value?.activePrice != null)
+
 const priceForm = ref({
   pricePerUnit: 0,
+  quantity: 1,
   supplierId: '' as string,
   validFrom: today(),
 })
@@ -213,6 +221,14 @@ const categoryBadgeVariant: Record<ComponentCategory, 'secondary' | 'warning' | 
 
 const formatDate = (dateStr: string): string =>
   new Date(dateStr).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' })
+
+/** Количество вводится как есть: 150 шт, 0,25 кг — лишние нули не показываем. */
+const formatQuantity = (value: number): string =>
+  new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 6 }).format(value)
+
+/** Введённая цена относится к введённому количеству, поэтому цена единицы — частное. */
+const unitPriceOf = (price: { pricePerUnit: number; quantity: number }): number =>
+  price.quantity > 0 ? price.pricePerUnit / price.quantity : 0
 
 const activeSuppliers = (): SupplierItem[] => suppliers.value.filter(s => s.isActive)
 
@@ -268,16 +284,42 @@ const columns = computed<ColumnDef<ComponentItem, unknown>[]>(() => {
       ),
     },
     {
+      id: 'quantity',
+      accessorFn: (item: ComponentItem) => item.activePrice?.quantity ?? null,
+      enableSorting: false,
+      enableHiding: true,
+      meta: { title: 'Количество' },
+      header: 'Количество',
+      cell: ({ row }) => h(
+        'div',
+        { class: 'text-right tabular-nums' },
+        row.original.activePrice ? formatQuantity(row.original.activePrice.quantity) : '—',
+      ),
+    },
+    {
       id: 'price',
       accessorFn: (item: ComponentItem) => item.activePrice?.pricePerUnit ?? null,
       enableSorting: false,
       enableHiding: true,
-      meta: { title: 'Цена/ед.' },
-      header: 'Цена/ед.',
+      meta: { title: 'Цена за количество' },
+      header: 'Цена за количество',
       cell: ({ row }) => h(
         'div',
         { class: 'text-right tabular-nums' },
         formatMoney(row.original.activePrice?.pricePerUnit ?? 0),
+      ),
+    },
+    {
+      id: 'unitPrice',
+      accessorFn: (item: ComponentItem) => (item.activePrice ? unitPriceOf(item.activePrice) : null),
+      enableSorting: false,
+      enableHiding: true,
+      meta: { title: 'Цена за ед.' },
+      header: 'Цена за ед.',
+      cell: ({ row }) => h(
+        'div',
+        { class: 'text-right tabular-nums text-muted-foreground' },
+        row.original.activePrice ? formatMoney(unitPriceOf(row.original.activePrice)) : '—',
       ),
     },
     {
@@ -523,6 +565,7 @@ const resetForm = (): void => {
     name: '',
     description: '',
     unit: Unit.Piece,
+    quantity: 1,
     category: 'Material',
     pricePerUnit: 0,
     supplierId: '',
@@ -550,6 +593,7 @@ const openNewPrice = (item: ComponentItem): void => {
   priceTarget.value = item
   priceForm.value = {
     pricePerUnit: item.activePrice?.pricePerUnit ?? 0,
+    quantity: item.activePrice?.quantity ?? 1,
     supplierId: item.activePrice?.supplierId ?? '',
     validFrom: today(),
   }
@@ -569,6 +613,7 @@ const openRestore = (item: ComponentItem): void => {
 const handleCreate = async (): Promise<void> => {
   if (!form.value.name.trim()) { toast.error('Введите название'); return }
   if (Number(form.value.pricePerUnit) <= 0) { toast.error('Укажите цену больше нуля'); return }
+  if (!Number(form.value.quantity) || Number(form.value.quantity) <= 0) { toast.error('Укажите количество больше нуля'); return }
   if (!form.value.validFrom) { toast.error('Укажите дату начала действия цены'); return }
   isSaving.value = true
   try {
@@ -578,6 +623,7 @@ const handleCreate = async (): Promise<void> => {
       unit: form.value.unit,
       category: form.value.category,
       pricePerUnit: Number(form.value.pricePerUnit),
+      quantity: Number(form.value.quantity),
       supplierId: form.value.supplierId || undefined,
       validFrom: form.value.validFrom,
     }
@@ -623,6 +669,10 @@ const handleCreatePrice = async (): Promise<void> => {
     toast.error('Укажите цену больше нуля')
     return
   }
+  if (!Number(priceForm.value.quantity) || Number(priceForm.value.quantity) <= 0) {
+    toast.error('Укажите количество больше нуля')
+    return
+  }
   if (!priceForm.value.validFrom) {
     toast.error('Укажите дату начала действия')
     return
@@ -631,6 +681,7 @@ const handleCreatePrice = async (): Promise<void> => {
   try {
     const payload: CreateComponentPriceRequest = {
       pricePerUnit: Number(priceForm.value.pricePerUnit),
+      quantity: Number(priceForm.value.quantity),
       supplierId: priceForm.value.supplierId || undefined,
       validFrom: priceForm.value.validFrom,
     }
@@ -841,6 +892,40 @@ const selectClass = 'flex h-10 w-full rounded-md border border-input bg-backgrou
               </div>
 
               <div :class="fieldClass">
+                <Label for="create-quantity">Количество *</Label>
+                <Input
+                  id="create-quantity"
+                  v-model.number="form.quantity"
+                  type="number"
+                  step="0.000001"
+                  min="0"
+                  placeholder="1"
+                  :class="inputClass"
+                />
+              </div>
+            </div>
+
+            <!-- Количество и цена вводятся вместе: цена относится ко всему количеству, а не к единице -->
+            <p class="-mt-2 text-xs text-muted-foreground">
+              Например, 150 шт за 100 ₽ — укажите количество 150 и цену за количество 100.
+              В составе товара количество указывается в той же единице.
+            </p>
+
+            <div class="grid grid-cols-2 gap-4">
+              <div :class="fieldClass">
+                <Label for="create-price">Цена за количество *</Label>
+                <Input
+                  id="create-price"
+                  v-model.number="form.pricePerUnit"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  placeholder="0.00"
+                  :class="inputClass"
+                />
+              </div>
+
+              <div :class="fieldClass">
                 <Label for="create-category">Категория *</Label>
                 <select
                   id="create-category"
@@ -855,19 +940,6 @@ const selectClass = 'flex h-10 w-full rounded-md border border-input bg-backgrou
                     {{ opt.label }}
                   </option>
                 </select>
-              </div>
-
-              <div :class="fieldClass">
-                <Label for="create-price">Цена за единицу *</Label>
-                <Input
-                  id="create-price"
-                  v-model.number="form.pricePerUnit"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  placeholder="0.00"
-                  :class="inputClass"
-                />
               </div>
             </div>
 
@@ -978,6 +1050,7 @@ const selectClass = 'flex h-10 w-full rounded-md border border-input bg-backgrou
                   id="edit-unit"
                   v-model.number="editForm.unit"
                   :class="selectClass"
+                  :disabled="isUnitLocked"
                 >
                   <option
                     v-for="opt in unitOptions"
@@ -987,6 +1060,12 @@ const selectClass = 'flex h-10 w-full rounded-md border border-input bg-backgrou
                     {{ opt.label }}
                   </option>
                 </select>
+                <p
+                  v-if="isUnitLocked"
+                  class="text-xs text-muted-foreground mt-1"
+                >
+                  Единицу нельзя изменить: сохранённые цены и состав товаров заданы в ней
+                </p>
               </div>
 
               <div :class="fieldClass">
@@ -1055,17 +1134,32 @@ const selectClass = 'flex h-10 w-full rounded-md border border-input bg-backgrou
           </div>
 
           <div class="flex flex-col gap-4">
-            <div :class="fieldClass">
-              <Label for="price-value">Цена за единицу *</Label>
-              <Input
-                id="price-value"
-                v-model.number="priceForm.pricePerUnit"
-                type="number"
-                step="0.01"
-                min="0"
-                placeholder="0.00"
-                :class="inputClass"
-              />
+            <div class="grid grid-cols-2 gap-4">
+              <div :class="fieldClass">
+                <Label for="price-value">Цена за количество *</Label>
+                <Input
+                  id="price-value"
+                  v-model.number="priceForm.pricePerUnit"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  placeholder="0.00"
+                  :class="inputClass"
+                />
+              </div>
+
+              <div :class="fieldClass">
+                <Label for="price-quantity">Количество *</Label>
+                <Input
+                  id="price-quantity"
+                  v-model.number="priceForm.quantity"
+                  type="number"
+                  step="0.000001"
+                  min="0"
+                  placeholder="1"
+                  :class="inputClass"
+                />
+              </div>
             </div>
 
             <div :class="fieldClass">

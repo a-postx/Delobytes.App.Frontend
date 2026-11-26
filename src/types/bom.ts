@@ -16,15 +16,12 @@ export const COMPONENT_CATEGORY_LABELS: Record<ComponentCategory, string> = {
 
 /**
  * Компонент, вложенный в строку BOM бэкендом (BomComponentDto).
- * ActivePricePerUnit может быть null, если у компонента нет действующей цены
- * на сегодняшнюю дату — это валидное состояние, а не ошибка.
  */
 export interface BomComponentDto {
   id: string
   name: string
   unit: Unit
   category: ComponentCategory
-  activePricePerUnit: number | null
 }
 
 /**
@@ -81,7 +78,7 @@ export interface CreateBomLineResponse {
 // ---------- Cost calculation ----------
 
 /** Причина неполноты расчёта себестоимости. Соответствует backend-enum CostWarningType. */
-export type CostWarningType = 'MissingComponentPrice' | 'MissingWorkRate' | 'MissingBom' | 'InvalidQuantity'
+export type CostWarningType = 'MissingComponentPrice' | 'MissingWorkRate' | 'MissingBom' | 'InvalidQuantity' | 'InvalidComponentPriceQuantity'
 
 export interface CostLineDto {
   componentId: string

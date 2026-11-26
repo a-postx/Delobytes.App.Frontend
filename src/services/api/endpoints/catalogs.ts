@@ -52,6 +52,8 @@ export interface UpdateSupplierRequest {
 export interface ComponentPriceDto {
   id: string
   pricePerUnit: number
+  /** Количество единиц компонента, за которое указана цена. Цена за единицу = pricePerUnit / quantity. */
+  quantity: number
   supplierId?: string
   supplierName?: string
   validFrom: string // YYYY-MM-DD
@@ -121,6 +123,7 @@ export interface CreateComponentRequest {
   unit: Unit
   category?: ComponentCategory
   pricePerUnit: number
+  quantity: number
   supplierId?: string
   validFrom: string // YYYY-MM-DD
 }
@@ -134,6 +137,7 @@ export interface UpdateComponentRequest {
 
 export interface CreateComponentPriceRequest {
   pricePerUnit: number
+  quantity: number
   supplierId?: string
   validFrom: string // YYYY-MM-DD
 }
