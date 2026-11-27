@@ -59,6 +59,15 @@
     --badge-oz-foreground: 214 80% 35%;
     --badge-ym: 35 90% 92%;
     --badge-ym-foreground: 35 90% 26%;
+
+    --save-bar: 20 13% 12%;
+    --save-bar-foreground: 34 22% 96%;
+    --save-bar-muted: 34 12% 76%;
+    --save-bar-border: 20 13% 7%;
+    --save-bar-primary: 14 65% 45%;
+    --save-bar-primary-foreground: 0 0% 100%;
+    --save-bar-fail: 0 80% 74%;
+    --save-bar-ring: 14 85% 70%;
   }
 
   .dark {
@@ -116,6 +125,15 @@
     --badge-oz-foreground: 214 70% 75%;
     --badge-ym: 35 45% 20%;
     --badge-ym-foreground: 35 85% 72%;
+
+    --save-bar: 160 12% 9%;
+    --save-bar-foreground: 34 20% 94%;
+    --save-bar-muted: 34 10% 72%;
+    --save-bar-border: 160 8% 30%;
+    --save-bar-primary: 14 65% 45%;
+    --save-bar-primary-foreground: 0 0% 100%;
+    --save-bar-fail: 0 80% 76%;
+    --save-bar-ring: 14 85% 72%;
   }
 }
 

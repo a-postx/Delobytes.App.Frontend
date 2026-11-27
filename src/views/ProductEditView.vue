@@ -10,20 +10,11 @@ import {
   TabsTrigger,
   TabsContent,
 } from '@/components/ui/tabs'
-import {
-  AlertDialogRoot,
-  AlertDialogPortal,
-  AlertDialogOverlay,
-  AlertDialogContent,
-  AlertDialogTitle,
-  AlertDialogDescription,
-  AlertDialogCancel,
-} from '@/components/ui/alert-dialog'
 import ProductPageHeader from '@/components/products/ProductPageHeader.vue'
 import ProductOverviewTab from '@/components/products/ProductOverviewTab.vue'
 import ProductChannelsTab from '@/components/products/ProductChannelsTab.vue'
 import ProductCostTab from '@/components/products/ProductCostTab.vue'
-import StickySaveBar from '@/components/products/StickySaveBar.vue'
+import PageDraftShell from '@/components/draft/PageDraftShell.vue'
 import ErrorState from '@/components/feedback/ErrorState.vue'
 import { toast } from 'vue-sonner'
 import { catalogProductsApi } from '@/services/api'
@@ -33,7 +24,7 @@ import type { FailureCopy } from '@/composables/useApiFailureCopy'
 import type { GetProductResponse } from '@/types/products'
 import type { ApiError } from '@/types/errors'
 import { useCurrentUser } from '@/composables/useCurrentUser'
-import { useUnsavedChangesGuard } from '@/composables/useUnsavedChangesGuard'
+import { provideDraftRegistry } from '@/composables/usePageDraft'
 
 type ProductTab = 'overview' | 'channels' | 'cost'
 
@@ -46,6 +37,8 @@ const route = useRoute()
 const router = useRouter()
 const { canWrite } = useCurrentUser()
 
+provideDraftRegistry()
+
 const productId = computed<string>(() => route.params.id as string)
 
 const FALLBACK_LOAD_MESSAGE = 'Не удалось загрузить товар'
@@ -55,36 +48,21 @@ const notFound = ref<boolean>(false)
 const loadError = ref<FailureCopy | null>(null)
 const product = ref<GetProductResponse | null>(null)
 
-const overviewTab = ref<InstanceType<typeof ProductOverviewTab> | null>(null)
-
 const isProductTab = (value: unknown): value is ProductTab =>
   typeof value === 'string' && (PRODUCT_TABS as readonly string[]).includes(value)
 
 const activeTab = ref<ProductTab>(DEFAULT_TAB)
-
-const pendingTab = ref<ProductTab | null>(null)
-const unsavedDialogOpen = ref<boolean>(false)
 
 /** Раз true — остаётся true: правки состава не должны теряться при переключении вкладок. */
 const costTabVisited = ref<boolean>(false)
 
 const channelCount = computed<number>(() => product.value?.channelLinks?.length ?? 0)
 
-/**
- * Бар сохранения живёт вне панелей вкладок: у неактивной панели reka-ui ставит hidden,
- * а position: fixed внутри hidden-элемента не отображается вовсе — бар исчезал бы
- * при переходе на другую вкладку с несохранёнными правками формы.
- */
-const overviewDirty = computed<boolean>(() => overviewTab.value?.hasUnsavedChanges === true)
-const overviewSaving = computed<boolean>(() => overviewTab.value?.isSaving === true)
-
 watch(activeTab, (tab: ProductTab) => {
   if (tab === 'cost') {
     costTabVisited.value = true
   }
 }, { immediate: true })
-
-useUnsavedChangesGuard('Есть несохранённые изменения. Покинуть страницу без сохранения?')
 
 const resetActiveTabFromQuery = (): void => {
   const requested = route.query.tab
@@ -133,51 +111,17 @@ const syncTabQuery = (tab: ProductTab): void => {
   void router.replace({ query: { ...route.query, tab } })
 }
 
-const applyTab = (tab: ProductTab): void => {
-  activeTab.value = tab
-  syncTabQuery(tab)
-}
-
 /**
- * Переключение вкладки идёт не напрямую в модель: уход из «Основных данных» с
- * несохранёнными правками сначала требует подтверждения.
+ * Смена вкладки — не разрушительное действие: панели остаются смонтированными,
+ * черновики живут в реестре страницы. Поэтому вопроса здесь нет, есть только query.
  */
-const requestTabChange = (value: string | number): void => {
+const applyTab = (value: string | number): void => {
   if (!isProductTab(value) || value === activeTab.value) {
     return
   }
 
-  const leavingOverviewWithChanges = activeTab.value === 'overview' && overviewDirty.value
-
-  if (leavingOverviewWithChanges) {
-    pendingTab.value = value
-    unsavedDialogOpen.value = true
-    return
-  }
-
-  applyTab(value)
-}
-
-const confirmTabChange = (): void => {
-  const target = pendingTab.value
-  pendingTab.value = null
-  unsavedDialogOpen.value = false
-
-  if (target) {
-    applyTab(target)
-  }
-}
-
-const cancelTabChange = (): void => {
-  pendingTab.value = null
-}
-
-const handleSave = (): void => {
-  void overviewTab.value?.handleSave()
-}
-
-const handleDiscard = (): void => {
-  overviewTab.value?.handleDiscard()
+  activeTab.value = value
+  syncTabQuery(value)
 }
 
 const handleProductSaved = (patch: SavedPatch): void => {
@@ -279,7 +223,7 @@ onMounted(() => {
       <TabsRoot
         :model-value="activeTab"
         class="flex flex-col gap-4"
-        @update:model-value="requestTabChange"
+        @update:model-value="applyTab"
       >
         <TabsList
           class="w-full justify-start overflow-x-auto sm:w-auto sm:justify-center"
@@ -307,7 +251,6 @@ onMounted(() => {
           class="mt-0 border-0 bg-transparent p-0"
         >
           <ProductOverviewTab
-            ref="overviewTab"
             :product-id="productId"
             :product="product"
             @saved="handleProductSaved"
@@ -333,50 +276,6 @@ onMounted(() => {
       </TabsRoot>
     </div>
 
-    <StickySaveBar
-      :visible="canWrite && overviewDirty"
-      :saving="overviewSaving"
-      message="Есть несохранённые изменения в данных товара"
-      @save="handleSave"
-      @discard="handleDiscard"
-    />
-
-    <AlertDialogRoot v-model:open="unsavedDialogOpen">
-      <AlertDialogPortal>
-        <AlertDialogOverlay class="fixed inset-0 z-50 bg-black/50" />
-        <AlertDialogContent
-          class="fixed left-[50%] top-[50%] z-[100] max-h-[85vh] w-[90vw] max-w-[480px] translate-x-[-50%] translate-y-[-50%] rounded-lg border bg-popover p-6 text-popover-foreground shadow-lg focus:outline-none"
-        >
-          <div class="flex flex-col gap-4">
-            <div>
-              <AlertDialogTitle class="text-lg font-semibold">
-                Перейти без сохранения?
-              </AlertDialogTitle>
-              <AlertDialogDescription class="mt-2 text-sm text-muted-foreground">
-                В основных данных есть несохранённые изменения. При переходе на другую вкладку они будут потеряны.
-              </AlertDialogDescription>
-            </div>
-            <div class="mt-2 flex justify-end gap-3">
-              <AlertDialogCancel as-child>
-                <Button
-                  variant="outline"
-                  @click="cancelTabChange"
-                >
-                  Остаться
-                </Button>
-              </AlertDialogCancel>
-              <!-- Не AlertDialogAction: он закрывает диалог своим обработчиком и обнуляет
-                   pendingTab через update:open раньше, чем вкладка успевает переключиться. -->
-              <Button
-                variant="destructive"
-                @click="confirmTabChange"
-              >
-                Перейти
-              </Button>
-            </div>
-          </div>
-        </AlertDialogContent>
-      </AlertDialogPortal>
-    </AlertDialogRoot>
+    <PageDraftShell v-if="canWrite" />
   </div>
 </template>

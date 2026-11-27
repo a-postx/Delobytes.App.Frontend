@@ -11,7 +11,7 @@ import { toast } from 'vue-sonner'
 import { catalogProductsApi } from '@/services/api'
 import { extractErrorMessage } from '@/composables/useApi'
 import { useCurrentUser } from '@/composables/useCurrentUser'
-import { markUnsavedChanges } from '@/composables/useUnsavedChangesGuard'
+import { useDraftSection } from '@/composables/usePageDraft'
 import type { GetProductResponse, UpdateProductRequest, ProductBarcode, PackingUnit } from '@/types/products'
 
 const props = defineProps<{
@@ -26,8 +26,6 @@ const emit = defineEmits<{
 }>()
 
 const { canWrite } = useCurrentUser()
-
-const isSaving = ref<boolean>(false)
 
 type PackingUnitForm = {
   [K in keyof Required<PackingUnit>]: string | number
@@ -93,8 +91,6 @@ const hasUnsavedChanges = computed<boolean>(() => {
   return formSnapshot() !== formBaseline.value
 })
 
-markUnsavedChanges('product-form', hasUnsavedChanges, 'Есть несохранённые изменения в данных товара. Покинуть страницу без сохранения?')
-
 const initFormFromProduct = (product: GetProductResponse): void => {
   form.value = {
     sku: product.sku ?? '',
@@ -151,13 +147,12 @@ const buildPackingUnitPayload = (): PackingUnit | undefined => {
   return unit
 }
 
-const handleSave = async (): Promise<void> => {
+const handleSave = async (): Promise<boolean> => {
   if (!form.value.sku.trim()) {
     toast.error('SKU обязателен')
-    return
+    return false
   }
 
-  isSaving.value = true
   try {
     const payload: UpdateProductRequest = {
       name: form.value.name.trim(),
@@ -185,10 +180,10 @@ const handleSave = async (): Promise<void> => {
       barcodes: form.value.barcodes,
       packingUnit,
     })
+    return true
   } catch (error: unknown) {
     toast.error(extractErrorMessage(error, 'Не удалось сохранить товар'))
-  } finally {
-    isSaving.value = false
+    return false
   }
 }
 
@@ -196,7 +191,13 @@ const handleDiscard = (): void => {
   initFormFromProduct(props.product)
 }
 
-defineExpose({ hasUnsavedChanges, isSaving, handleSave, handleDiscard })
+useDraftSection({
+  id: 'product-form',
+  label: 'Основные данные',
+  isDirty: hasUnsavedChanges,
+  save: handleSave,
+  discard: handleDiscard,
+})
 </script>
 
 <template>

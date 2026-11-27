@@ -189,34 +189,20 @@ describe('ProductEditView: вкладки', () => {
     expect(bomEditorMounts).toHaveBeenCalledTimes(1)
   })
 
-  it('спрашивает подтверждение при уходе из «Основных данных» с несохранёнными правками', async () => {
+  it('переключает вкладку без диалога и сохраняет черновик', async () => {
     const wrapper = await mountWith(productWithChannels)
 
     await wrapper.find('#name').setValue('Новое название')
     await tabByName(wrapper, 'Себестоимость').trigger('mousedown')
     await flushPromises()
 
-    // Вкладка не сменилась, показан вопрос. Диалог телепортирован в document.body.
-    expect(tabByName(wrapper, 'Основные данные').attributes('data-state')).toBe('active')
-    expect(document.body.querySelector('[role="alertdialog"]')).not.toBeNull()
-
-    await clickBodyButton('Перейти')
-
+    expect(document.body.querySelector('[role="alertdialog"]')).toBeNull()
     expect(tabByName(wrapper, 'Себестоимость').attributes('data-state')).toBe('active')
-    expect(wrapper.find('.product-bom-editor').exists()).toBe(true)
-  })
 
-  it('остаётся на вкладке, если переход отменён', async () => {
-    const wrapper = await mountWith(productWithChannels)
-
-    await wrapper.find('#name').setValue('Новое название')
-    await tabByName(wrapper, 'Себестоимость').trigger('mousedown')
+    await tabByName(wrapper, 'Основные данные').trigger('mousedown')
     await flushPromises()
 
-    await clickBodyButton('Остаться')
-
-    expect(tabByName(wrapper, 'Основные данные').attributes('data-state')).toBe('active')
-    expect(bomEditorMounts).not.toHaveBeenCalled()
+    expect((wrapper.find('#name').element as HTMLInputElement).value).toBe('Новое название')
   })
 
   it('переключает вкладку без вопроса, если правок нет', async () => {
@@ -230,45 +216,49 @@ describe('ProductEditView: вкладки', () => {
   })
 })
 
-describe('ProductEditView: бар сохранения', () => {
+describe('ProductEditView: панель сохранения', () => {
+  const saveBar = (): Element | null =>
+    document.body.querySelector('[role="region"][aria-label="Несохранённые изменения"]')
+
   beforeEach(() => {
     vi.clearAllMocks()
     routeQuery.value = {}
   })
 
-  it('не показывает бар, пока правок нет', async () => {
+  it('не показывает панель, пока правок нет', async () => {
     await mountWith(productWithChannels)
 
-    expect(document.body.querySelector('[role="status"]')).toBeNull()
+    expect(saveBar()).toBeNull()
   })
 
-  it('сохраняет бар видимым при переходе на другую вкладку', async () => {
+  it('остаётся видимой при переходе на другую вкладку', async () => {
     const wrapper = await mountWith(productWithChannels)
 
     await wrapper.find('#name').setValue('Новое название')
     await flushPromises()
 
-    const bar = document.body.querySelector('[role="status"]')
+    const bar = saveBar()
     expect(bar).not.toBeNull()
-    expect(bar!.textContent).toContain('Есть несохранённые изменения')
+    expect(bar!.textContent).toContain('Не сохранено:')
+    expect(bar!.textContent).toContain('Основные данные')
 
     await tabByName(wrapper, 'Каналы продаж').trigger('mousedown')
     await flushPromises()
 
-    // Панель «Основных данных» скрыта, но бар живёт на уровне страницы и остаётся виден.
-    expect(document.body.querySelector('[role="status"]')).not.toBeNull()
+    // Панель «Основных данных» скрыта, но панель сохранения живёт на уровне страницы.
+    expect(saveBar()).not.toBeNull()
   })
 
-  it('сбрасывает правки по кнопке «Отмена» в баре', async () => {
+  it('сбрасывает правки по кнопке «Отменить всё»', async () => {
     const wrapper = await mountWith(productWithChannels)
 
     await wrapper.find('#name').setValue('Новое название')
     await flushPromises()
 
-    await clickBodyButton('Отмена')
+    await clickBodyButton('Отменить всё')
 
     expect((wrapper.find('#name').element as HTMLInputElement).value).toBe('Товар')
-    expect(document.body.querySelector('[role="status"]')).toBeNull()
+    expect(saveBar()).toBeNull()
   })
 })
 

@@ -8,7 +8,6 @@ import {
   Calculator,
   History,
   RefreshCw,
-  AlertCircle,
   ArrowRight,
   Minus,
   TrendingDown,
@@ -43,7 +42,7 @@ import { useCurrentUser } from '@/composables/useCurrentUser'
 import { useTenantToday } from '@/composables/useTenantToday'
 import { useTenantMoney } from '@/composables/useTenantMoney'
 import { useBomChanges } from '@/composables/useBomChanges'
-import { markUnsavedChanges } from '@/composables/useUnsavedChangesGuard'
+import { useDraftSection } from '@/composables/usePageDraft'
 import { useBomCostPreview } from '@/composables/useBomCostPreview'
 import ProductCostHistoryDialog from './ProductCostHistoryDialog.vue'
 
@@ -68,7 +67,6 @@ const serverLines = ref<BomLineItem[]>([])
 const rows = ref<EditableBomRow[]>([])
 const allComponents = ref<ComponentItem[]>([])
 const isLoadingBom = ref<boolean>(true)
-const isSavingBom = ref<boolean>(false)
 
 const unitLabels: Record<Unit, string> = {
   [Unit.Piece]: 'шт.',
@@ -197,15 +195,6 @@ const rowsComparable = computed(() =>
 
 const { hasUnsavedChanges } = useBomChanges(serverLinesComparable, rowsComparable)
 
-// Хук ухода регистрирует владелец страницы (ProductEditView), здесь только помечаем секцию:
-// иначе оба компонента повесили бы свой onBeforeRouteLeave и пользователь получил бы
-// два вопроса подряд на один уход.
-markUnsavedChanges(
-  'product-bom',
-  hasUnsavedChanges,
-  'Есть несохранённые изменения в составе товара. Покинуть страницу без сохранения?',
-)
-
 // ---------- Черновик состава ----------
 
 const draftLines = computed<PreviewProductBomCostLine[]>(() =>
@@ -250,24 +239,31 @@ const resetDraftChanges = (): void => {
 
 // ---------- Сохранение ----------
 
-const handleSaveBom = async (): Promise<void> => {
+const handleSaveBom = async (): Promise<boolean> => {
   if (!validateDraft()) {
-    return
+    return false
   }
 
-  isSavingBom.value = true
   try {
     await bomApi.upsert(props.productId, { lines: draftLines.value })
     toast.success('Состав товара сохранён')
     await loadBom()
     await loadCost()
     resetPreview()
+    return true
   } catch {
     toast.error('Не удалось сохранить состав товара')
-  } finally {
-    isSavingBom.value = false
+    return false
   }
 }
+
+useDraftSection({
+  id: 'product-bom',
+  label: 'Состав и себестоимость',
+  isDirty: hasUnsavedChanges,
+  save: handleSaveBom,
+  discard: resetDraftChanges,
+})
 
 // ---------- Cost calculation state ----------
 
@@ -404,44 +400,6 @@ const selectClass = 'flex h-9 w-full rounded-md border border-input bg-backgroun
         <History class="size-4" />
         История
       </Button>
-    </div>
-
-    <!-- Панель несохранённых изменений: единственная точка сохранения секции -->
-    <div
-      v-if="hasUnsavedChanges"
-      class="flex flex-wrap items-center gap-x-4 gap-y-3 rounded-lg border border-warning/40 bg-warning/10 px-4 py-3"
-    >
-      <AlertCircle class="size-5 text-warning shrink-0" />
-      <div class="flex flex-col gap-1 flex-1 min-w-0">
-        <span class="text-sm font-medium text-foreground">
-          Есть несохранённые изменения в составе товара
-        </span>
-      </div>
-      <div
-        v-if="canWrite"
-        class="flex items-center gap-2 shrink-0"
-      >
-        <Button
-          variant="outline"
-          size="sm"
-          :disabled="isSavingBom"
-          @click="resetDraftChanges"
-        >
-          Отменить правки
-        </Button>
-        <Button
-          size="sm"
-          class="gap-2"
-          :disabled="isSavingBom"
-          @click="handleSaveBom"
-        >
-          <Spinner
-            v-if="isSavingBom"
-            class="size-4"
-          />
-          Сохранить состав
-        </Button>
-      </div>
     </div>
 
     <div class="border-t border-border" />

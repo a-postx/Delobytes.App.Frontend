@@ -1,5 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { defineComponent, h } from 'vue'
 import { mount, flushPromises } from '@vue/test-utils'
+import type { DraftRegistry } from '@/composables/usePageDraft'
+import { provideDraftRegistry } from '@/composables/usePageDraft'
+
+vi.mock('vue-router', () => ({
+  onBeforeRouteLeave: vi.fn(),
+}))
 
 vi.mock('@/composables/useCurrentUser', () => ({
   useCurrentUser: () => ({ canWrite: { value: true } }),
@@ -77,9 +84,17 @@ const quantities = (wrapper: ReturnType<typeof mount>): string[] =>
 const buttonsWithText = (wrapper: ReturnType<typeof mount>, text: string) =>
   wrapper.findAll('button').filter(button => button.text().includes(text))
 
-async function mountEditor() {
-  const wrapper = mount(ProductBomEditor, {
-    props: { productId: 'p1' },
+async function mountEditor(): Promise<{ wrapper: ReturnType<typeof mount>; draft: DraftRegistry }> {
+  const holder: { registry: DraftRegistry | null } = { registry: null }
+
+  const Host = defineComponent({
+    setup() {
+      holder.registry = provideDraftRegistry()
+      return () => h(ProductBomEditor, { productId: 'p1' })
+    },
+  })
+
+  const wrapper = mount(Host, {
     global: {
       stubs: {
         RouterLink: { props: ['to'], template: '<a><slot /></a>' },
@@ -88,10 +103,15 @@ async function mountEditor() {
     },
   })
   await flushPromises()
-  return wrapper
+
+  if (!holder.registry) {
+    throw new Error('Реестр черновиков не создан')
+  }
+
+  return { wrapper, draft: holder.registry }
 }
 
-describe('ProductBomEditor — панель несохранённых изменений', () => {
+describe('ProductBomEditor — регистрация в реестре черновиков', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     bomGet.mockResolvedValue({ items: SERVER_LINES })
@@ -99,39 +119,39 @@ describe('ProductBomEditor — панель несохранённых изме�
     costGet.mockResolvedValue(COST)
   })
 
-  it('показывает панель с единственной точкой сохранения только при правках', async () => {
-    const wrapper = await mountEditor()
+  it('регистрирует секцию и становится изменённым после правки', async () => {
+    const { wrapper, draft } = await mountEditor()
 
-    expect(wrapper.text()).not.toContain('Есть несохранённые изменения в составе товара')
+    expect(draft.sections.value).toHaveLength(1)
+    expect(draft.isDirty.value).toBe(false)
+    // Своей кнопки сохранения у состава нет: точка сохранения одна — панель страницы
     expect(buttonsWithText(wrapper, 'Сохранить состав')).toHaveLength(0)
 
     await tableRows(wrapper)[0].find('input[type="number"]').setValue('7')
 
-    expect(wrapper.text()).toContain('Есть несохранённые изменения в составе товара')
-    expect(buttonsWithText(wrapper, 'Сохранить состав')).toHaveLength(1)
-    expect(buttonsWithText(wrapper, 'Отменить правки')).toHaveLength(1)
-    // Кнопка под таблицей удалена — иначе точек сохранения было бы две
-    expect(buttonsWithText(wrapper, 'Добавить компонент').length).toBeGreaterThan(0)
+    expect(draft.isDirty.value).toBe(true)
+    expect(draft.dirtySections.value[0].label).toBe('Состав и себестоимость')
   })
 
-  it('«Отменить правки» возвращает строки к сохранённому составу и снимает панель', async () => {
-    const wrapper = await mountEditor()
+  it('discardAll возвращает строки к сохранённому составу', async () => {
+    const { wrapper, draft } = await mountEditor()
 
     await tableRows(wrapper)[0].find('input[type="number"]').setValue('7')
     expect(quantities(wrapper)[0]).toBe('7')
 
-    await buttonsWithText(wrapper, 'Отменить правки')[0].trigger('click')
+    draft.discardAll()
+    await flushPromises()
 
     expect(quantities(wrapper)).toEqual(['2', '5', '1'])
-    expect(wrapper.text()).not.toContain('Есть несохранённые изменения в составе товара')
+    expect(draft.isDirty.value).toBe(false)
     expect(bomGet).toHaveBeenCalledTimes(1)
   })
 
   it('не отправляет PUT при отмене правок', async () => {
-    const wrapper = await mountEditor()
+    const { wrapper, draft } = await mountEditor()
 
     await tableRows(wrapper)[0].find('input[type="number"]').setValue('7')
-    await buttonsWithText(wrapper, 'Отменить правки')[0].trigger('click')
+    draft.discardAll()
     await flushPromises()
 
     expect(bomApi.upsert).not.toHaveBeenCalled()
@@ -152,7 +172,7 @@ describe('ProductBomEditor — отмена удаления строки', () =
   }
 
   it('показывает toast с названием компонента и действием отмены', async () => {
-    const wrapper = await mountEditor()
+    const { wrapper } = await mountEditor()
     await removeSecondRow(wrapper)
 
     expect(tableRows(wrapper)).toHaveLength(2)
@@ -165,7 +185,7 @@ describe('ProductBomEditor — отмена удаления строки', () =
   })
 
   it('отмена возвращает строку на прежнее место с прежним количеством', async () => {
-    const wrapper = await mountEditor()
+    const { wrapper, draft } = await mountEditor()
     await removeSecondRow(wrapper)
 
     const [, options] = toastFn.mock.calls[0] as unknown as [string, { action: { onClick: () => void } }]
@@ -175,16 +195,16 @@ describe('ProductBomEditor — отмена удаления строки', () =
     expect(tableRows(wrapper)).toHaveLength(3)
     expect(quantities(wrapper)).toEqual(['2', '5', '1'])
     // Удаление было единственной правкой, поэтому отмена возвращает черновик в исходное
-    // состояние: состав снова совпадает с сохранённым и сохранять нечего — панель скрыта
-    expect(wrapper.text()).not.toContain('Есть несохранённые изменения в составе товара')
+    // состояние: состав снова совпадает с сохранённым и сохранять нечего
+    expect(draft.isDirty.value).toBe(false)
     expect(bomApi.upsert).not.toHaveBeenCalled()
   })
 
   it('после отмены удаления прочие правки по-прежнему требуют сохранения', async () => {
-    const wrapper = await mountEditor()
+    const { wrapper, draft } = await mountEditor()
 
     // Правка количества до удаления: отмена возвращает строку, но состав всё ещё
-    // отличается от сохранённого, поэтому панель сохранения остаётся на месте
+    // отличается от сохранённого
     await tableRows(wrapper)[0].find('input[type="number"]').setValue('7')
     await removeSecondRow(wrapper)
 
@@ -193,12 +213,12 @@ describe('ProductBomEditor — отмена удаления строки', () =
     await flushPromises()
 
     expect(quantities(wrapper)).toEqual(['7', '5', '1'])
-    expect(wrapper.text()).toContain('Есть несохранённые изменения в составе товара')
+    expect(draft.isDirty.value).toBe(true)
     expect(bomApi.upsert).not.toHaveBeenCalled()
   })
 
   it('повторная отмена не дублирует восстановленную строку', async () => {
-    const wrapper = await mountEditor()
+    const { wrapper } = await mountEditor()
     await removeSecondRow(wrapper)
 
     const [, options] = toastFn.mock.calls[0] as unknown as [string, { action: { onClick: () => void } }]

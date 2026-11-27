@@ -81,6 +81,18 @@ export default {
             foreground: 'hsl(var(--badge-ym-foreground))',
           },
         },
+        'save-bar': {
+          DEFAULT: 'hsl(var(--save-bar))',
+          foreground: 'hsl(var(--save-bar-foreground))',
+          muted: 'hsl(var(--save-bar-muted))',
+          border: 'hsl(var(--save-bar-border))',
+          fail: 'hsl(var(--save-bar-fail))',
+          ring: 'hsl(var(--save-bar-ring))',
+          primary: {
+            DEFAULT: 'hsl(var(--save-bar-primary))',
+            foreground: 'hsl(var(--save-bar-primary-foreground))',
+          },
+        },
         sidebar: {
           DEFAULT: 'hsl(var(--sidebar-background))',
           foreground: 'hsl(var(--sidebar-foreground))',

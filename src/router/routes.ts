@@ -121,6 +121,7 @@ export const routes: RouteRecordRaw[] = [
         meta: {
           title: 'Редактирование товара',
           requiresAuth: true,
+          saveGuard: 'page',
         },
       },
       {

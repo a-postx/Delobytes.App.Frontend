@@ -45,10 +45,35 @@ module.exports = {
         '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }]
       }
     }
+    ,
+    {
+      // beforeunload регистрируется только реестром черновиков: два обработчика дают два диалога.
+      files: ['src/composables/usePageDraft.ts'],
+      rules: {
+        'no-restricted-syntax': 'off'
+      }
+    }
   ],
   rules: {
     'no-console': process.env.NODE_ENV === 'production' ? 'warn' : 'off',
     'no-debugger': process.env.NODE_ENV === 'production' ? 'warn' : 'off',
-    'vue/multi-word-component-names': 'off'
+    'vue/multi-word-component-names': 'off',
+    // Схема черновиков: подтверждение ухода и предупреждение о потере живут в реестре страницы.
+    'no-restricted-globals': [
+      'error',
+      { name: 'confirm', message: 'Уход подтверждается через provideDraftRegistry(); см. usePageDraft.ts' },
+      { name: 'alert', message: 'Сообщения показываются через toast или диалог схемы черновиков' }
+    ],
+    'no-restricted-syntax': [
+      'error',
+      {
+        selector: "CallExpression[callee.object.name='window'][callee.property.name='confirm']",
+        message: 'Уход подтверждается через provideDraftRegistry(); см. usePageDraft.ts'
+      },
+      {
+        selector: "CallExpression[callee.property.name='addEventListener'][arguments.0.value='beforeunload']",
+        message: 'Единственный обработчик beforeunload живёт в usePageDraft.ts'
+      }
+    ]
   }
 }
